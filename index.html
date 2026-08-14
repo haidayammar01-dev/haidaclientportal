@@ -4530,7 +4530,8 @@ function applyDepartmentVisibility(){
 }
 
 // ══ MONTHLY MERIT RATINGS (owner only) ══
-const MERIT_CATEGORIES=['🌟 Top Performer','✅ Solid','⚠ Needs Improvement'];
+const MERIT_CATEGORIES=['S Rank','A Rank','B Rank'];
+const MERIT_RANK_COLOR={'S Rank':'#C9A24B','A Rank':'#5E8B7E','B Rank':'#8B7E5E'};
 async function loadMeritRatings(){
   const monthSel=document.getElementById('meritrating-month');
   const yearInp=document.getElementById('meritrating-year');
@@ -4563,8 +4564,7 @@ async function loadMeritRatings(){
           <td style="padding:10px 16px;font-size:12px;color:var(--muted)">${a.department||''}</td>
           <td style="padding:10px 16px">
             <select id="mr-cat-${a.id}">
-              <option value="">— Not set —</option>
-              ${MERIT_CATEGORIES.map(c=>`<option value="${c}" ${r&&r.category===c?'selected':''}>${c}</option>`).join('')}
+              ${MERIT_CATEGORIES.map(c=>`<option value="${c}" ${(r?r.category===c:c==='S Rank')?'selected':''}>${c}</option>`).join('')}
             </select>
           </td>
           <td style="padding:10px 16px"><input type="text" id="mr-note-${a.id}" value="${r&&r.note?String(r.note).replace(/"/g,'&quot;'):''}" placeholder="optional note" style="width:100%"></td>
@@ -4591,15 +4591,17 @@ async function loadMyMeritWidget(){
   if(!box||!currentUser||!currentUser.adminId||currentUser.isOwner)return;
   const thisMonth=new Date().getMonth()+1,thisYear=new Date().getFullYear();
   const {data:r}=await db.from('merit_ratings').select('*').eq('admin_id',currentUser.adminId).eq('period_month',thisMonth).eq('period_year',thisYear).maybeSingle();
-  if(!r){box.style.display='none';return;}
+  const category=(r&&r.category)||'S Rank';
+  const note=r&&r.note;
   const monthName=new Date(thisYear,thisMonth-1,1).toLocaleString('default',{month:'long'});
+  const color=MERIT_RANK_COLOR[category]||'var(--gold)';
   box.style.display='flex';
   box.innerHTML=`
-    <div style="font-size:24px">${r.category.split(' ')[0]}</div>
+    <div style="width:44px;height:44px;border-radius:50%;background:${color};color:#fff;display:flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:700;flex-shrink:0">${category.charAt(0)}</div>
     <div>
-      <div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:2px">Your rating — ${monthName}</div>
-      <div style="font-size:15px;font-weight:600;color:var(--ink)">${r.category.split(' ').slice(1).join(' ')}</div>
-      ${r.note?`<div style="font-size:12px;color:var(--muted);margin-top:2px">${r.note}</div>`:''}
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:2px">Your rank — ${monthName}</div>
+      <div style="font-size:15px;font-weight:600;color:var(--ink)">${category}</div>
+      ${note?`<div style="font-size:12px;color:var(--muted);margin-top:2px">${note}</div>`:''}
     </div>`;
 }
 
