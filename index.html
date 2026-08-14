@@ -693,8 +693,8 @@ self.addEventListener('notificationclick',function(e){
       <button class="tab-btn" onclick="showAdminTab('contracts',this)">Contracts</button>
       <button class="tab-btn" onclick="showAdminTab('documents',this)">Documents</button>
       <button class="tab-btn" id="compliance-tab-btn" onclick="showAdminTab('compliance',this)">🗂 Compliance</button>
-      <div class="tab-section">My Profile</div>
-      <button class="tab-btn" onclick="showAdminTab('mydetails',this)">🪪 My Details</button>
+      <div class="tab-section" id="myprofile-section">My Profile</div>
+      <button class="tab-btn" id="mydetails-tab-btn" onclick="showAdminTab('mydetails',this)">🪪 My Details</button>
       <div class="tab-section" id="admin-section" style="display:none">Admin</div>
       <button class="tab-btn" id="onboarding-tab-btn" style="display:none" onclick="showAdminTab('onboarding',this)">Onboarding</button>
       <button class="tab-btn" id="expenditure-tab-btn" data-dept="finance" style="display:none" onclick="showAdminTab('expenditure',this)">Expenditure</button>
@@ -709,6 +709,7 @@ self.addEventListener('notificationclick',function(e){
       <button class="tab-btn" data-dept="finance" onclick="showAdminTab('accounting',this)">📚 Accounting</button>
       <button class="tab-btn" id="activitylog-tab-btn" data-dept="owner" style="display:none" onclick="showAdminTab('activitylog',this)">🕵 Activity Log</button>
       <button class="tab-btn" id="staffrecords-tab-btn" data-dept="owner" style="display:none" onclick="showAdminTab('staffrecords',this)">🗂 Staff Records</button>
+      <button class="tab-btn" id="meritratings-tab-btn" data-dept="owner" style="display:none" onclick="showAdminTab('meritratings',this)">🏅 Team Ratings</button>
     </nav>
 
     <div class="content-area">
@@ -2556,6 +2557,28 @@ self.addEventListener('notificationclick',function(e){
         <div class="page-title">Staff Records</div>
         <div class="page-sub">Personal details, agreed schedule/duties, and guarantor info submitted by your team — visible only to you</div>
         <div id="staffrecords-list"></div>
+      </div>
+
+      <!-- MERIT RATINGS PAGE (owner only) -->
+      <div class="page" id="page-meritratings">
+        <div class="page-title">🏅 Team Ratings</div>
+        <div class="page-sub">Set each team member's category once a month — they'll see it on their own dashboard</div>
+        <div style="display:flex;gap:12px;align-items:center;margin-bottom:18px;flex-wrap:wrap">
+          <div class="form-field" style="min-width:160px">
+            <label>Month</label>
+            <select id="meritrating-month" onchange="loadMeritRatings()">
+              <option value="1">January</option><option value="2">February</option><option value="3">March</option>
+              <option value="4">April</option><option value="5">May</option><option value="6">June</option>
+              <option value="7">July</option><option value="8">August</option><option value="9">September</option>
+              <option value="10">October</option><option value="11">November</option><option value="12">December</option>
+            </select>
+          </div>
+          <div class="form-field" style="min-width:120px">
+            <label>Year</label>
+            <input type="number" id="meritrating-year" onchange="loadMeritRatings()">
+          </div>
+        </div>
+        <div id="meritratings-list"></div>
       </div>
 
       <!-- EXPENDITURE PAGE -->
@@ -4506,6 +4529,80 @@ function applyDepartmentVisibility(){
   if(projBtn)projBtn.style.display=deptList.includes('project_management')?'block':'none';
 }
 
+// ══ MONTHLY MERIT RATINGS (owner only) ══
+const MERIT_CATEGORIES=['🌟 Top Performer','✅ Solid','⚠ Needs Improvement'];
+async function loadMeritRatings(){
+  const monthSel=document.getElementById('meritrating-month');
+  const yearInp=document.getElementById('meritrating-year');
+  if(!monthSel||!yearInp)return;
+  if(!yearInp.value)yearInp.value=new Date().getFullYear();
+  if(!monthSel.value)monthSel.value=new Date().getMonth()+1;
+  const month=parseInt(monthSel.value),year=parseInt(yearInp.value);
+  const el=document.getElementById('meritratings-list');
+  el.innerHTML='<p style="font-size:13px;color:var(--muted)">Loading…</p>';
+  const [{data:admins},{data:ratings}]=await Promise.all([
+    db.from('admin_users').select('*').eq('is_owner',false).order('full_name'),
+    db.from('merit_ratings').select('*').eq('period_month',month).eq('period_year',year)
+  ]);
+  const ratingMap={};
+  (ratings||[]).forEach(r=>{ratingMap[r.admin_id]=r;});
+  el.innerHTML=`<div class="card" style="padding:0;overflow:hidden">
+    <table style="width:100%;border-collapse:collapse">
+      <thead><tr>
+        <th style="padding:10px 16px;text-align:left">Team Member</th>
+        <th style="padding:10px 16px;text-align:left">Department</th>
+        <th style="padding:10px 16px;text-align:left">Category</th>
+        <th style="padding:10px 16px;text-align:left">Note (optional)</th>
+        <th></th>
+      </tr></thead>
+      <tbody>
+      ${(admins||[]).map(a=>{
+        const r=ratingMap[a.id];
+        return `<tr style="border-top:1px solid var(--border)">
+          <td style="padding:10px 16px"><strong>${a.full_name}</strong></td>
+          <td style="padding:10px 16px;font-size:12px;color:var(--muted)">${a.department||''}</td>
+          <td style="padding:10px 16px">
+            <select id="mr-cat-${a.id}">
+              <option value="">— Not set —</option>
+              ${MERIT_CATEGORIES.map(c=>`<option value="${c}" ${r&&r.category===c?'selected':''}>${c}</option>`).join('')}
+            </select>
+          </td>
+          <td style="padding:10px 16px"><input type="text" id="mr-note-${a.id}" value="${r&&r.note?String(r.note).replace(/"/g,'&quot;'):''}" placeholder="optional note" style="width:100%"></td>
+          <td style="padding:10px 16px"><button class="btn-sm" onclick="saveMeritRating('${a.id}',${month},${year})">Save</button></td>
+        </tr>`;
+      }).join('')}
+      </tbody>
+    </table>
+  </div>
+  <div style="font-size:11.5px;color:var(--muted);margin-top:10px">Ratings save per person, per month — come back and update them anytime this month, or move to the next month above.</div>`;
+}
+async function saveMeritRating(adminId,month,year){
+  const category=document.getElementById(`mr-cat-${adminId}`).value;
+  const note=document.getElementById(`mr-note-${adminId}`).value.trim();
+  if(!category){alert('Pick a category first.');return;}
+  const {error}=await db.from('merit_ratings').upsert({
+    admin_id:adminId,period_month:month,period_year:year,category,note,set_by:currentUser.name
+  },{onConflict:'admin_id,period_month,period_year'});
+  if(error){alert('Error saving rating: '+error.message);return;}
+  loadMeritRatings();
+}
+async function loadMyMeritWidget(){
+  const box=document.getElementById('dash-merit-box');
+  if(!box||!currentUser||!currentUser.adminId||currentUser.isOwner)return;
+  const thisMonth=new Date().getMonth()+1,thisYear=new Date().getFullYear();
+  const {data:r}=await db.from('merit_ratings').select('*').eq('admin_id',currentUser.adminId).eq('period_month',thisMonth).eq('period_year',thisYear).maybeSingle();
+  if(!r){box.style.display='none';return;}
+  const monthName=new Date(thisYear,thisMonth-1,1).toLocaleString('default',{month:'long'});
+  box.style.display='flex';
+  box.innerHTML=`
+    <div style="font-size:24px">${r.category.split(' ')[0]}</div>
+    <div>
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:2px">Your rating — ${monthName}</div>
+      <div style="font-size:15px;font-weight:600;color:var(--ink)">${r.category.split(' ').slice(1).join(' ')}</div>
+      ${r.note?`<div style="font-size:12px;color:var(--muted);margin-top:2px">${r.note}</div>`:''}
+    </div>`;
+}
+
 // ══ CLIENT SERVICE PACKAGES ══
 async function openManageServices(clientId){
   const {data:client}=await db.from('clients').select('services').eq('id',clientId).single();
@@ -4546,7 +4643,10 @@ function showApp(){
     document.getElementById('admin-section').style.display='';
     if(currentUser.isOwner)document.getElementById('activitylog-tab-btn').style.display='';
     document.getElementById('staffrecords-tab-btn').style.display='';
+    document.getElementById('meritratings-tab-btn').style.display='';
     document.getElementById('onboarding-tab-btn').style.display='';
+    document.getElementById('myprofile-section').style.display='none';
+    document.getElementById('mydetails-tab-btn').style.display='none';
     document.getElementById('projects-tab-btn').style.display='block';
     loadInvoices();
     loadExpenditure();
@@ -7447,6 +7547,8 @@ async function loadDashboard(){
       </div>
     </div>
 
+    <div id="dash-merit-box" style="display:none;align-items:center;gap:14px;background:var(--gold-light);border:1px solid var(--gold);border-radius:14px;padding:14px 20px;margin-bottom:20px"></div>
+
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:26px">
       ${dashShows('overdueTrainings')?kpi('⚠️',overdueTrainings.length,'Overdue Trainings','danger'):''}
       ${dashShows('leave')?kpi('🌴',(leave||[]).length,'Pending Leave','gold'):''}
@@ -7483,6 +7585,7 @@ async function loadDashboard(){
   if(donutCtx&&totalUrgent2>0){
     window._dashUrgentDonut=new Chart(donutCtx,{type:'doughnut',data:{labels:['Trainings','Stock','Bills'],datasets:[{data:[dashShows('overdueTrainings')?overdueTrainings.length:0,dashShows('lowStock')?lowStock.length:0,dashShows('overdueBills')?overdueBills.length:0],backgroundColor:['#C9A24B','#E8B4A8','#A12F2F'],borderWidth:0}]},options:{cutout:'65%',plugins:{legend:{display:false},tooltip:{enabled:true}}}});
   }
+  loadMyMeritWidget();
   await loadDashboardDeptSection();
 }
 async function loadDashboardDeptSection(deptOverride){
@@ -10921,6 +11024,7 @@ function showAdminTab(tab,btn){
   if(tab==='invoices'&&(!currentUser||!currentUser.isOwner)){return;}
   if(tab==='activitylog'&&(!currentUser||!currentUser.isOwner)){return;}
   if(tab==='staffrecords'&&(!currentUser||!currentUser.isOwner)){return;}
+  if(tab==='meritratings'&&(!currentUser||!currentUser.isOwner)){return;}
   if(tab==='mydetails'&&(!currentUser||!currentUser.adminId)){return;}
   document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
@@ -10929,6 +11033,7 @@ function showAdminTab(tab,btn){
   if(tab==='activitylog') loadActivityLog();
   if(tab==='mydetails') loadMyDetails();
   if(tab==='staffrecords') loadStaffRecords();
+  if(tab==='meritratings') loadMeritRatings();
   if(tab==='payroll') loadPayrollPage();
   if(tab==='accounting') loadAccountingPageInit();
   if(tab==='income') loadCompanyIncome();
