@@ -689,7 +689,7 @@ self.addEventListener('notificationclick',function(e){
       <button class="tab-btn" onclick="showAdminTab('eventplanner',this)">🎪 Event Planner</button>
       <button class="tab-btn" onclick="showAdminTab('actions',this)">Action Tracker</button>
       <button class="tab-btn" id="projects-tab-btn" data-dept="project_management" style="display:none" onclick="showAdminTab('projects',this)">📁 Projects</button>
-      <button class="tab-btn" onclick="showAdminTab('staff',this)">Client Staff</button>
+      <button class="tab-btn" onclick="showAdminTab('staff',this)">🧑‍💼 HR & Staff</button>
       <button class="tab-btn" onclick="showAdminTab('contracts',this)">Contracts</button>
       <button class="tab-btn" onclick="showAdminTab('documents',this)">Documents</button>
       <button class="tab-btn" id="compliance-tab-btn" onclick="showAdminTab('compliance',this)">🗂 Compliance</button>
@@ -718,6 +718,7 @@ self.addEventListener('notificationclick',function(e){
         <div class="page-title">Dashboard</div>
         <div class="page-sub">Everything that needs your attention today, in one place</div>
         <div id="dashboard-content"></div>
+        <div id="dashboard-dept-section"></div>
       </div>
       <div class="page" id="page-calendar">
         <div class="page-title">Calendar</div>
@@ -748,10 +749,14 @@ self.addEventListener('notificationclick',function(e){
       <!-- REPORTS TAB -->
       <div class="page" id="page-reports">
         <div class="page-title">Add Report</div>
-        <div class="page-sub">Submit a report for a client — fields adapt to the client's niche automatically</div>
+        <div class="page-sub">Submit a report for a client — add niche-specific spot-check fields only when you choose to</div>
         <div class="card">
-          <div style="margin-bottom:12px;padding:10px 14px;background:var(--surface2);border-radius:9px;font-family:Arial;font-size:12px;color:var(--muted)" id="niche-report-banner">
-            Select a client to see niche-specific report fields
+          <div class="form-field" style="margin-bottom:14px">
+            <label>Spot-Check Focus (optional)</label>
+            <select id="rf-niche-select" onchange="renderTypeFields()">
+              <option value="">None — report type fields only</option>
+            </select>
+            <div style="font-size:11px;color:var(--muted);margin-top:4px">Pick this independently of the client selected — e.g. run a café-style spot check on any client, not just café clients.</div>
           </div>
           <div class="inner-tabs">
             <button class="inner-tab active" onclick="switchReportType('audit',this)">Audit</button>
@@ -2340,10 +2345,13 @@ self.addEventListener('notificationclick',function(e){
         <div id="mywork-switcher" style="display:none;margin-bottom:16px">
           <label style="font-size:12px;color:var(--muted);margin-right:8px">View as:</label>
           <select id="mywork-dept-select" onchange="loadMyWork(this.value)" style="padding:7px 12px;border:1px solid var(--border);border-radius:9px;font-size:13px">
-            <option value="operations">Operations</option>
-            <option value="hr">HR</option>
-            <option value="social_media">Social Media</option>
+            <option value="operations">Operations & Admin</option>
+            <option value="hr,social_media">HR & Social Media</option>
+            <option value="hr">HR only</option>
+            <option value="social_media">Social Media only</option>
             <option value="customer_service">Customer Service</option>
+            <option value="finance">Finance</option>
+            <option value="project_management">Project Management</option>
           </select>
         </div>
         <div id="mywork-content"></div>
@@ -2909,7 +2917,7 @@ self.addEventListener('notificationclick',function(e){
             <option value="events">🎉 Event Catering / Hospitality</option>
             <option value="hospitality">🏠 Hospitality / Airbnb</option>
             <option value="media">🎬 Media / Creative Agency</option>
-            <option value="halal">✅ Halal Brand</option>
+            <option value="halal">✅ Certified Brand</option>
             <option value="wellness">🏥 Healthcare / Wellness</option>
             <option value="retail">🛍️ Retail / E-Commerce</option>
             <option value="corporate">🏢 Corporate / Professional Services</option>
@@ -2918,6 +2926,7 @@ self.addEventListener('notificationclick',function(e){
             <option value="homebrand">📦 Home Brand / DTC Delivery</option>
             <option value="delivery">🛵 Delivery / Rider Company</option>
             <option value="event_planner">🎪 Event Planner</option>
+            <option value="banking">🏦 Banking / Finance</option>
             <option value="general">📋 General</option>
           </select>
         </div>
@@ -3901,7 +3910,7 @@ const taskDb=supabase.createClient(TASK_URL,TASK_KEY);
 let currentUser=null,allClients=[],reportType='audit';
 
 // ══ NICHES ══
-const nicheLabels={cafe:'☕ Café/F&B',aesthetics:'💆 Aesthetics',hair:'💇 Hair & Beauty',education:'🎓 Education',faith:'🕌 Faith Org',events:'🎉 Events',event_planner:'🎪 Event Planner',hospitality:'🏠 Hospitality',media:'🎬 Media',halal:'✅ Halal Brand',wellness:'🏥 Wellness',retail:'🛍️ Retail',corporate:'🏢 Corporate',logistics:'🚚 Logistics',tech:'💻 Tech Firm',homebrand:'📦 Home Brand / DTC',delivery:'🛵 Delivery / Rider Co',general:'📋 General'};
+const nicheLabels={cafe:'☕ Café/F&B',aesthetics:'💆 Aesthetics',hair:'💇 Hair & Beauty',education:'🎓 Education',faith:'🕌 Faith Org',events:'🎉 Events',event_planner:'🎪 Event Planner',hospitality:'🏠 Hospitality',media:'🎬 Media',halal:'✅ Certified Brand',wellness:'🏥 Wellness',retail:'🛍️ Retail',corporate:'🏢 Corporate',logistics:'🚚 Logistics',tech:'💻 Tech Firm',homebrand:'📦 Home Brand / DTC',delivery:'🛵 Delivery / Rider Co',banking:'🏦 Banking / Finance',general:'📋 General'};
 
 
 // ══ KPI LIBRARY — all possible KPIs per niche ══
@@ -3959,7 +3968,7 @@ const KPI_LIBRARY = {
     {id:'avg_spend',label:'Average spend per customer',unit:'₦',lower_is_better:false},
     {id:'stock_accuracy',label:'Stock accuracy rate',unit:'%',lower_is_better:false,description:'System stock vs physical count'},
     {id:'product_sell_through',label:'Product sell-through rate',unit:'%',lower_is_better:false},
-    {id:'halal_compliance',label:'Halal product compliance',unit:'%',lower_is_better:false,description:'% of products with valid halal certification'},
+    {id:'halal_compliance',label:'Certification compliance',unit:'%',lower_is_better:false,description:'% of products with valid certification'},
     {id:'upsell_rate',label:'Upsell conversion rate',unit:'%',lower_is_better:false},
     {id:'staff_knowledge',label:'Staff product knowledge score',unit:'/10',lower_is_better:false},
     {id:'display_score',label:'Display standard score',unit:'/10',lower_is_better:false},
@@ -4058,16 +4067,16 @@ const KPI_LIBRARY = {
     {id:'profit_margin',label:'Net profit margin',unit:'%',lower_is_better:false},
   ],
   halal: [
-    {id:'cert_status',label:'Halal certification status',unit:'score',lower_is_better:false,description:'1=Not in place, 2=Expired, 3=Current'},
-    {id:'supplier_compliance',label:'Supplier halal compliance rate',unit:'%',lower_is_better:false,description:'% of suppliers with verified halal status'},
+    {id:'cert_status',label:'Certification status',unit:'score',lower_is_better:false,description:'1=Not in place, 2=Expired, 3=Current'},
+    {id:'supplier_compliance',label:'Supplier certification compliance rate',unit:'%',lower_is_better:false,description:'% of suppliers with verified certification status'},
     {id:'ingredient_verification',label:'Ingredient verification rate',unit:'%',lower_is_better:false},
     {id:'cross_contamination_score',label:'Cross-contamination protocol score',unit:'/10',lower_is_better:false},
     {id:'labelling_compliance',label:'Product labelling compliance',unit:'%',lower_is_better:false},
-    {id:'staff_training_halal',label:'Staff halal training completion',unit:'%',lower_is_better:false},
-    {id:'audit_score',label:'Overall halal audit score',unit:'/10',lower_is_better:false},
+    {id:'staff_training_halal',label:'Staff certification training completion',unit:'%',lower_is_better:false},
+    {id:'audit_score',label:'Overall certification audit score',unit:'/10',lower_is_better:false},
     {id:'monthly_revenue',label:'Monthly revenue',unit:'₦',lower_is_better:false},
     {id:'complaint_rate',label:'Customer complaints',unit:'complaints',lower_is_better:true},
-    {id:'new_products',label:'New halal-certified products launched',unit:'products',lower_is_better:false},
+    {id:'new_products',label:'New certified products launched',unit:'products',lower_is_better:false},
     {id:'consumer_trust_score',label:'Consumer trust / brand score',unit:'/10',lower_is_better:false},
     {id:'social_reach',label:'Social media reach',unit:'accounts',lower_is_better:false},
   ],
@@ -4242,7 +4251,7 @@ const nicheFields={
   ],
   hair:[
     {id:'product_display',label:'Product display standard (0–10)',type:'range'},
-    {id:'halal_cert',label:'Halal certification visible',type:'select',options:['Yes','No','N/A']},
+    {id:'halal_cert',label:'Certification visible',type:'select',options:['Yes','No','N/A']},
     {id:'product_knowledge',label:'Staff product knowledge (0–10)',type:'range'},
     {id:'stock_notes',label:'Stock levels — flag shortages',type:'textarea'},
     {id:'upsell',label:'Upselling observed',type:'select',options:['Yes','No','Partially']},
@@ -4284,18 +4293,26 @@ const nicheFields={
     {id:'client_satisfaction',label:'Client satisfaction (0–10)',type:'range'},
   ],
   halal:[
-    {id:'cert_current',label:'Halal certification current',type:'select',options:['Yes','Expired','Not in place']},
-    {id:'ingredients',label:'Ingredients halal verified',type:'select',options:['Fully','Partial','Not verified']},
+    {id:'cert_current',label:'Certification current',type:'select',options:['Yes','Expired','Not in place']},
+    {id:'ingredients',label:'Ingredients certified verified',type:'select',options:['Fully','Partial','Not verified']},
     {id:'cross_contamination',label:'Cross-contamination protocol',type:'select',options:['Strict','Partial','None']},
     {id:'supplier_check',label:'Supplier last checked',type:'text',placeholder:'e.g. March 2026'},
-    {id:'labelling',label:'Halal mark on products',type:'select',options:['All products','Some','None']},
-    {id:'staff_halal',label:'Staff trained on halal standards',type:'select',options:['All staff','Partial','Not trained']},
+    {id:'labelling',label:'Certification mark on products',type:'select',options:['All products','Some','None']},
+    {id:'staff_halal',label:'Staff trained on certification standards',type:'select',options:['All staff','Partial','Not trained']},
   ],
   wellness:[
     {id:'clinic',label:'Clinic environment (0–10)',type:'range'},
     {id:'records',label:'Patient records management',type:'select',options:['Fully compliant','Partial','Non-compliant']},
     {id:'equipment',label:'Equipment condition',type:'select',options:['Good','Needs attention','Non-functional items']},
     {id:'consent',label:'Consent and confidentiality protocols',type:'select',options:['In place','Partial','Absent']},
+  ],
+  banking:[
+    {id:'queue_time',label:'Average queue/wait time (mins)',type:'text',placeholder:'e.g. 12 mins'},
+    {id:'teller_conduct',label:'Teller/front-desk conduct (0–10)',type:'range'},
+    {id:'kyc_compliance',label:'KYC/documentation compliance',type:'select',options:['Fully compliant','Partial','Non-compliant']},
+    {id:'security',label:'Security & surveillance standard',type:'select',options:['Good','Needs attention','Issues noted']},
+    {id:'cash_handling',label:'Cash handling protocol observed',type:'select',options:['Followed','Partial','Not followed']},
+    {id:'complaint_handling',label:'Customer complaint handling',type:'textarea'},
   ],
   retail:[
     {id:'stock',label:'Stock accuracy (system vs physical)',type:'text',placeholder:'e.g. 97%'},
@@ -5124,22 +5141,28 @@ async function generateFullReport(){
   document.querySelector('#modal-invoice-pdf .modal-title').textContent='Full Client Report';
 }
 
+function populateReportNicheSelect(){
+  const sel=document.getElementById('rf-niche-select');
+  if(!sel||sel.options.length>1)return;
+  Object.keys(nicheFields).forEach(key=>{
+    const opt=document.createElement('option');
+    opt.value=key;
+    opt.textContent=nicheLabels[key]||key;
+    sel.appendChild(opt);
+  });
+}
 function renderTypeFields(){
+  populateReportNicheSelect();
   const base=typeFields[reportType]||[];
-  const niche=getClientNiche();
-  const extra=nicheFields[niche]||[];
+  const spotNiche=document.getElementById('rf-niche-select')?document.getElementById('rf-niche-select').value:'';
+  const extra=spotNiche?(nicheFields[spotNiche]||[]):[];
   const container=document.getElementById('type-fields');container.innerHTML='';
   const labels={audit:'Audit Scores & Observations',supervision:'Supervision Details',site_visit:'Site Visit Details',cx_mystery:'CX Mystery Visit Scoring',staff_training:'Training Session Details',brand_review:'Brand & Content Review',performance:'Performance Scores',kpi:'KPI Data'};
   document.getElementById('dynamic-sections').textContent=labels[reportType]||'';
-  // Update niche banner
-  const banner=document.getElementById('niche-report-banner');
-  if(banner){
-    if(niche&&niche!=='general'){banner.textContent=`${nicheLabels[niche]} — niche-specific fields included for this report type`;banner.style.background='var(--gold-light)';banner.style.color='var(--warn)';}
-    else if(niche==='general'){banner.textContent='General client — standard fields only';}
-    else{banner.textContent='Select a client to see niche-specific report fields';}
-  }
-  if(niche!=='general'&&extra.length){const b=document.createElement('div');b.style.cssText='background:var(--gold-light);border-left:3px solid var(--gold);padding:8px 14px;margin-bottom:12px;font-family:Arial;font-size:12px;color:var(--ink2);border-radius:9px;';b.textContent=`${nicheLabels[niche]} — niche fields included`;container.appendChild(b);}
-  const all=[...base,...(extra.length?[{id:'_div',label:`── ${nicheLabels[niche]} Specific ──`,type:'divider'}]:[]),...extra];
+  // Niche-specific spot-check fields only appear when YOU explicitly pick a
+  // focus above — never auto-derived from the client, so you can run a café
+  // spot check on any client, a school spot check on any client, etc.
+  const all=[...base,...(extra.length?[{id:'_div',label:`── ${nicheLabels[spotNiche]||spotNiche} Spot Check ──`,type:'divider'}]:[]),...extra];
   const grid=document.createElement('div');grid.className='form-grid';
   all.forEach(f=>{
     if(f.type==='divider'){const d=document.createElement('div');d.style.cssText='grid-column:1/-1;font-family:Arial;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--gold);margin-top:8px;padding-top:8px;border-top:1px solid var(--border);';d.textContent=f.label;grid.appendChild(d);return;}
@@ -5158,7 +5181,9 @@ function renderTypeFields(){
 async function saveReport(){
   const clientId=document.getElementById('rf-client').value;const date=document.getElementById('rf-date').value;const title=document.getElementById('rf-title').value.trim();const fb=document.getElementById('form-feedback');
   if(!clientId||!date||!title){fb.innerHTML='<div class="error-msg">Please fill in client, date, and title.</div>';return;}
-  const typeData={};(typeFields[reportType]||[]).concat(nicheFields[getClientNiche()]||[]).forEach(f=>{const el=document.getElementById('trf-'+f.id);if(el)typeData[f.id]=el.value;});
+  const spotNiche=document.getElementById('rf-niche-select')?document.getElementById('rf-niche-select').value:'';
+  const typeData={};(typeFields[reportType]||[]).concat(spotNiche?(nicheFields[spotNiche]||[]):[]).forEach(f=>{const el=document.getElementById('trf-'+f.id);if(el)typeData[f.id]=el.value;});
+  if(spotNiche)typeData._spot_check_niche=spotNiche;
   const {error}=await db.from('reports').insert({client_id:clientId,date,title,location:document.getElementById('rf-location').value.trim(),report_type:reportType,summary:document.getElementById('rf-summary').value.trim(),action_items:document.getElementById('rf-actions').value.trim(),recommendations:document.getElementById('rf-recs').value.trim(),type_data:typeData});
   if(error){fb.innerHTML=`<div class="error-msg">${error.message}</div>`;return;}
   fb.innerHTML='<div class="success-msg">✓ Report saved.</div>';
@@ -7455,6 +7480,30 @@ async function loadDashboard(){
   if(donutCtx&&totalUrgent2>0){
     window._dashUrgentDonut=new Chart(donutCtx,{type:'doughnut',data:{labels:['Trainings','Stock','Bills'],datasets:[{data:[dashShows('overdueTrainings')?overdueTrainings.length:0,dashShows('lowStock')?lowStock.length:0,dashShows('overdueBills')?overdueBills.length:0],backgroundColor:['#C9A24B','#E8B4A8','#A12F2F'],borderWidth:0}]},options:{cutout:'65%',plugins:{legend:{display:false},tooltip:{enabled:true}}}});
   }
+  await loadDashboardDeptSection();
+}
+async function loadDashboardDeptSection(deptOverride){
+  const wrap=document.getElementById('dashboard-dept-section');
+  if(!wrap)return;
+  const dept=deptOverride||currentUser.department||'';
+  const deptList=currentUser.isOwner&&!deptOverride
+    ? ['operations','hr','social_media','customer_service','finance','project_management'] // owner sees every department's dashboard by default
+    : dept.split(',').map(d=>d.trim().toLowerCase());
+  window._mwChartData={};
+  const builders=[];
+  const seen=new Set();
+  const add=(key,fn)=>{if(deptList.includes(key)&&!seen.has(fn)){seen.add(fn);builders.push(fn('dash'));}};
+  add('operations',myWorkOperationsHtml);
+  add('hr',myWorkHrHtml);
+  add('social_media',myWorkSocialHtml);
+  add('customer_service',myWorkCsHtml);
+  add('finance',myWorkFinanceHtml);
+  add('project_management',myWorkProjectManagementHtml);
+  if(!builders.length){wrap.innerHTML='';return;}
+  wrap.innerHTML='<p style="font-size:12px;color:var(--muted)">Loading your department dashboard…</p>';
+  const parts=await Promise.all(builders);
+  wrap.innerHTML=parts.join('');
+  setTimeout(()=>renderMyWorkCharts('dash'),30);
 }
 // ══ COURSE CONTENT MANAGER (admin: add questions to knowledge_test / practical_scenario modules) ══
 async function openCourseContentManager(){
@@ -8212,13 +8261,38 @@ async function sendTalentToPipeline(id){
   loadTalentPool();
 }
 
-async function myWorkOperationsHtml(){
+function _mwSectionHeader(icon,label){
+  return `<div style="border-radius:14px;background:linear-gradient(120deg,var(--ink) 0%,var(--ink2) 100%);padding:16px 20px;margin:22px 0 14px;display:flex;align-items:center;gap:10px">
+    <span style="font-size:20px">${icon}</span><span style="font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600;color:#fff;letter-spacing:.02em">${label}</span>
+  </div>`;
+}
+function _mwKpi(icon,val,label,tone){
+  return `<div class="card" style="padding:16px 18px;display:flex;align-items:center;gap:12px">
+    <div style="width:40px;height:40px;border-radius:11px;background:var(--${tone||'gold'}-light,var(--gold-light));display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">${icon}</div>
+    <div><div style="font-size:24px;font-family:'Cormorant Garamond',serif;font-weight:700;color:${tone==='danger'&&val>0?'var(--danger)':'var(--ink)'}">${val}</div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">${label}</div></div>
+  </div>`;
+}
+async function myWorkOperationsHtml(scope){
+  scope=scope||"mw";
   const [{data:complaints},{data:actions}]=await Promise.all([
     db.from('complaints').select('*,clients(business_name)').neq('status','Resolved').order('date',{ascending:false}),
     db.from('actions').select('*,clients(business_name)').neq('status','Done').order('due_date',{ascending:true})
   ]);
+  const byPriority={High:0,Medium:0,Low:0};
+  (actions||[]).forEach(a=>{byPriority[a.priority]=(byPriority[a.priority]||0)+1;});
+  const bySeverity={};
+  (complaints||[]).forEach(c=>{bySeverity[c.severity||'Unspecified']=(bySeverity[c.severity||'Unspecified']||0)+1;});
+  window._mwChartData=window._mwChartData||{};window._mwChartData[scope]=window._mwChartData[scope]||{};window._mwChartData[scope].ops={priority:byPriority,severity:bySeverity};
   return `
-    <div style="font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--gold);font-weight:600;margin:18px 0 10px">Operations</div>
+    ${_mwSectionHeader('⚙️','Operations & Admin')}
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:16px">
+      ${_mwKpi('📣',(complaints||[]).length,'Open Complaints',(complaints||[]).length?'danger':null)}
+      ${_mwKpi('✅',(actions||[]).length,'Open Actions','gold')}
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;margin-bottom:16px">
+      <div class="card" style="padding:16px"><div style="font-size:12px;color:var(--muted);margin-bottom:8px;font-weight:600">Actions by Priority</div><canvas id="${scope}-ops-priority" height="160"></canvas></div>
+      <div class="card" style="padding:16px"><div style="font-size:12px;color:var(--muted);margin-bottom:8px;font-weight:600">Complaints by Severity</div><canvas id="${scope}-ops-severity" height="160"></canvas></div>
+    </div>
     <div class="card" style="padding:18px 20px;margin-bottom:16px">
       <div style="font-size:13px;font-weight:600;margin-bottom:10px">📣 Open Complaints (${(complaints||[]).length})</div>
       ${(complaints||[]).length?(complaints||[]).map(c=>`<div style="border:1px solid var(--border);border-radius:9px;padding:10px 14px;margin-bottom:8px">
@@ -8232,17 +8306,36 @@ async function myWorkOperationsHtml(){
         <strong style="font-size:13px">${(a.clients&&a.clients.business_name)||'—'}</strong>${a.owner?`<span class="badge" style="margin-left:8px;background:var(--surface2);color:var(--ink)">${a.owner}</span>`:''}<br>
         <span style="font-size:12px;color:var(--muted)">${a.description||''}${a.due_date?' — due '+a.due_date:''}</span>
       </div>`).join(''):'<p style="font-size:12px;color:var(--muted)">Nothing outstanding.</p>'}
-    </div>`;
+    </div>
+    `;
 }
-async function myWorkHrHtml(){
-  const [{data:leave},{data:candidates},{data:trainings}]=await Promise.all([
+async function myWorkHrHtml(scope){
+  scope=scope||"mw";
+  const [{data:leave},{data:candidates},{data:trainings},{data:staff}]=await Promise.all([
     db.from('staff_leave_requests').select('*,client_staff(name),clients(business_name)').eq('status','Pending').order('created_at',{ascending:false}),
     db.from('staff_candidates').select('*,clients(business_name)').eq('status','Under Review').order('created_at',{ascending:false}),
-    db.from('staff_trainings').select('*,client_staff(name,client_id,clients(business_name))').neq('status','Completed').order('due_date',{ascending:true})
+    db.from('staff_trainings').select('*,client_staff(name,client_id,clients(business_name))').neq('status','Completed').order('due_date',{ascending:true}),
+    db.from('client_staff').select('employment_type,attrition_risk').neq('status','Terminated')
   ]);
   const overdueTrainings=(trainings||[]).filter(t=>t.due_date&&new Date(t.due_date)<new Date());
+  const fte={full_time:0,part_time:0,contract:0,unspecified:0};
+  (staff||[]).forEach(s=>{fte[s.employment_type||'unspecified']++;});
+  const risk={low:0,medium:0,high:0,unassessed:0};
+  (staff||[]).forEach(s=>{risk[s.attrition_risk||'unassessed']++;});
+  window._mwChartData=window._mwChartData||{};window._mwChartData[scope]=window._mwChartData[scope]||{};window._mwChartData[scope].hr={fte,risk};
   return `
-    <div style="font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--gold);font-weight:600;margin:18px 0 10px">HR</div>
+    ${_mwSectionHeader('🧑‍💼','HR & Social Media')}
+    <div style="font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--gold);font-weight:700;margin-bottom:10px">HR</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:16px">
+      ${_mwKpi('🌴',(leave||[]).length,'Pending Leave','gold')}
+      ${_mwKpi('🧑‍🎓',(candidates||[]).length,'Candidates Under Review','gold')}
+      ${_mwKpi('⚠️',overdueTrainings.length,'Overdue Trainings',overdueTrainings.length?'danger':null)}
+      ${_mwKpi('🔺',risk.high,'High Attrition Risk',risk.high?'danger':null)}
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;margin-bottom:16px">
+      <div class="card" style="padding:16px"><div style="font-size:12px;color:var(--muted);margin-bottom:8px;font-weight:600">Staff by Employment Type</div><canvas id="${scope}-hr-fte" height="160"></canvas></div>
+      <div class="card" style="padding:16px"><div style="font-size:12px;color:var(--muted);margin-bottom:8px;font-weight:600">Attrition Risk</div><canvas id="${scope}-hr-risk" height="160"></canvas></div>
+    </div>
     <div class="card" style="padding:18px 20px;margin-bottom:16px">
       <div style="font-size:13px;font-weight:600;margin-bottom:10px">🌴 Pending Leave Requests (${(leave||[]).length})</div>
       ${(leave||[]).length?(leave||[]).map(l=>`<div style="border:1px solid var(--border);border-radius:9px;padding:10px 14px;margin-bottom:8px">
@@ -8264,15 +8357,25 @@ async function myWorkHrHtml(){
         <strong style="font-size:13px">${(t.client_staff&&t.client_staff.name)||'—'}</strong> · ${(t.client_staff&&t.client_staff.clients&&t.client_staff.clients.business_name)||'—'}<br>
         <span style="font-size:12px;color:var(--danger)">${t.training_name} — was due ${t.due_date}</span>
       </div>`).join(''):'<p style="font-size:12px;color:var(--muted)">Nothing overdue.</p>'}
-    </div>`;
+    </div>
+    `;
 }
-async function myWorkSocialHtml(){
+async function myWorkSocialHtml(scope){
+  scope=scope||"mw";
   const [{data:events},{data:notices}]=await Promise.all([
     db.from('events').select('*,clients(business_name)').gte('event_date',new Date().toISOString().slice(0,10)).order('event_date',{ascending:true}).limit(20),
     db.from('client_notices').select('*,clients(business_name)').order('created_at',{ascending:false}).limit(15)
   ]);
+  const byClient={};
+  (events||[]).forEach(e=>{const c=(e.clients&&e.clients.business_name)||'Unassigned';byClient[c]=(byClient[c]||0)+1;});
+  window._mwChartData=window._mwChartData||{};window._mwChartData[scope]=window._mwChartData[scope]||{};window._mwChartData[scope].social={events:byClient};
   return `
-    <div style="font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--gold);font-weight:600;margin:18px 0 10px">Social Media</div>
+    <div style="font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--gold);font-weight:700;margin:20px 0 10px">Social Media</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:16px">
+      ${_mwKpi('📅',(events||[]).length,'Upcoming Events','gold')}
+      ${_mwKpi('📌',(notices||[]).length,'Recent Notices','gold')}
+    </div>
+    <div class="card" style="padding:16px;margin-bottom:16px;max-width:400px"><div style="font-size:12px;color:var(--muted);margin-bottom:8px;font-weight:600">Upcoming Events by Client</div><canvas id="${scope}-social-events" height="160"></canvas></div>
     <div class="card" style="padding:18px 20px;margin-bottom:16px">
       <div style="font-size:13px;font-weight:600;margin-bottom:10px">📅 Upcoming Events — All Clients (${(events||[]).length})</div>
       ${(events||[]).length?(events||[]).map(e=>`<div style="border:1px solid var(--border);border-radius:9px;padding:10px 14px;margin-bottom:8px">
@@ -8286,10 +8389,141 @@ async function myWorkSocialHtml(){
         <strong style="font-size:13px">${n.title}</strong> · ${(n.clients&&n.clients.business_name)||'—'}<br>
         <span style="font-size:12px;color:var(--ink2)">${n.message||''}</span>
       </div>`).join(''):'<p style="font-size:12px;color:var(--muted)">No notices posted yet.</p>'}
-      <div style="font-size:11px;color:var(--muted);margin-top:10px">Note: a dedicated content/social calendar module isn't built yet — this pulls from Events and Notice Board for now. Let Wahida know if you need a proper content planner added.</div>
-    </div>`;
+      <div style="font-size:11px;color:var(--muted);margin-top:10px">Note: a dedicated content/social calendar module isn't built yet — this pulls from Events and Notice Board for now.</div>
+    </div>
+    `;
 }
-async function myWorkCsHtml(){
+async function myWorkFinanceHtml(scope){
+  scope=scope||"mw";
+  const [{data:invoices},{data:expenditure}]=await Promise.all([
+    db.from('invoices').select('*,clients(business_name)').order('created_at',{ascending:false}),
+    db.from('expenditure').select('*').gte('date',new Date(new Date().setDate(1)).toISOString().slice(0,10))
+  ]);
+  const statusCounts={Paid:0,Partial:0,Unpaid:0};
+  (invoices||[]).forEach(i=>{statusCounts[i.status]=(statusCounts[i.status]||0)+1;});
+  const overdue=(invoices||[]).filter(i=>i.status!=='Paid'&&i.due_date&&i.due_date<new Date().toISOString().slice(0,10));
+  const byCategory={};
+  (expenditure||[]).forEach(e=>{byCategory[e.category||'Other']=(byCategory[e.category||'Other']||0)+Number(e.amount||0);});
+  const totalExpThisMonth=(expenditure||[]).reduce((s,e)=>s+Number(e.amount||0),0);
+  window._mwChartData=window._mwChartData||{};window._mwChartData[scope]=window._mwChartData[scope]||{};window._mwChartData[scope].finance={status:statusCounts,category:byCategory};
+  return `
+    ${_mwSectionHeader('💰','Finance')}
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:16px">
+      ${_mwKpi('📄',(invoices||[]).length,'Total Invoices','gold')}
+      ${_mwKpi('⚠️',overdue.length,'Overdue Invoices',overdue.length?'danger':null)}
+      ${_mwKpi('💸','₦'+totalExpThisMonth.toLocaleString(),'Spend This Month','gold')}
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;margin-bottom:16px">
+      <div class="card" style="padding:16px"><div style="font-size:12px;color:var(--muted);margin-bottom:8px;font-weight:600">Invoices by Status</div><canvas id="${scope}-fin-status" height="160"></canvas></div>
+      <div class="card" style="padding:16px"><div style="font-size:12px;color:var(--muted);margin-bottom:8px;font-weight:600">Expenditure by Category (This Month)</div><canvas id="${scope}-fin-category" height="160"></canvas></div>
+    </div>
+    <div class="card" style="padding:18px 20px">
+      <div style="font-size:13px;font-weight:600;margin-bottom:10px">⚠ Overdue Invoices (${overdue.length})</div>
+      ${overdue.length?overdue.map(i=>`<div style="border:1px solid var(--border);border-radius:9px;padding:10px 14px;margin-bottom:8px;background:var(--danger-light)">
+        <strong style="font-size:13px">${(i.clients&&i.clients.business_name)||'—'}</strong><br>
+        <span style="font-size:12px;color:var(--danger)">₦${Number(i.amount||0).toLocaleString()} — due ${i.due_date}</span>
+      </div>`).join(''):'<p style="font-size:12px;color:var(--muted)">Nothing overdue.</p>'}
+    </div>
+    `;
+}
+async function myWorkProjectManagementHtml(scope){
+  scope=scope||"mw";
+  const [{data:projects},{data:risks},{data:tasks}]=await Promise.all([
+    db.from('projects').select('id,status'),
+    db.from('project_risks').select('impact,status').eq('status','open'),
+    db.from('project_tasks').select('status,due_date,title,project_id')
+  ]);
+  const today=new Date().toISOString().slice(0,10);
+  const overdueTasks=(tasks||[]).filter(t=>t.due_date&&t.due_date<today&&t.status!=='done');
+  const statusCounts={planning:0,active:0,on_hold:0,completed:0};
+  (projects||[]).forEach(p=>{statusCounts[p.status]=(statusCounts[p.status]||0)+1;});
+  const riskCounts={low:0,medium:0,high:0};
+  (risks||[]).forEach(r=>{riskCounts[r.impact]=(riskCounts[r.impact]||0)+1;});
+  window._mwChartData=window._mwChartData||{};window._mwChartData[scope]=window._mwChartData[scope]||{};window._mwChartData[scope].pm={status:statusCounts,risk:riskCounts};
+  return `
+    ${_mwSectionHeader('📁','Project Management')}
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:16px">
+      ${_mwKpi('📁',(projects||[]).length,'Total Projects','gold')}
+      ${_mwKpi('🟢',statusCounts.active||0,'Active Projects','success')}
+      ${_mwKpi('⚠️',overdueTasks.length,'Overdue Tasks',overdueTasks.length?'danger':null)}
+      ${_mwKpi('🔺',riskCounts.high||0,'High-Impact Open Risks',riskCounts.high?'danger':null)}
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;margin-bottom:16px">
+      <div class="card" style="padding:16px"><div style="font-size:12px;color:var(--muted);margin-bottom:8px;font-weight:600">Projects by Status</div><canvas id="${scope}-pm-status" height="160"></canvas></div>
+      <div class="card" style="padding:16px"><div style="font-size:12px;color:var(--muted);margin-bottom:8px;font-weight:600">Open Risks by Impact</div><canvas id="${scope}-pm-risk" height="160"></canvas></div>
+    </div>
+    <div class="card" style="padding:18px 20px">
+      <div style="font-size:13px;font-weight:600;margin-bottom:10px">⚠ Overdue Tasks (${overdueTasks.length})</div>
+      ${overdueTasks.length?overdueTasks.map(t=>`<div style="border:1px solid var(--border);border-radius:9px;padding:10px 14px;margin-bottom:8px;background:var(--danger-light)">
+        <strong style="font-size:13px">${t.title}</strong><br><span style="font-size:12px;color:var(--danger)">Was due ${t.due_date}</span>
+      </div>`).join(''):'<p style="font-size:12px;color:var(--muted)">Nothing overdue.</p>'}
+      <div style="font-size:11px;color:var(--muted);margin-top:10px">Full task boards, risk register, and benefit tracking live in the 📁 Projects tab.</div>
+    </div>
+    `;
+}
+function renderMyWorkCharts(scope){
+  scope=scope||'mw';
+  const d=(window._mwChartData&&window._mwChartData[scope])||{};
+  const destroy=id=>{if(window['_mwc_'+id]){window['_mwc_'+id].destroy();window['_mwc_'+id]=null;}};
+  const mk=(id,type,labels,data,colors,opts)=>{
+    const ctx=document.getElementById(id);if(!ctx)return;
+    destroy(id);
+    window['_mwc_'+id]=new Chart(ctx,{type,data:{labels,datasets:[{data,backgroundColor:colors,borderWidth:type==='bar'?0:0}]},options:Object.assign({plugins:{legend:{position:'bottom',labels:{font:{size:10}}}}},opts||{})});
+  };
+  if(d.ops){
+    mk(`${scope}-ops-priority`,'doughnut',['High','Medium','Low'],[d.ops.priority.High||0,d.ops.priority.Medium||0,d.ops.priority.Low||0],['#A12F2F','#C9A24B','#9AA0A6']);
+    const sevLabels=Object.keys(d.ops.severity);
+    mk(`${scope}-ops-severity`,'bar',sevLabels,sevLabels.map(k=>d.ops.severity[k]),'#A12F2F',{plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{stepSize:1}}}});
+  }
+  if(d.hr){
+    mk(`${scope}-hr-fte`,'pie',['Full-Time','Part-Time','Contract','Unspecified'],[d.hr.fte.full_time,d.hr.fte.part_time,d.hr.fte.contract,d.hr.fte.unspecified],['#1A5C38','#C9A24B','#28395e','#9AA0A6']);
+    mk(`${scope}-hr-risk`,'doughnut',['Low','Medium','High','Not Assessed'],[d.hr.risk.low,d.hr.risk.medium,d.hr.risk.high,d.hr.risk.unassessed],['#2f7d4f','#C9A24B','#A12F2F','#9AA0A6']);
+  }
+  if(d.social){
+    const labels=Object.keys(d.social.events);
+    mk(`${scope}-social-events`,'pie',labels,labels.map(k=>d.social.events[k]),['#C9A24B','#1B2A4A','#28395e','#9AA0A6','#A12F2F','#2f7d4f']);
+  }
+  if(d.finance){
+    mk(`${scope}-fin-status`,'doughnut',['Paid','Partial','Unpaid'],[d.finance.status.Paid||0,d.finance.status.Partial||0,d.finance.status.Unpaid||0],['#2f7d4f','#C9A24B','#A12F2F']);
+    const catLabels=Object.keys(d.finance.category);
+    mk(`${scope}-fin-category`,'bar',catLabels,catLabels.map(k=>d.finance.category[k]),'#C9A24B',{plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}}});
+  }
+  if(d.pm){
+    mk(`${scope}-pm-status`,'doughnut',['Planning','Active','On Hold','Completed'],[d.pm.status.planning,d.pm.status.active,d.pm.status.on_hold,d.pm.status.completed],['#C9A24B','#1A5C38','#A12F2F','#9AA0A6']);
+    mk(`${scope}-pm-risk`,'bar',['Low','Medium','High'],[d.pm.risk.low,d.pm.risk.medium,d.pm.risk.high],'#A12F2F',{plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{stepSize:1}}}});
+  }
+}
+async function loadMyWork(deptOverride){
+  const el=document.getElementById('mywork-content');
+  el.innerHTML='<p style="font-size:13px;color:var(--muted)">Loading…</p>';
+  const switcher=document.getElementById('mywork-switcher');
+  if(currentUser.isOwner&&switcher){
+    switcher.style.display='block';
+    if(deptOverride)document.getElementById('mywork-dept-select').value=deptOverride;
+  }
+  const dept=deptOverride||currentUser.department||'operations';
+  // Multi-department logins (e.g. "hr,social_media") combine every matching
+  // section instead of matching one exact string — a single-department string
+  // still works fine since it's just a one-item list.
+  const deptList=dept.split(',').map(d=>d.trim().toLowerCase());
+  window._mwChartData={};
+  const builders=[];
+  if(deptList.includes('operations'))builders.push(myWorkOperationsHtml('mw'));
+  if(deptList.includes('hr'))builders.push(myWorkHrHtml('mw'));
+  if(deptList.includes('social_media'))builders.push(myWorkSocialHtml('mw'));
+  if(deptList.includes('customer_service'))builders.push(myWorkCsHtml('mw'));
+  if(deptList.includes('finance'))builders.push(myWorkFinanceHtml('mw'));
+  if(deptList.includes('project_management'))builders.push(myWorkProjectManagementHtml('mw'));
+  if(!builders.length){
+    el.innerHTML='<p style="font-size:13px;color:var(--muted)">This dashboard is set up for Operations, HR, Social Media, Customer Service, Finance, and Project Management roles.</p>';
+    return;
+  }
+  const parts=await Promise.all(builders);
+  el.innerHTML=parts.join('');
+  setTimeout(()=>renderMyWorkCharts('mw'),30);
+}
+async function myWorkCsHtml(scope){
+  scope=scope||"mw";
   const [{data:complaints},{data:messages},{data:requests}]=await Promise.all([
     db.from('complaints').select('*,clients(business_name)').neq('status','Resolved').order('date',{ascending:false}),
     db.from('client_messages').select('*,clients(business_name)').eq('read_by_admin',false).order('created_at',{ascending:false}),
