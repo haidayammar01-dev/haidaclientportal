@@ -688,7 +688,7 @@ self.addEventListener('notificationclick',function(e){
       <button class="tab-btn" onclick="showAdminTab('complaints',this)">Complaints</button>
       <button class="tab-btn" onclick="showAdminTab('eventplanner',this)">🎪 Event Planner</button>
       <button class="tab-btn" onclick="showAdminTab('actions',this)">Action Tracker</button>
-      <button class="tab-btn" onclick="showAdminTab('projects',this)">📁 Projects</button>
+      <button class="tab-btn" id="projects-tab-btn" data-dept="project_management" style="display:none" onclick="showAdminTab('projects',this)">📁 Projects</button>
       <button class="tab-btn" onclick="showAdminTab('staff',this)">Client Staff</button>
       <button class="tab-btn" onclick="showAdminTab('contracts',this)">Contracts</button>
       <button class="tab-btn" onclick="showAdminTab('documents',this)">Documents</button>
@@ -956,25 +956,61 @@ self.addEventListener('notificationclick',function(e){
       </div>
 
       <div class="page" id="page-staff">
-        <div class="page-title">Client Staff Records</div>
-        <div class="page-sub">Staff members employed by clients — flags, performance notes, training records</div>
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px">
-          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-            <select id="staff-client-filter" onchange="filterStaffByClient()" style="padding:7px 12px;border:1px solid var(--border);border-radius:9px;font-family:Arial;font-size:13px;color:var(--ink);min-width:200px">
-              <option value="">All Clients</option>
-            </select>
-            <select id="staff-status-filter" onchange="filterStaffByClient()" style="padding:7px 12px;border:1px solid var(--border);border-radius:9px;font-family:Arial;font-size:13px;color:var(--ink)">
-              <option value="">All Statuses</option>
-              <option value="Active">Active</option>
-              <option value="Probation">Probation</option>
-              <option value="Flagged">Flagged</option>
-              <option value="Terminated">Terminated</option>
-            </select>
-          </div>
-          <button class="btn-add" onclick="openModal('modal-add-staff')">+ Add Staff Member</button>
+        <div class="page-title">HR — Client Staff</div>
+        <div class="page-sub">Staff records, org structure, applicant pipeline and workforce health, in one place</div>
+        <div style="display:flex;gap:8px;margin-bottom:16px;border-bottom:1px solid var(--border);flex-wrap:wrap">
+          <button class="inner-tab hr-subtab active" id="hrsub-directory" onclick="showHrSubTab('directory')">Directory</button>
+          <button class="inner-tab hr-subtab" id="hrsub-overview" onclick="showHrSubTab('overview')">📊 HR Overview</button>
+          <button class="inner-tab hr-subtab" id="hrsub-applicants" onclick="showHrSubTab('applicants')">🧑‍🎓 Applicants</button>
         </div>
-        <div id="staff-cards-wrap" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px">
-          <p style="font-family:Arial;font-size:13px;color:var(--muted)">Loading…</p>
+
+        <div id="hr-panel-directory">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+              <select id="staff-client-filter" onchange="filterStaffByClient()" style="padding:7px 12px;border:1px solid var(--border);border-radius:9px;font-family:Arial;font-size:13px;color:var(--ink);min-width:200px">
+                <option value="">All Clients</option>
+              </select>
+              <select id="staff-status-filter" onchange="filterStaffByClient()" style="padding:7px 12px;border:1px solid var(--border);border-radius:9px;font-family:Arial;font-size:13px;color:var(--ink)">
+                <option value="">All Statuses</option>
+                <option value="Active">Active</option>
+                <option value="Probation">Probation</option>
+                <option value="Flagged">Flagged</option>
+                <option value="Terminated">Terminated</option>
+              </select>
+              <select id="staff-supervisor-filter" onchange="filterStaffByClient()" style="padding:7px 12px;border:1px solid var(--border);border-radius:9px;font-family:Arial;font-size:13px;color:var(--ink)">
+                <option value="">All Supervisors</option>
+              </select>
+            </div>
+            <button class="btn-add" onclick="openModal('modal-add-staff')">+ Add Staff Member</button>
+          </div>
+          <div id="staff-cards-wrap" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px">
+            <p style="font-family:Arial;font-size:13px;color:var(--muted)">Loading…</p>
+          </div>
+        </div>
+
+        <div id="hr-panel-overview" style="display:none">
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-bottom:20px" id="hr-overview-kpis"></div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;margin-bottom:20px">
+            <div class="card" style="padding:16px"><div style="font-size:12px;color:var(--muted);margin-bottom:8px;font-weight:600">Staff by Employment Type</div><canvas id="hr-chart-fte" height="200"></canvas></div>
+            <div class="card" style="padding:16px"><div style="font-size:12px;color:var(--muted);margin-bottom:8px;font-weight:600">Attrition Risk</div><canvas id="hr-chart-attrition" height="200"></canvas></div>
+            <div class="card" style="padding:16px"><div style="font-size:12px;color:var(--muted);margin-bottom:8px;font-weight:600">Staff by Client</div><canvas id="hr-chart-byclient" height="200"></canvas></div>
+          </div>
+          <div class="card" style="padding:0;overflow:hidden">
+            <div style="padding:14px 18px;border-bottom:1px solid var(--border);font-size:13px;font-weight:600">⚠ Attrition Risk Watchlist</div>
+            <div id="hr-attrition-watchlist"></div>
+          </div>
+        </div>
+
+        <div id="hr-panel-applicants" style="display:none">
+          <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
+            <select id="hr-applicant-client-filter" onchange="loadHrApplicants()" style="padding:7px 12px;border:1px solid var(--border);border-radius:9px;font-family:Arial;font-size:13px"><option value="">All Clients</option></select>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px" id="hr-applicant-board">
+            <div><div style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:8px;font-weight:600">Under Review</div><div id="hr-app-col-under_review"></div></div>
+            <div><div style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:8px;font-weight:600">Interviewing</div><div id="hr-app-col-interviewing"></div></div>
+            <div><div style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:8px;font-weight:600">Offer</div><div id="hr-app-col-offer"></div></div>
+            <div><div style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:8px;font-weight:600">Hired</div><div id="hr-app-col-hired"></div></div>
+          </div>
         </div>
       </div>
 
@@ -3220,7 +3256,15 @@ self.addEventListener('notificationclick',function(e){
             <input type="text" id="sd-e-photo" placeholder="Or paste a photo link">
             <div style="font-size:11px;color:var(--muted);margin-top:4px">Uploading here saves the photo immediately — no need to click Save Profile for this field.</div>
           </div>
+          <div class="form-field"><label>Employment Type</label><select id="sd-e-emptype"><option value="full_time">Full-Time</option><option value="part_time">Part-Time</option><option value="contract">Contract</option></select></div>
+          <div class="form-field"><label>Supervisor</label><input type="text" id="sd-e-supervisor" placeholder="Name of who they report to"></div>
+          <div class="form-field"><label>Date of Birth</label><input type="date" id="sd-e-dob"></div>
+          <div class="form-field"><label>Next of Kin</label><input type="text" id="sd-e-nok"></div>
+          <div class="form-field"><label>Next of Kin Phone</label><input type="text" id="sd-e-nokphone"></div>
+          <div class="form-field"><label>ID Document Link</label><input type="text" id="sd-e-iddoc" placeholder="Link to uploaded ID/document"></div>
+          <div class="form-field"><label>Attrition Risk</label><select id="sd-e-attrisk"><option value="">Not assessed</option><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option></select></div>
         </div>
+        <div class="form-field" style="margin-top:10px"><label>Attrition Risk Note</label><textarea id="sd-e-attrisknote" rows="2" placeholder="Why this risk level — e.g. attendance pattern, exit signals, market pull"></textarea></div>
         <div class="form-field" style="margin-top:10px"><label>Performance Notes</label><textarea id="sd-e-notes" rows="2"></textarea></div>
         <button class="btn-save" onclick="saveSdProfile()" style="margin-top:12px">Save Profile</button>
         <div id="sd-e-feedback" style="margin-top:8px"></div>
@@ -4437,6 +4481,10 @@ function applyDepartmentVisibility(){
     document.getElementById('income-tab-btn').style.display='';
     loadInvoices();loadExpenditure();
   }
+  // Projects is Project-Management-only (plus owner, handled by the early return above).
+  const deptList=dept.split(',').map(d=>d.trim().toLowerCase());
+  const projBtn=document.getElementById('projects-tab-btn');
+  if(projBtn)projBtn.style.display=deptList.includes('project_management')?'block':'none';
 }
 
 // ══ CLIENT SERVICE PACKAGES ══
@@ -4480,6 +4528,7 @@ function showApp(){
     if(currentUser.isOwner)document.getElementById('activitylog-tab-btn').style.display='';
     document.getElementById('staffrecords-tab-btn').style.display='';
     document.getElementById('onboarding-tab-btn').style.display='';
+    document.getElementById('projects-tab-btn').style.display='block';
     loadInvoices();
     loadExpenditure();
     loadNotifications();
@@ -5428,7 +5477,7 @@ const _pmoState={currentProjectId:null};
 function canSeeProjectCost(){
   if(!currentUser)return false;
   if(currentUser.isOwner)return true;
-  const dept=(currentUser.department||'').split(',').map(d=>d.trim());
+  const dept=(currentUser.department||'').split(',').map(d=>d.trim().toLowerCase());
   return dept.includes('finance')||dept.includes('project_management');
 }
 function showPmoTab(which){
@@ -5792,10 +5841,20 @@ async function saveAction(){
 
 // ══ CLIENT STAFF ══
 let _allStaff = [];
+let _staffTrainingCounts = {};
 
 async function loadStaff(){
   const {data}=await db.from('client_staff').select('*,clients(business_name)').order('created_at',{ascending:false});
   _allStaff = data||[];
+  const {data:trainings}=await db.from('staff_trainings').select('staff_id,status,due_date');
+  _staffTrainingCounts={};
+  const today=new Date().toISOString().slice(0,10);
+  (trainings||[]).forEach(t=>{
+    const c=_staffTrainingCounts[t.staff_id]=_staffTrainingCounts[t.staff_id]||{completed:0,overdue:0,pending:0};
+    if(t.status==='Completed')c.completed++;
+    else if(t.due_date&&t.due_date<today)c.overdue++;
+    else c.pending++;
+  });
   // Populate client filter dropdown
   const sel = document.getElementById('staff-client-filter');
   if(sel){
@@ -5803,16 +5862,24 @@ async function loadStaff(){
     const clientNames = [...new Set(_allStaff.map(s=>s.clients?.business_name).filter(Boolean))].sort();
     sel.innerHTML = '<option value="">All Clients</option>' + clientNames.map(n=>`<option value="${n}" ${n===currentVal?'selected':''}>${n}</option>`).join('');
   }
+  const supSel=document.getElementById('staff-supervisor-filter');
+  if(supSel){
+    const currentSup=supSel.value;
+    const supervisors=[...new Set(_allStaff.map(s=>s.supervisor_name).filter(Boolean))].sort();
+    supSel.innerHTML='<option value="">All Supervisors</option>'+supervisors.map(n=>`<option value="${n}" ${n===currentSup?'selected':''}>${n}</option>`).join('');
+  }
   filterStaffByClient();
 }
 
 function filterStaffByClient(){
   const clientFilter = document.getElementById('staff-client-filter')?.value || '';
   const statusFilter = document.getElementById('staff-status-filter')?.value || '';
+  const supervisorFilter = document.getElementById('staff-supervisor-filter')?.value || '';
   const filtered = _allStaff.filter(s => {
     const nameMatch = !clientFilter || (s.clients?.business_name === clientFilter);
     const statusMatch = !statusFilter || s.status === statusFilter;
-    return nameMatch && statusMatch;
+    const supMatch = !supervisorFilter || s.supervisor_name === supervisorFilter;
+    return nameMatch && statusMatch && supMatch;
   });
   renderStaffTable(filtered);
 }
@@ -5823,16 +5890,25 @@ function renderStaffTable(staff){
   if(!staff.length){wrap.innerHTML='<p style="font-size:13px;color:var(--muted)">No staff records.</p>';return;}
   wrap.className='staff-grid';
   const sb={Active:'badge-green',Probation:'badge-gold',Flagged:'badge-red',Terminated:'badge-gray'};
+  const riskColor={low:'var(--success)',medium:'var(--warn)',high:'var(--danger)'};
   wrap.innerHTML=staff.map(s=>{
     const strikes=parseInt(s.strike_count)||0;
     const dots='<span class="strike-dot"></span>'.repeat(strikes)+'<span class="strike-empty"></span>'.repeat(Math.max(0,3-strikes));
     const initial=(s.name||'?').charAt(0).toUpperCase();
+    const tc=(_staffTrainingCounts&&_staffTrainingCounts[s.id])||{completed:0,overdue:0,pending:0};
+    const trainingBadge=tc.overdue>0
+      ?`<span class="badge badge-red" title="Overdue trainings">⚠ ${tc.overdue} overdue</span>`
+      :(tc.completed+tc.pending>0?`<span class="badge badge-green" title="Trainings on track">✓ ${tc.completed}/${tc.completed+tc.pending+tc.overdue} trainings</span>`:'');
+    const riskBadge=s.attrition_risk?`<span style="display:inline-flex;align-items:center;gap:4px;font-size:10.5px;color:${riskColor[s.attrition_risk]||'var(--muted)'};font-weight:600;text-transform:uppercase;letter-spacing:.3px"><span style="width:7px;height:7px;border-radius:50%;background:${riskColor[s.attrition_risk]||'var(--muted)'}"></span>${s.attrition_risk} attrition risk</span>`:'';
     return`<div class="staff-card" onclick="openStaffDetail('${s.id}')">
       ${s.photo_url?`<img src="${s.photo_url}" class="staff-photo">`:`<div class="staff-photo ph">${initial}</div>`}
       <div class="sc-name">${s.name}</div>
       <div class="sc-role">${s.role||'—'}${s.employee_id?' · '+s.employee_id:''}</div>
-      <div class="sc-meta"><span class="badge ${sb[s.status]||'badge-gray'}">${s.status}</span></div>
+      <div class="sc-meta"><span class="badge ${sb[s.status]||'badge-gray'}">${s.status}</span>${s.employment_type?` <span class="badge badge-gray">${s.employment_type.replace('_',' ')}</span>`:''}</div>
       <div class="sc-meta">${(s.clients&&s.clients.business_name)||'—'} · Rating <span class="sc-rating">${s.rating!=null?s.rating:'—'}</span></div>
+      ${s.supervisor_name?`<div class="sc-meta" style="font-size:11px;color:var(--muted)">Reports to: ${s.supervisor_name}</div>`:''}
+      <div style="margin-top:8px">${trainingBadge}</div>
+      ${riskBadge?`<div style="margin-top:6px">${riskBadge}</div>`:''}
       <div style="margin-top:10px">${dots}</div>
       <div style="margin-top:10px;display:flex;gap:6px;justify-content:center;flex-wrap:wrap" onclick="event.stopPropagation()">
         <button class="btn-sm" onclick="openStrikeModal('${s.id}','${s.name.replace(/'/g,"\\'")}',${strikes})">+ Strike</button>
@@ -5844,6 +5920,78 @@ function renderStaffTable(staff){
   }).join('');
 }
 
+function showHrSubTab(which){
+  document.getElementById('hr-panel-directory').style.display=which==='directory'?'block':'none';
+  document.getElementById('hr-panel-overview').style.display=which==='overview'?'block':'none';
+  document.getElementById('hr-panel-applicants').style.display=which==='applicants'?'block':'none';
+  document.getElementById('hrsub-directory').classList.toggle('active',which==='directory');
+  document.getElementById('hrsub-overview').classList.toggle('active',which==='overview');
+  document.getElementById('hrsub-applicants').classList.toggle('active',which==='applicants');
+  if(which==='overview')loadHrOverview();
+  if(which==='applicants')loadHrApplicants();
+}
+async function loadHrOverview(){
+  const active=_allStaff.filter(s=>s.status!=='Terminated');
+  const kpiHtml=(icon,val,label,tone)=>`<div class="card" style="padding:16px 18px;display:flex;align-items:center;gap:12px">
+    <div style="font-size:22px">${icon}</div>
+    <div><div style="font-size:26px;font-family:'Cormorant Garamond',serif;font-weight:700;color:${tone?`var(--${tone})`:'var(--ink)'}">${val}</div><div style="font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">${label}</div></div>
+  </div>`;
+  const highRisk=active.filter(s=>s.attrition_risk==='high').length;
+  const overdueTrainingStaff=Object.keys(_staffTrainingCounts).filter(id=>_staffTrainingCounts[id].overdue>0).length;
+  document.getElementById('hr-overview-kpis').innerHTML=
+    kpiHtml('🧑‍💼',active.length,'Active Staff')+
+    kpiHtml('🔺',highRisk,'High Attrition Risk',highRisk?'danger':null)+
+    kpiHtml('⚠️',overdueTrainingStaff,'Staff With Overdue Training',overdueTrainingStaff?'danger':null)+
+    kpiHtml('🌟',active.filter(s=>s.status==='Probation').length,'On Probation','gold');
+
+  const fteCounts={full_time:0,part_time:0,contract:0,unspecified:0};
+  active.forEach(s=>{fteCounts[s.employment_type||'unspecified']++;});
+  const riskCounts={low:0,medium:0,high:0,unassessed:0};
+  active.forEach(s=>{riskCounts[s.attrition_risk||'unassessed']++;});
+  const byClient={};
+  active.forEach(s=>{const c=(s.clients&&s.clients.business_name)||'Unassigned';byClient[c]=(byClient[c]||0)+1;});
+
+  ['hr-chart-fte','hr-chart-attrition','hr-chart-byclient'].forEach(id=>{if(window['_hrChart_'+id])window['_hrChart_'+id].destroy();});
+  const ctx1=document.getElementById('hr-chart-fte');
+  if(ctx1)window['_hrChart_hr-chart-fte']=new Chart(ctx1,{type:'pie',data:{labels:['Full-Time','Part-Time','Contract','Unspecified'],datasets:[{data:[fteCounts.full_time,fteCounts.part_time,fteCounts.contract,fteCounts.unspecified],backgroundColor:['#1A5C38','#C9A24B','#28395e','#9AA0A6']}]},options:{plugins:{legend:{position:'bottom',labels:{font:{size:11}}}}}});
+  const ctx2=document.getElementById('hr-chart-attrition');
+  if(ctx2)window['_hrChart_hr-chart-attrition']=new Chart(ctx2,{type:'doughnut',data:{labels:['Low','Medium','High','Not Assessed'],datasets:[{data:[riskCounts.low,riskCounts.medium,riskCounts.high,riskCounts.unassessed],backgroundColor:['#2f7d4f','#C9A24B','#A12F2F','#9AA0A6']}]},options:{plugins:{legend:{position:'bottom',labels:{font:{size:11}}}}}});
+  const ctx3=document.getElementById('hr-chart-byclient');
+  const clientLabels=Object.keys(byClient);
+  if(ctx3)window['_hrChart_hr-chart-byclient']=new Chart(ctx3,{type:'bar',data:{labels:clientLabels,datasets:[{data:clientLabels.map(c=>byClient[c]),backgroundColor:'#C9A24B'}]},options:{plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{stepSize:1}}}}});
+
+  const watchlist=active.filter(s=>s.attrition_risk==='high'||s.attrition_risk==='medium').sort((a,b)=>(a.attrition_risk==='high'?0:1)-(b.attrition_risk==='high'?0:1));
+  const wlEl=document.getElementById('hr-attrition-watchlist');
+  if(!watchlist.length){wlEl.innerHTML='<div style="padding:16px 18px;font-size:13px;color:var(--muted);font-family:Arial">No staff currently flagged as medium/high attrition risk.</div>';}
+  else{
+    wlEl.innerHTML=watchlist.map(s=>`<div style="padding:12px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;cursor:pointer" onclick="openStaffDetail('${s.id}')">
+      <div><strong style="font-size:13px">${s.name}</strong> <span style="font-size:11.5px;color:var(--muted)">— ${(s.clients&&s.clients.business_name)||'—'}</span>${s.attrition_risk_note?`<div style="font-size:11.5px;color:var(--muted);margin-top:2px">${s.attrition_risk_note}</div>`:''}</div>
+      <span class="badge ${s.attrition_risk==='high'?'badge-red':'badge-gold'}">${s.attrition_risk}</span>
+    </div>`).join('');
+  }
+}
+async function loadHrApplicants(){
+  const clientFilter=document.getElementById('hr-applicant-client-filter')?.value||'';
+  if(document.getElementById('hr-applicant-client-filter').options.length<=1){
+    const {data:clients}=await db.from('clients').select('id,business_name').neq('status','Inactive').order('business_name',{ascending:true});
+    document.getElementById('hr-applicant-client-filter').innerHTML='<option value="">All Clients</option>'+(clients||[]).map(c=>`<option value="${c.id}">${c.business_name}</option>`).join('');
+    document.getElementById('hr-applicant-client-filter').value=clientFilter;
+  }
+  let q=db.from('staff_candidates').select('*,clients(business_name)').order('created_at',{ascending:false});
+  if(clientFilter)q=q.eq('client_id',clientFilter);
+  const {data}=await q;
+  const statusMap={'Under Review':'under_review',Interviewing:'interviewing',Offer:'offer',Hired:'hired'};
+  const cols={under_review:[],interviewing:[],offer:[],hired:[]};
+  (data||[]).forEach(c=>{const key=statusMap[c.status]||'under_review';cols[key].push(c);});
+  Object.keys(cols).forEach(key=>{
+    const el=document.getElementById('hr-app-col-'+key);
+    if(!el)return;
+    el.innerHTML=cols[key].map(c=>`<div class="card" style="padding:10px 12px;margin-bottom:8px">
+      <div style="font-size:12.5px;font-weight:600">${c.full_name||c.name||'—'}</div>
+      <div style="font-size:10.5px;color:var(--muted);margin-top:2px">${(c.clients&&c.clients.business_name)||'—'}</div>
+    </div>`).join('')||'<div style="font-size:11px;color:var(--muted);padding:8px 0">None</div>';
+  });
+}
 function openStrikeModal(staffId, staffName, currentStrikes){
   document.getElementById('strike-staff-id').value = staffId;
   document.getElementById('strike-modal-title').textContent = `Log Strike — ${staffName}`;
@@ -5913,6 +6061,14 @@ async function openStaffDetail(staffId){
   document.getElementById('sd-e-start').value=staff.start_date||'';
   document.getElementById('sd-e-photo').value=staff.photo_url||'';
   document.getElementById('sd-e-notes').value=staff.performance_notes||'';
+  document.getElementById('sd-e-emptype').value=staff.employment_type||'full_time';
+  document.getElementById('sd-e-supervisor').value=staff.supervisor_name||'';
+  document.getElementById('sd-e-dob').value=staff.date_of_birth||'';
+  document.getElementById('sd-e-nok').value=staff.next_of_kin||'';
+  document.getElementById('sd-e-nokphone').value=staff.next_of_kin_phone||'';
+  document.getElementById('sd-e-iddoc').value=staff.id_document_url||'';
+  document.getElementById('sd-e-attrisk').value=staff.attrition_risk||'';
+  document.getElementById('sd-e-attrisknote').value=staff.attrition_risk_note||'';
   document.getElementById('sd-e-feedback').innerHTML='';
   // Salary fields
   document.getElementById('sd-sal-basic').value=staff.basic_salary||0;
@@ -5939,7 +6095,15 @@ async function saveSdProfile(){
     rating:parseFloat(document.getElementById('sd-e-rating').value)||0,
     start_date:document.getElementById('sd-e-start').value||null,
     photo_url:document.getElementById('sd-e-photo').value.trim()||null,
-    performance_notes:document.getElementById('sd-e-notes').value.trim()
+    performance_notes:document.getElementById('sd-e-notes').value.trim(),
+    employment_type:document.getElementById('sd-e-emptype').value||null,
+    supervisor_name:document.getElementById('sd-e-supervisor').value.trim()||null,
+    date_of_birth:document.getElementById('sd-e-dob').value||null,
+    next_of_kin:document.getElementById('sd-e-nok').value.trim()||null,
+    next_of_kin_phone:document.getElementById('sd-e-nokphone').value.trim()||null,
+    id_document_url:document.getElementById('sd-e-iddoc').value.trim()||null,
+    attrition_risk:document.getElementById('sd-e-attrisk').value||null,
+    attrition_risk_note:document.getElementById('sd-e-attrisknote').value.trim()||null
   };
   const {error}=await db.from('client_staff').update(changes).eq('id',_sdStaffId);
   if(error){fb.innerHTML=`<div class="error-msg">${error.message}</div>`;return;}
@@ -6776,6 +6940,8 @@ async function addCandidate(){
   const fb=document.getElementById('cand-feedback');
   const name=document.getElementById('cand-name').value.trim();
   if(!name){fb.innerHTML='<div class="error-msg">Enter the candidate\'s name.</div>';return;}
+  const btn=document.querySelector('button[onclick="addCandidate()"]');
+  if(btn){if(btn.disabled)return;btn.disabled=true;}
   const {error}=await db.from('staff_candidates').insert({
     client_id:clientId,
     full_name:name,
@@ -6784,6 +6950,7 @@ async function addCandidate(){
     cv_notes:document.getElementById('cand-notes').value.trim(),
     status:'Under Review'
   });
+  if(btn)btn.disabled=false;
   if(error){fb.innerHTML=`<div class="error-msg">${error.message}</div>`;return;}
   fb.innerHTML='<div class="success-msg">✓ Candidate added.</div>';
   ['cand-name','cand-phone','cand-cvlink','cand-notes'].forEach(id=>{document.getElementById(id).value='';});
@@ -7217,7 +7384,7 @@ async function loadDashboard(){
   const greeting=firstName?`${timeGreeting}, ${firstName}`:timeGreeting;
   // ── Department-scoped dashboard: owner and Project Management see everything,
   // everyone else only sees the cards relevant to their department. ──
-  const dept=(currentUser.department||'operations').split(',').map(d=>d.trim());
+  const dept=(currentUser.department||'operations').split(',').map(d=>d.trim().toLowerCase());
   const seesAll=currentUser.isOwner||dept.includes('project_management');
   const DASH_SECTIONS={
     overdueTrainings:['operations','hr','social_media'],
@@ -7231,24 +7398,25 @@ async function loadDashboard(){
   const dashShows=key=>seesAll||DASH_SECTIONS[key].some(d=>dept.includes(d));
   const totalUrgent2=(dashShows('overdueTrainings')?overdueTrainings.length:0)+(dashShows('lowStock')?lowStock.length:0)+(dashShows('overdueBills')?overdueBills.length:0);
   const kpi=(icon,val,label,tone)=>`
-    <div class="card" style="padding:0;overflow:hidden;text-align:left;transition:transform .12s" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
-      <div style="height:4px;background:var(--${tone})"></div>
-      <div style="padding:16px 18px;display:flex;align-items:center;gap:12px">
-        <div style="font-size:22px;line-height:1">${icon}</div>
-        <div>
-          <div style="font-size:30px;font-family:'Cormorant Garamond',serif;font-weight:700;color:${tone==='danger'&&val>0?'var(--danger)':'var(--ink)'};line-height:1">${val}</div>
-          <div style="font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-top:3px">${label}</div>
-        </div>
+    <div class="card" style="padding:18px;display:flex;align-items:center;gap:14px;transition:transform .15s,box-shadow .15s" onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 10px 24px rgba(27,42,74,.1)'" onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='none'">
+      <div style="width:44px;height:44px;border-radius:12px;background:var(--${tone}-light,var(--gold-light));display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">${icon}</div>
+      <div>
+        <div style="font-size:28px;font-family:'Cormorant Garamond',serif;font-weight:700;color:${tone==='danger'&&val>0?'var(--danger)':'var(--ink)'};line-height:1">${val}</div>
+        <div style="font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-top:4px">${label}</div>
       </div>
     </div>`;
 
   el.innerHTML=`
-    <div style="margin-bottom:24px;display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:12px">
-      <div>
-        <div style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold);font-weight:600;margin-bottom:2px">${greeting}</div>
-        <div style="font-size:26px;font-family:'Cormorant Garamond',serif;font-weight:600;color:var(--ink)">${totalUrgent2>0?`${totalUrgent2} thing${totalUrgent2===1?'':'s'} need${totalUrgent2===1?'s':''} your attention`:'You\'re all caught up'}</div>
+    <div style="border-radius:18px;background:linear-gradient(120deg,var(--ink) 0%,var(--ink2) 60%,#2c3f6b 100%);padding:26px 28px;margin-bottom:24px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px;position:relative;overflow:hidden">
+      <div style="position:absolute;top:-40px;right:-40px;width:160px;height:160px;border-radius:50%;background:radial-gradient(circle,rgba(201,162,75,.18),transparent 70%)"></div>
+      <div style="position:relative;z-index:1">
+        <div style="font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--gold);font-weight:600;margin-bottom:4px">${greeting}</div>
+        <div style="font-size:28px;font-family:'Cormorant Garamond',serif;font-weight:600;color:#fff">${totalUrgent2>0?`${totalUrgent2} thing${totalUrgent2===1?'':'s'} need${totalUrgent2===1?'s':''} your attention`:'You\'re all caught up'}</div>
       </div>
-      ${totalUrgent2>0?`<div style="background:var(--danger);color:#fff;padding:8px 16px;border-radius:20px;font-size:12px;font-weight:600;letter-spacing:.02em">⚠ ${totalUrgent2} urgent</div>`:`<div style="background:var(--success);color:#fff;padding:8px 16px;border-radius:20px;font-size:12px;font-weight:600;letter-spacing:.02em">✓ Nothing on fire</div>`}
+      <div style="position:relative;z-index:1;display:flex;align-items:center;gap:16px">
+        ${totalUrgent2>0?`<canvas id="dash-urgent-donut" width="72" height="72" style="max-width:72px;max-height:72px"></canvas>`:''}
+        ${totalUrgent2>0?`<div style="background:rgba(161,47,47,.9);color:#fff;padding:9px 18px;border-radius:20px;font-size:12px;font-weight:600;letter-spacing:.02em">⚠ ${totalUrgent2} urgent</div>`:`<div style="background:var(--success);color:#fff;padding:9px 18px;border-radius:20px;font-size:12px;font-weight:600;letter-spacing:.02em">✓ Nothing on fire</div>`}
+      </div>
     </div>
 
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:26px">
@@ -7281,6 +7449,11 @@ async function loadDashboard(){
   if(badge){
     if(totalUrgent>0){badge.textContent=totalUrgent;badge.style.display='inline';}
     else{badge.style.display='none';}
+  }
+  if(window._dashUrgentDonut){window._dashUrgentDonut.destroy();window._dashUrgentDonut=null;}
+  const donutCtx=document.getElementById('dash-urgent-donut');
+  if(donutCtx&&totalUrgent2>0){
+    window._dashUrgentDonut=new Chart(donutCtx,{type:'doughnut',data:{labels:['Trainings','Stock','Bills'],datasets:[{data:[dashShows('overdueTrainings')?overdueTrainings.length:0,dashShows('lowStock')?lowStock.length:0,dashShows('overdueBills')?overdueBills.length:0],backgroundColor:['#C9A24B','#E8B4A8','#A12F2F'],borderWidth:0}]},options:{cutout:'65%',plugins:{legend:{display:false},tooltip:{enabled:true}}}});
   }
 }
 // ══ COURSE CONTENT MANAGER (admin: add questions to knowledge_test / practical_scenario modules) ══
@@ -8024,19 +8197,129 @@ async function sendTalentToPipeline(id){
   const sel=document.getElementById('tp-sendto-'+id);
   const clientId=sel.value;
   if(!clientId){alert('Choose a client first.');return;}
+  const btn=document.querySelector(`button[onclick="sendTalentToPipeline('${id}')"]`);
+  if(btn){if(btn.disabled)return;btn.disabled=true;}
   const {data:applicant}=await db.from('talent_pool').select('*').eq('id',id).single();
-  if(!applicant)return;
+  if(!applicant){if(btn)btn.disabled=false;return;}
   const {error}=await db.from('staff_candidates').insert({
     client_id:clientId,full_name:applicant.full_name,phone:applicant.phone,
     cv_link:applicant.cv_link,cv_notes:applicant.background||'',status:'Under Review'
   });
-  if(error){alert('Could not send: '+error.message);return;}
+  if(error){if(btn)btn.disabled=false;alert('Could not send: '+error.message);return;}
   await db.from('talent_pool').update({status:'Shortlisted'}).eq('id',id);
   await logActivity('Sent talent pool applicant to client pipeline',applicant.full_name,clientId);
   alert(applicant.full_name+' has been added to that client\'s Candidates list.');
   loadTalentPool();
 }
 
+async function myWorkOperationsHtml(){
+  const [{data:complaints},{data:actions}]=await Promise.all([
+    db.from('complaints').select('*,clients(business_name)').neq('status','Resolved').order('date',{ascending:false}),
+    db.from('actions').select('*,clients(business_name)').neq('status','Done').order('due_date',{ascending:true})
+  ]);
+  return `
+    <div style="font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--gold);font-weight:600;margin:18px 0 10px">Operations</div>
+    <div class="card" style="padding:18px 20px;margin-bottom:16px">
+      <div style="font-size:13px;font-weight:600;margin-bottom:10px">📣 Open Complaints (${(complaints||[]).length})</div>
+      ${(complaints||[]).length?(complaints||[]).map(c=>`<div style="border:1px solid var(--border);border-radius:9px;padding:10px 14px;margin-bottom:8px">
+        <strong style="font-size:13px">${(c.clients&&c.clients.business_name)||'—'}</strong><br>
+        <span style="font-size:12px;color:var(--muted)">${c.detail||''}</span>
+      </div>`).join(''):'<p style="font-size:12px;color:var(--muted)">Nothing open.</p>'}
+    </div>
+    <div class="card" style="padding:18px 20px">
+      <div style="font-size:13px;font-weight:600;margin-bottom:10px">✅ Open Action Items (${(actions||[]).length})</div>
+      ${(actions||[]).length?(actions||[]).map(a=>`<div style="border:1px solid var(--border);border-radius:9px;padding:10px 14px;margin-bottom:8px">
+        <strong style="font-size:13px">${(a.clients&&a.clients.business_name)||'—'}</strong>${a.owner?`<span class="badge" style="margin-left:8px;background:var(--surface2);color:var(--ink)">${a.owner}</span>`:''}<br>
+        <span style="font-size:12px;color:var(--muted)">${a.description||''}${a.due_date?' — due '+a.due_date:''}</span>
+      </div>`).join(''):'<p style="font-size:12px;color:var(--muted)">Nothing outstanding.</p>'}
+    </div>`;
+}
+async function myWorkHrHtml(){
+  const [{data:leave},{data:candidates},{data:trainings}]=await Promise.all([
+    db.from('staff_leave_requests').select('*,client_staff(name),clients(business_name)').eq('status','Pending').order('created_at',{ascending:false}),
+    db.from('staff_candidates').select('*,clients(business_name)').eq('status','Under Review').order('created_at',{ascending:false}),
+    db.from('staff_trainings').select('*,client_staff(name,client_id,clients(business_name))').neq('status','Completed').order('due_date',{ascending:true})
+  ]);
+  const overdueTrainings=(trainings||[]).filter(t=>t.due_date&&new Date(t.due_date)<new Date());
+  return `
+    <div style="font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--gold);font-weight:600;margin:18px 0 10px">HR</div>
+    <div class="card" style="padding:18px 20px;margin-bottom:16px">
+      <div style="font-size:13px;font-weight:600;margin-bottom:10px">🌴 Pending Leave Requests (${(leave||[]).length})</div>
+      ${(leave||[]).length?(leave||[]).map(l=>`<div style="border:1px solid var(--border);border-radius:9px;padding:10px 14px;margin-bottom:8px">
+        <strong style="font-size:13px">${(l.client_staff&&l.client_staff.name)||'—'}</strong> · ${(l.clients&&l.clients.business_name)||'—'}<br>
+        <span style="font-size:12px;color:var(--muted)">${l.start_date} → ${l.end_date}</span>
+        <div style="margin-top:6px"><button class="btn-sm" onclick="decideLeave('${l.id}','Approved',null,null);loadMyWork()">Approve</button> <button class="btn-danger" onclick="decideLeave('${l.id}','Denied',null,null);loadMyWork()">Deny</button></div>
+      </div>`).join(''):'<p style="font-size:12px;color:var(--muted)">Nothing pending.</p>'}
+    </div>
+    <div class="card" style="padding:18px 20px;margin-bottom:16px">
+      <div style="font-size:13px;font-weight:600;margin-bottom:10px">🧑‍🎓 Candidates Under Review (${(candidates||[]).length})</div>
+      ${(candidates||[]).length?(candidates||[]).map(c=>`<div style="border:1px solid var(--border);border-radius:9px;padding:10px 14px;margin-bottom:8px">
+        <strong style="font-size:13px">${c.full_name}</strong> · ${(c.clients&&c.clients.business_name)||'—'}<br>
+        <span style="font-size:12px;color:var(--muted)">${c.phone||''}</span>
+      </div>`).join(''):'<p style="font-size:12px;color:var(--muted)">Nothing pending.</p>'}
+    </div>
+    <div class="card" style="padding:18px 20px">
+      <div style="font-size:13px;font-weight:600;margin-bottom:10px">🎓 Overdue Trainings (${overdueTrainings.length})</div>
+      ${overdueTrainings.length?overdueTrainings.map(t=>`<div style="border:1px solid var(--border);border-radius:9px;padding:10px 14px;margin-bottom:8px;background:var(--danger-light)">
+        <strong style="font-size:13px">${(t.client_staff&&t.client_staff.name)||'—'}</strong> · ${(t.client_staff&&t.client_staff.clients&&t.client_staff.clients.business_name)||'—'}<br>
+        <span style="font-size:12px;color:var(--danger)">${t.training_name} — was due ${t.due_date}</span>
+      </div>`).join(''):'<p style="font-size:12px;color:var(--muted)">Nothing overdue.</p>'}
+    </div>`;
+}
+async function myWorkSocialHtml(){
+  const [{data:events},{data:notices}]=await Promise.all([
+    db.from('events').select('*,clients(business_name)').gte('event_date',new Date().toISOString().slice(0,10)).order('event_date',{ascending:true}).limit(20),
+    db.from('client_notices').select('*,clients(business_name)').order('created_at',{ascending:false}).limit(15)
+  ]);
+  return `
+    <div style="font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--gold);font-weight:600;margin:18px 0 10px">Social Media</div>
+    <div class="card" style="padding:18px 20px;margin-bottom:16px">
+      <div style="font-size:13px;font-weight:600;margin-bottom:10px">📅 Upcoming Events — All Clients (${(events||[]).length})</div>
+      ${(events||[]).length?(events||[]).map(e=>`<div style="border:1px solid var(--border);border-radius:9px;padding:10px 14px;margin-bottom:8px">
+        <strong style="font-size:13px">${e.event_type||'Event'}</strong> · ${(e.clients&&e.clients.business_name)||'—'}<br>
+        <span style="font-size:12px;color:var(--muted)">${e.event_date||''} ${e.venue?'· '+e.venue:''}</span>
+      </div>`).join(''):'<p style="font-size:12px;color:var(--muted)">No upcoming events.</p>'}
+    </div>
+    <div class="card" style="padding:18px 20px">
+      <div style="font-size:13px;font-weight:600;margin-bottom:10px">📌 Recent Notices Across Clients</div>
+      ${(notices||[]).length?(notices||[]).map(n=>`<div style="border:1px solid var(--gold);border-left:4px solid var(--gold);border-radius:9px;padding:10px 14px;margin-bottom:8px;background:var(--gold-light)">
+        <strong style="font-size:13px">${n.title}</strong> · ${(n.clients&&n.clients.business_name)||'—'}<br>
+        <span style="font-size:12px;color:var(--ink2)">${n.message||''}</span>
+      </div>`).join(''):'<p style="font-size:12px;color:var(--muted)">No notices posted yet.</p>'}
+      <div style="font-size:11px;color:var(--muted);margin-top:10px">Note: a dedicated content/social calendar module isn't built yet — this pulls from Events and Notice Board for now. Let Wahida know if you need a proper content planner added.</div>
+    </div>`;
+}
+async function myWorkCsHtml(){
+  const [{data:complaints},{data:messages},{data:requests}]=await Promise.all([
+    db.from('complaints').select('*,clients(business_name)').neq('status','Resolved').order('date',{ascending:false}),
+    db.from('client_messages').select('*,clients(business_name)').eq('read_by_admin',false).order('created_at',{ascending:false}),
+    db.from('client_requests').select('*,clients(business_name)').eq('status','new').order('created_at',{ascending:false})
+  ]);
+  const clientMsgsOnly=(messages||[]).filter(m=>m.sender_role==='client');
+  return `
+    <div style="font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--gold);font-weight:600;margin:18px 0 10px">Customer Service</div>
+    <div class="card" style="padding:18px 20px;margin-bottom:16px">
+      <div style="font-size:13px;font-weight:600;margin-bottom:10px">📣 Open Complaints (${(complaints||[]).length})</div>
+      ${(complaints||[]).length?(complaints||[]).map(c=>`<div style="border:1px solid var(--border);border-radius:9px;padding:10px 14px;margin-bottom:8px">
+        <strong style="font-size:13px">${(c.clients&&c.clients.business_name)||'—'}</strong><br>
+        <span style="font-size:12px;color:var(--muted)">${c.detail||''}</span>
+      </div>`).join(''):'<p style="font-size:12px;color:var(--muted)">Nothing open.</p>'}
+    </div>
+    <div class="card" style="padding:18px 20px;margin-bottom:16px">
+      <div style="font-size:13px;font-weight:600;margin-bottom:10px">💬 Unread Client Messages (${clientMsgsOnly.length})</div>
+      ${clientMsgsOnly.length?clientMsgsOnly.map(m=>`<div style="border:1px solid var(--border);border-radius:9px;padding:10px 14px;margin-bottom:8px;background:var(--gold-light)">
+        <strong style="font-size:13px">${(m.clients&&m.clients.business_name)||'—'}</strong><br>
+        <span style="font-size:12px;color:var(--ink2)">${m.message}</span>
+      </div>`).join(''):'<p style="font-size:12px;color:var(--muted)">All caught up.</p>'}
+    </div>
+    <div class="card" style="padding:18px 20px">
+      <div style="font-size:13px;font-weight:600;margin-bottom:10px">📥 New Client Requests (${(requests||[]).length})</div>
+      ${(requests||[]).length?(requests||[]).map(r=>`<div style="border:1px solid var(--border);border-radius:9px;padding:10px 14px;margin-bottom:8px">
+        <strong style="font-size:13px">${CLIENT_REQ_CATEGORY_LABEL[r.category]||r.category||'Request'}</strong> · ${(r.clients&&r.clients.business_name)||'—'}<br>
+        <span style="font-size:12px;color:var(--muted)">${r.message||''}</span>
+      </div>`).join(''):'<p style="font-size:12px;color:var(--muted)">Nothing new.</p>'}
+    </div>`;
+}
 async function loadMyWork(deptOverride){
   const el=document.getElementById('mywork-content');
   el.innerHTML='<p style="font-size:13px;color:var(--muted)">Loading…</p>';
@@ -8046,109 +8329,21 @@ async function loadMyWork(deptOverride){
     if(deptOverride)document.getElementById('mywork-dept-select').value=deptOverride;
   }
   const dept=deptOverride||currentUser.department||'operations';
-  if(dept==='operations'){
-    const [{data:complaints},{data:actions}]=await Promise.all([
-      db.from('complaints').select('*,clients(business_name)').neq('status','Resolved').order('date',{ascending:false}),
-      db.from('actions').select('*,clients(business_name)').neq('status','Done').order('due_date',{ascending:true})
-    ]);
-    el.innerHTML=`
-      <div class="card" style="padding:18px 20px;margin-bottom:16px">
-        <div style="font-size:13px;font-weight:600;margin-bottom:10px">📣 Open Complaints (${(complaints||[]).length})</div>
-        ${(complaints||[]).length?(complaints||[]).map(c=>`<div style="border:1px solid var(--border);border-radius:9px;padding:10px 14px;margin-bottom:8px">
-          <strong style="font-size:13px">${(c.clients&&c.clients.business_name)||'—'}</strong><br>
-          <span style="font-size:12px;color:var(--muted)">${c.detail||''}</span>
-        </div>`).join(''):'<p style="font-size:12px;color:var(--muted)">Nothing open.</p>'}
-      </div>
-      <div class="card" style="padding:18px 20px">
-        <div style="font-size:13px;font-weight:600;margin-bottom:10px">✅ Open Action Items (${(actions||[]).length})</div>
-        ${(actions||[]).length?(actions||[]).map(a=>`<div style="border:1px solid var(--border);border-radius:9px;padding:10px 14px;margin-bottom:8px">
-          <strong style="font-size:13px">${(a.clients&&a.clients.business_name)||'—'}</strong>${a.owner?`<span class="badge" style="margin-left:8px;background:var(--surface2);color:var(--ink)">${a.owner}</span>`:''}<br>
-          <span style="font-size:12px;color:var(--muted)">${a.description||''}${a.due_date?' — due '+a.due_date:''}</span>
-        </div>`).join(''):'<p style="font-size:12px;color:var(--muted)">Nothing outstanding.</p>'}
-      </div>`;
-  } else if(dept==='hr'){
-    const [{data:leave},{data:candidates},{data:trainings}]=await Promise.all([
-      db.from('staff_leave_requests').select('*,client_staff(name),clients(business_name)').eq('status','Pending').order('created_at',{ascending:false}),
-      db.from('staff_candidates').select('*,clients(business_name)').eq('status','Under Review').order('created_at',{ascending:false}),
-      db.from('staff_trainings').select('*,client_staff(name,client_id,clients(business_name))').neq('status','Completed').order('due_date',{ascending:true})
-    ]);
-    const overdueTrainings=(trainings||[]).filter(t=>t.due_date&&new Date(t.due_date)<new Date());
-    el.innerHTML=`
-      <div class="card" style="padding:18px 20px;margin-bottom:16px">
-        <div style="font-size:13px;font-weight:600;margin-bottom:10px">🌴 Pending Leave Requests (${(leave||[]).length})</div>
-        ${(leave||[]).length?(leave||[]).map(l=>`<div style="border:1px solid var(--border);border-radius:9px;padding:10px 14px;margin-bottom:8px">
-          <strong style="font-size:13px">${(l.client_staff&&l.client_staff.name)||'—'}</strong> · ${(l.clients&&l.clients.business_name)||'—'}<br>
-          <span style="font-size:12px;color:var(--muted)">${l.start_date} → ${l.end_date}</span>
-          <div style="margin-top:6px"><button class="btn-sm" onclick="decideLeave('${l.id}','Approved',null,null);loadMyWork()">Approve</button> <button class="btn-danger" onclick="decideLeave('${l.id}','Denied',null,null);loadMyWork()">Deny</button></div>
-        </div>`).join(''):'<p style="font-size:12px;color:var(--muted)">Nothing pending.</p>'}
-      </div>
-      <div class="card" style="padding:18px 20px;margin-bottom:16px">
-        <div style="font-size:13px;font-weight:600;margin-bottom:10px">🧑‍🎓 Candidates Under Review (${(candidates||[]).length})</div>
-        ${(candidates||[]).length?(candidates||[]).map(c=>`<div style="border:1px solid var(--border);border-radius:9px;padding:10px 14px;margin-bottom:8px">
-          <strong style="font-size:13px">${c.full_name}</strong> · ${(c.clients&&c.clients.business_name)||'—'}<br>
-          <span style="font-size:12px;color:var(--muted)">${c.phone||''}</span>
-        </div>`).join(''):'<p style="font-size:12px;color:var(--muted)">Nothing pending.</p>'}
-      </div>
-      <div class="card" style="padding:18px 20px">
-        <div style="font-size:13px;font-weight:600;margin-bottom:10px">🎓 Overdue Trainings (${overdueTrainings.length})</div>
-        ${overdueTrainings.length?overdueTrainings.map(t=>`<div style="border:1px solid var(--border);border-radius:9px;padding:10px 14px;margin-bottom:8px;background:var(--danger-light)">
-          <strong style="font-size:13px">${(t.client_staff&&t.client_staff.name)||'—'}</strong> · ${(t.client_staff&&t.client_staff.clients&&t.client_staff.clients.business_name)||'—'}<br>
-          <span style="font-size:12px;color:var(--danger)">${t.training_name} — was due ${t.due_date}</span>
-        </div>`).join(''):'<p style="font-size:12px;color:var(--muted)">Nothing overdue.</p>'}
-      </div>`;
-  } else if(dept==='social_media'){
-    const [{data:events},{data:notices}]=await Promise.all([
-      db.from('events').select('*,clients(business_name)').gte('event_date',new Date().toISOString().slice(0,10)).order('event_date',{ascending:true}).limit(20),
-      db.from('client_notices').select('*,clients(business_name)').order('created_at',{ascending:false}).limit(15)
-    ]);
-    el.innerHTML=`
-      <div class="card" style="padding:18px 20px;margin-bottom:16px">
-        <div style="font-size:13px;font-weight:600;margin-bottom:10px">📅 Upcoming Events — All Clients (${(events||[]).length})</div>
-        ${(events||[]).length?(events||[]).map(e=>`<div style="border:1px solid var(--border);border-radius:9px;padding:10px 14px;margin-bottom:8px">
-          <strong style="font-size:13px">${e.event_type||'Event'}</strong> · ${(e.clients&&e.clients.business_name)||'—'}<br>
-          <span style="font-size:12px;color:var(--muted)">${e.event_date||''} ${e.venue?'· '+e.venue:''}</span>
-        </div>`).join(''):'<p style="font-size:12px;color:var(--muted)">No upcoming events.</p>'}
-      </div>
-      <div class="card" style="padding:18px 20px">
-        <div style="font-size:13px;font-weight:600;margin-bottom:10px">📌 Recent Notices Across Clients</div>
-        ${(notices||[]).length?(notices||[]).map(n=>`<div style="border:1px solid var(--gold);border-left:4px solid var(--gold);border-radius:9px;padding:10px 14px;margin-bottom:8px;background:var(--gold-light)">
-          <strong style="font-size:13px">${n.title}</strong> · ${(n.clients&&n.clients.business_name)||'—'}<br>
-          <span style="font-size:12px;color:var(--ink2)">${n.message||''}</span>
-        </div>`).join(''):'<p style="font-size:12px;color:var(--muted)">No notices posted yet.</p>'}
-        <div style="font-size:11px;color:var(--muted);margin-top:10px">Note: a dedicated content/social calendar module isn't built yet — this pulls from Events and Notice Board for now. Let Wahida know if you need a proper content planner added.</div>
-      </div>`;
-  } else if(dept==='customer_service'){
-    const [{data:complaints},{data:messages},{data:requests}]=await Promise.all([
-      db.from('complaints').select('*,clients(business_name)').neq('status','Resolved').order('date',{ascending:false}),
-      db.from('client_messages').select('*,clients(business_name)').eq('read_by_admin',false).order('created_at',{ascending:false}),
-      db.from('client_requests').select('*,clients(business_name)').eq('status','Submitted').order('created_at',{ascending:false})
-    ]);
-    const clientMsgsOnly=(messages||[]).filter(m=>m.sender_role==='client');
-    el.innerHTML=`
-      <div class="card" style="padding:18px 20px;margin-bottom:16px">
-        <div style="font-size:13px;font-weight:600;margin-bottom:10px">📣 Open Complaints (${(complaints||[]).length})</div>
-        ${(complaints||[]).length?(complaints||[]).map(c=>`<div style="border:1px solid var(--border);border-radius:9px;padding:10px 14px;margin-bottom:8px">
-          <strong style="font-size:13px">${(c.clients&&c.clients.business_name)||'—'}</strong><br>
-          <span style="font-size:12px;color:var(--muted)">${c.detail||''}</span>
-        </div>`).join(''):'<p style="font-size:12px;color:var(--muted)">Nothing open.</p>'}
-      </div>
-      <div class="card" style="padding:18px 20px;margin-bottom:16px">
-        <div style="font-size:13px;font-weight:600;margin-bottom:10px">💬 Unread Client Messages (${clientMsgsOnly.length})</div>
-        ${clientMsgsOnly.length?clientMsgsOnly.map(m=>`<div style="border:1px solid var(--border);border-radius:9px;padding:10px 14px;margin-bottom:8px;background:var(--gold-light)">
-          <strong style="font-size:13px">${(m.clients&&m.clients.business_name)||'—'}</strong><br>
-          <span style="font-size:12px;color:var(--ink2)">${m.message}</span>
-        </div>`).join(''):'<p style="font-size:12px;color:var(--muted)">All caught up.</p>'}
-      </div>
-      <div class="card" style="padding:18px 20px">
-        <div style="font-size:13px;font-weight:600;margin-bottom:10px">📥 New Client Requests (${(requests||[]).length})</div>
-        ${(requests||[]).length?(requests||[]).map(r=>`<div style="border:1px solid var(--border);border-radius:9px;padding:10px 14px;margin-bottom:8px">
-          <strong style="font-size:13px">${r.title||'Request'}</strong> · ${(r.clients&&r.clients.business_name)||'—'}<br>
-          <span style="font-size:12px;color:var(--muted)">${r.description||''}</span>
-        </div>`).join(''):'<p style="font-size:12px;color:var(--muted)">Nothing new.</p>'}
-      </div>`;
-  } else {
+  // Multi-department logins (e.g. "hr,social_media") combine every matching
+  // section instead of matching one exact string — a single-department string
+  // still works fine since it's just a one-item list.
+  const deptList=dept.split(',').map(d=>d.trim().toLowerCase());
+  const builders=[];
+  if(deptList.includes('operations'))builders.push(myWorkOperationsHtml());
+  if(deptList.includes('hr'))builders.push(myWorkHrHtml());
+  if(deptList.includes('social_media'))builders.push(myWorkSocialHtml());
+  if(deptList.includes('customer_service'))builders.push(myWorkCsHtml());
+  if(!builders.length){
     el.innerHTML='<p style="font-size:13px;color:var(--muted)">This dashboard is set up for Operations, HR, Social Media, and Customer Service roles.</p>';
+    return;
   }
+  const parts=await Promise.all(builders);
+  el.innerHTML=parts.join('');
 }
 async function loadClientAccountingView(clientId){
   const el=document.getElementById('portal-accounting-content');
