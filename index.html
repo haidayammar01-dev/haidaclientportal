@@ -1007,14 +1007,15 @@ self.addEventListener('notificationclick',function(e){
         </div>
 
         <div id="hr-panel-applicants" style="display:none">
+          <div style="font-size:12px;color:var(--muted);margin-bottom:12px">Job applicants and candidates in the pipeline — not existing staff.</div>
           <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
             <select id="hr-applicant-client-filter" onchange="loadHrApplicants()" style="padding:7px 12px;border:1px solid var(--border);border-radius:9px;font-family:Arial;font-size:13px"><option value="">All Clients</option></select>
           </div>
           <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px" id="hr-applicant-board">
-            <div><div style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:8px;font-weight:600">Under Review</div><div id="hr-app-col-under_review"></div></div>
-            <div><div style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:8px;font-weight:600">Interviewing</div><div id="hr-app-col-interviewing"></div></div>
-            <div><div style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:8px;font-weight:600">Offer</div><div id="hr-app-col-offer"></div></div>
-            <div><div style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:8px;font-weight:600">Hired</div><div id="hr-app-col-hired"></div></div>
+            <div><div style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:8px;font-weight:600">Applicants: Under Review</div><div id="hr-app-col-under_review"></div></div>
+            <div><div style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:8px;font-weight:600">Applicants: Interviewing</div><div id="hr-app-col-interviewing"></div></div>
+            <div><div style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:8px;font-weight:600">Applicants: Offer Made</div><div id="hr-app-col-offer"></div></div>
+            <div><div style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:8px;font-weight:600">Applicants: Hired</div><div id="hr-app-col-hired"></div></div>
           </div>
         </div>
       </div>
@@ -3452,6 +3453,7 @@ self.addEventListener('notificationclick',function(e){
     <div class="modal-header"><div class="modal-title">Schedule Interview</div><button class="modal-close" onclick="closeModal('modal-schedule-interview')">×</button></div>
     <div class="modal-body">
       <input type="hidden" id="int-source-id">
+      <input type="hidden" id="int-source-type">
       <div id="int-source-note" style="display:none;font-size:11.5px;color:var(--muted);margin-bottom:10px;background:var(--surface2);padding:6px 10px;border-radius:8px">Linked to their Talent Pool record</div>
       <div class="form-grid">
         <div class="form-field"><label>Candidate Name</label><input type="text" id="int-candidate-name"></div>
@@ -6988,8 +6990,8 @@ async function loadCandidates(clientId,targetId,canManage){
   const {data}=await db.from('staff_candidates').select('*').eq('client_id',clientId).order('created_at',{ascending:false});
   const rows=data||[];const el=document.getElementById(targetId);if(!el)return;
   if(!rows.length){el.innerHTML='<p style="font-size:13px;color:var(--muted)">No candidates yet.</p>';return;}
-  const sb={'Under Review':'badge-gold',Shortlisted:'badge-gold',Hired:'badge-green',Rejected:'badge-red'};
-  const statusOptions=['Under Review','Shortlisted','Hired','Rejected'];
+  const sb={'Under Review':'badge-gold',Interviewing:'badge-gold',Offer:'badge-green',Shortlisted:'badge-gold',Hired:'badge-green',Rejected:'badge-red'};
+  const statusOptions=['Under Review','Interviewing','Offer','Hired','Rejected'];
   el.innerHTML=rows.map(c=>`<div class="card" style="padding:16px 20px;margin-bottom:12px">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px">
       <div>
@@ -7001,6 +7003,7 @@ async function loadCandidates(clientId,targetId,canManage){
     ${c.cv_notes?`<div style="font-size:12px;color:var(--ink2);margin-top:8px">${c.cv_notes}</div>`:''}
     ${c.cv_link?`<div style="margin-top:6px"><a href="${c.cv_link}" target="_blank" style="font-size:12px;color:var(--gold)">View CV →</a></div>`:''}
     ${canManage&&c.status!=='Hired'?`<button class="btn-sm" onclick="convertCandidateToStaff('${c.id}','${clientId}')" style="margin-top:10px">Convert to Staff Member</button>`:''}
+    ${canManage&&c.status!=='Hired'?`<button class="btn-sm" data-c-id="${c.id}" data-c-name="${(c.full_name||'').replace(/"/g,'&quot;')}" onclick="openScheduleInterviewModal(this.dataset.cId,this.dataset.cName,'','${clientId}','candidate')" style="margin-top:10px">🗣 Schedule Interview</button>`:''}
     ${canManage?`<button class="btn-danger" onclick="deleteRow('staff_candidates','${c.id}',()=>loadCandidates('${clientId}','${targetId}',true))" style="margin-top:10px;margin-left:6px">Del</button>`:''}
   </div>`).join('');
 }
@@ -7894,10 +7897,11 @@ function populateInterviewNicheSelect(){
   const sel=document.getElementById('int-niche');if(!sel)return;
   sel.innerHTML='<option value="">— General questions only —</option>'+INTERVIEW_NICHES.map(([slug,label])=>`<option value="${slug}">${label}</option>`).join('');
 }
-async function openScheduleInterviewModal(sourceId,sourceName,sourceRole,sourceClient){
+async function openScheduleInterviewModal(sourceId,sourceName,sourceRole,sourceClient,sourceType){
   await populateClientSelect('int-client',true);
   populateInterviewNicheSelect();
   document.getElementById('int-source-id').value=sourceId||'';
+  document.getElementById('int-source-type').value=sourceType||'';
   document.getElementById('int-source-note').style.display=sourceId?'block':'none';
   document.getElementById('int-candidate-name').value=sourceName||'';
   document.getElementById('int-role').value=sourceRole||'';
@@ -7972,6 +7976,22 @@ async function updateInterviewStatus(sessionId,status){
 }
 async function updateInterviewOutcome(sessionId,outcome){
   await db.from('interview_sessions').update({outcome}).eq('id',sessionId);
+  // Sync outcome onto the linked candidate record, if there is one, so the
+  // Applicants board reflects a passed/failed interview automatically.
+  const {data:session}=await db.from('interview_sessions').select('candidate_id,candidate_name,client_id').eq('id',sessionId).maybeSingle();
+  if(session&&session.candidate_id){
+    const newStatus=outcome==='passed'?'Offer':outcome==='failed'?'Rejected':null;
+    if(newStatus){
+      // candidate_id may point to staff_candidates OR talent_pool depending on
+      // how the interview was booked — try staff_candidates first.
+      const {data:cand}=await db.from('staff_candidates').select('id').eq('id',session.candidate_id).maybeSingle();
+      if(cand){
+        await db.from('staff_candidates').update({status:newStatus}).eq('id',cand.id);
+      } else if(session.client_id&&session.candidate_name){
+        await db.from('staff_candidates').update({status:newStatus}).eq('client_id',session.client_id).eq('full_name',session.candidate_name);
+      }
+    }
+  }
   await loadInterviews();
 }
 async function openCreateStaffFromInterview(sessionId){
@@ -8024,8 +8044,28 @@ async function saveInterviewSession(){
 
   // 4. Create the actual session.
   const sourceId=document.getElementById('int-source-id').value||null;
+  const sourceType=document.getElementById('int-source-type').value||'';
   const {error}=await db.from('interview_sessions').insert({candidate_id:sourceId,candidate_name:name,template_id:template.id,client_id:clientId,interviewer:document.getElementById('int-interviewer').value.trim(),scheduled_at:document.getElementById('int-datetime').value||null,status:'scheduled'});
   if(error){fb.innerHTML=`<span style="color:var(--danger);font-size:12px">${error.message}</span>`;if(btn){btn.disabled=false;btn.textContent='Schedule';}return;}
+  // 5. Sync status on the source record so it stops sitting in "Under Review"
+  // once an interview is actually booked — this is what shows up on the
+  // Applicants board and Talent Pool as "Interviewing" going forward.
+  if(sourceId&&sourceType==='candidate'){
+    await db.from('staff_candidates').update({status:'Interviewing'}).eq('id',sourceId);
+  } else if(sourceId&&sourceType==='talent_pool'){
+    await db.from('talent_pool').update({status:'Interviewing'}).eq('id',sourceId);
+    // If a client was picked for this interview, also reflect it on that
+    // client's Candidates pipeline so it shows on the Applicants board.
+    if(clientId){
+      const {data:existing}=await db.from('staff_candidates').select('id').eq('client_id',clientId).eq('full_name',name).maybeSingle();
+      if(existing){
+        await db.from('staff_candidates').update({status:'Interviewing'}).eq('id',existing.id);
+      } else {
+        const {data:tp}=await db.from('talent_pool').select('phone,cv_link,background').eq('id',sourceId).maybeSingle();
+        await db.from('staff_candidates').insert({client_id:clientId,full_name:name,phone:tp?tp.phone:null,cv_link:tp?tp.cv_link:null,cv_notes:tp?tp.background:'',status:'Interviewing'});
+      }
+    }
+  }
   fb.innerHTML=`<span style="color:var(--success);font-size:12px">Scheduled with ${questionsToInsert.length} question${questionsToInsert.length===1?'':'s'} lined up.</span>`;
   await logActivity('Scheduled interview for '+name,role,null);
   setTimeout(()=>{closeModal('modal-schedule-interview');loadInterviews();},600);
@@ -8211,13 +8251,13 @@ async function loadTalentPool(){
   if(!rows.length){el.innerHTML='<p style="font-size:13px;color:var(--muted)">No applicants match.</p>';return;}
   const {data:clients}=await db.from('clients').select('id,business_name').neq('status','Inactive').order('business_name',{ascending:true});
   const clientOptions=(clients||[]).map(c=>`<option value="${c.id}">${c.business_name}</option>`).join('');
-  const sb={New:'badge-gold',Reviewed:'badge-gray',Shortlisted:'badge-green',Rejected:'badge-red'};
+  const sb={New:'badge-gold',Reviewed:'badge-gray',Shortlisted:'badge-green',Interviewing:'badge-gold',Rejected:'badge-red'};
   el.innerHTML=`<div class="staff-grid" style="grid-template-columns:repeat(auto-fill,minmax(300px,1fr))">`+rows.map(r=>`
     <div class="card" style="padding:16px 18px">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
         <div><strong style="font-size:14px">${r.full_name}</strong><br><span style="font-size:12px;color:var(--muted)">${r.position_applied||'—'} · ${r.experience||'—'} yrs</span></div>
         <select onchange="updateTalentStatus('${r.id}',this.value)" style="padding:4px 8px;border:1px solid var(--border);border-radius:9px;font-size:11px">
-          ${['New','Reviewed','Shortlisted','Rejected'].map(s=>`<option ${s===r.status?'selected':''}>${s}</option>`).join('')}
+          ${['New','Reviewed','Shortlisted','Interviewing','Rejected'].map(s=>`<option ${s===r.status?'selected':''}>${s}</option>`).join('')}
         </select>
       </div>
       <div style="font-size:12px;color:var(--muted);margin-top:8px">📞 ${r.phone||'—'} · ${r.email||'—'}</div>
@@ -8233,7 +8273,7 @@ async function loadTalentPool(){
         <select id="tp-sendto-${r.id}" style="flex:1;padding:5px 8px;border:1px solid var(--border);border-radius:9px;font-size:12px"><option value="">Send to client…</option>${clientOptions}</select>
         <button class="btn-sm" onclick="sendTalentToPipeline('${r.id}')">→ Add to Pipeline</button>
         <button class="btn-sm" data-tp-id="${r.id}" data-tp-name="${(r.full_name||'').replace(/"/g,'&quot;')}" onclick="openEnrollModal(this.dataset.tpId,this.dataset.tpName,'candidate')">🎓 Enroll in Course</button>
-        <button class="btn-sm" data-tp-id="${r.id}" data-tp-name="${(r.full_name||'').replace(/"/g,'&quot;')}" data-tp-role="${(r.position_applied||'').replace(/"/g,'&quot;')}" onclick="openScheduleInterviewModal(this.dataset.tpId,this.dataset.tpName,this.dataset.tpRole)">🗣 Schedule Interview</button>
+        <button class="btn-sm" data-tp-id="${r.id}" data-tp-name="${(r.full_name||'').replace(/"/g,'&quot;')}" data-tp-role="${(r.position_applied||'').replace(/"/g,'&quot;')}" onclick="openScheduleInterviewModal(this.dataset.tpId,this.dataset.tpName,this.dataset.tpRole,'','talent_pool')">🗣 Schedule Interview</button>
         <button class="btn-danger" onclick="deleteRow('talent_pool','${r.id}',loadTalentPool)">Del</button>
       </div>
     </div>`).join('')+`</div>`;
@@ -10588,9 +10628,10 @@ function renderEventsList(events){
             +'<button class="btn-sm" data-eid="'+eid+'" onclick="openAddUpdate(this.dataset.eid)" style="font-size:10px">+ Log Update</button>'
           +'</div>'
           +(updates.length?updates.slice().reverse().slice(0,5).map(function(u){
-            return '<div style="padding:6px 0;border-bottom:1px solid var(--border);font-family:Arial;font-size:12px">'
-              +'<div style="color:var(--muted);font-size:10px">'+u.date+'</div>'
-              +'<div>'+u.text+'</div>'
+            return '<div style="padding:6px 0;border-bottom:1px solid var(--border);font-family:Arial;font-size:12px;display:flex;justify-content:space-between;align-items:flex-start;gap:8px">'
+              +'<div><div style="color:var(--muted);font-size:10px">'+u.date+'</div>'
+              +'<div>'+u.text+'</div></div>'
+              +'<button class="btn-danger" data-eid="'+eid+'" data-uid="'+u.id+'" onclick="deleteUpdate(this.dataset.eid,this.dataset.uid)" style="font-size:9px;padding:1px 6px;flex-shrink:0">×</button>'
             +'</div>';
           }).join(''):'<div style="font-family:Arial;font-size:12px;color:var(--muted)">No updates yet.</div>')
         +'</div>'
@@ -10725,6 +10766,12 @@ function openAddUpdate(eventId){
   getEventField(eventId,'updates_log').then(function(updates){
     updates.push({id:Date.now().toString(),date,text});
     setEventField(eventId,'updates_log',updates);
+  });
+}
+function deleteUpdate(eventId, updateId){
+  if(!confirm('Remove this update?')) return;
+  getEventField(eventId,'updates_log').then(function(updates){
+    setEventField(eventId,'updates_log',updates.filter(function(u){return u.id!==updateId;}));
   });
 }
 
