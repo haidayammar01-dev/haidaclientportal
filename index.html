@@ -4733,7 +4733,10 @@ function populateAllDropdowns(){
   const opts='<option value="">Select client…</option>'+allClients.map(c=>`<option value="${c.id}">${c.business_name}</option>`).join('');
   ['rf-client','inv-client','comp-client','act-client','stf-client','con-client','doc-client','onb-client-select','exp-client','ev-client'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML=opts.replace('<option value="">Select client…</option>','<option value="">None — internal cost</option>');});
   // Restore proper placeholder for other dropdowns
-  ['rf-client','inv-client','comp-client','act-client','stf-client','con-client','doc-client','onb-client-select'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML=opts;});
+  ['rf-client','inv-client','comp-client','stf-client','con-client','doc-client','onb-client-select'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML=opts;});
+  // Action Tracker: explicit "Internal / Company" category instead of a blank placeholder
+  const actEl=document.getElementById('act-client');
+  if(actEl)actEl.innerHTML=opts.replace('<option value="">Select client…</option>','<option value="">Internal / Company</option>');
 }
 
 async function saveClient(){
@@ -5139,7 +5142,7 @@ function renderActionsTable(acts){
     const due=a.due_date?new Date(a.due_date):null;const overdue=due&&due<today&&a.status!=='Done';
     return`<tr${overdue?' style="background:var(--danger-light)"':''}>
       <td><strong style="font-family:Arial;font-size:13px">${a.description||'—'}</strong>${a.notes?`<br><span style="font-family:Arial;font-size:11px;color:var(--muted)">${a.notes}</span>`:''}${overdue?'<span class="badge badge-red" style="margin-left:8px">OVERDUE</span>':''}</td>
-      <td style="font-family:Arial;font-size:13px">${(a.clients&&a.clients.business_name)||'—'}</td>
+      <td style="font-family:Arial;font-size:13px">${(a.clients&&a.clients.business_name)||'<span style="color:var(--muted);font-style:italic">Internal / Company</span>'}</td>
       <td style="font-family:Arial;font-size:13px">${a.owner||'—'}</td>
       <td style="font-family:Arial;font-size:12px">${a.due_date||'—'}</td>
       <td><span class="priority-${(a.priority||'low').toLowerCase()}" style="font-family:Arial;font-size:12px;font-weight:500">${a.priority||'—'}</span></td>
@@ -5157,8 +5160,9 @@ async function markActionDone(id){await db.from('actions').update({status:'Done'
 
 async function saveAction(){
   const clientId=document.getElementById('act-client').value;const fb=document.getElementById('action-feedback');
-  if(!clientId){fb.innerHTML='<div class="error-msg">Select a client.</div>';return;}
-  const {error}=await db.from('actions').insert({client_id:clientId,description:document.getElementById('act-desc').value.trim(),owner:document.getElementById('act-owner').value.trim(),due_date:document.getElementById('act-due').value,priority:document.getElementById('act-priority').value,status:document.getElementById('act-status').value,notes:document.getElementById('act-notes').value.trim()});
+  const desc=document.getElementById('act-desc').value.trim();
+  if(!desc){fb.innerHTML='<div class="error-msg">Description is required.</div>';return;}
+  const {error}=await db.from('actions').insert({client_id:clientId||null,description:desc,owner:document.getElementById('act-owner').value.trim(),due_date:document.getElementById('act-due').value,priority:document.getElementById('act-priority').value,status:document.getElementById('act-status').value,notes:document.getElementById('act-notes').value.trim()});
   if(error){fb.innerHTML=`<div class="error-msg">${error.message}</div>`;return;}
   fb.innerHTML='<div class="success-msg">✓ Action saved.</div>';loadActions();setTimeout(()=>{closeModal('modal-add-action');fb.innerHTML='';},1500);
 }
