@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Jost:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
 <style>
 :root{
   --ink:#1B2A4A;--ink2:#28395e;--gold:#C9A24B;--gold-light:#F7F5F0;--gold-mid:#e8d9b5;
@@ -687,6 +688,7 @@ self.addEventListener('notificationclick',function(e){
       <button class="tab-btn" onclick="showAdminTab('complaints',this)">Complaints</button>
       <button class="tab-btn" onclick="showAdminTab('eventplanner',this)">🎪 Event Planner</button>
       <button class="tab-btn" onclick="showAdminTab('actions',this)">Action Tracker</button>
+      <button class="tab-btn" onclick="showAdminTab('projects',this)">📁 Projects</button>
       <button class="tab-btn" onclick="showAdminTab('staff',this)">Client Staff</button>
       <button class="tab-btn" onclick="showAdminTab('contracts',this)">Contracts</button>
       <button class="tab-btn" onclick="showAdminTab('documents',this)">Documents</button>
@@ -719,9 +721,14 @@ self.addEventListener('notificationclick',function(e){
       </div>
       <div class="page" id="page-calendar">
         <div class="page-title">Calendar</div>
-        <div class="page-sub">Who's scheduled and who's on leave, across every client, next 14 days</div>
+        <div class="page-sub">Who's scheduled and who's on leave, across every client, next 14 days — plus anything your team adds</div>
+        <div style="display:flex;justify-content:flex-end;margin-bottom:14px">
+          <button class="btn-add" onclick="openAddTeamEventModal()">+ Add Event</button>
+        </div>
         <div id="calendar-content"></div>
       </div>
+
+
       <div class="page" id="page-clients">
         <div class="page-title">Clients</div>
         <div class="page-sub">Manage all active and onboarding clients</div>
@@ -811,19 +818,143 @@ self.addEventListener('notificationclick',function(e){
       <!-- ACTION TRACKER -->
       <div class="page" id="page-actions">
         <div class="page-title">Action Tracker</div>
-        <div class="page-sub">All outstanding actions across every client — nothing falls through</div>
-        <div style="display:flex;justify-content:flex-end;margin-bottom:16px;">
-          <button class="btn-add" onclick="openAddActionModal()">+ Add Action</button>
+        <div class="page-sub">Internal tasks and client-submitted requests, tracked separately</div>
+        <div style="display:flex;gap:8px;margin-bottom:16px;border-bottom:1px solid var(--border)">
+          <button class="inner-tab actions-subtab active" id="actionsub-internal" onclick="showActionSubTab('internal')">Internal Tracker</button>
+          <button class="inner-tab actions-subtab" id="actionsub-client" onclick="showActionSubTab('client')">Client Requests <span id="client-requests-badge" style="display:none;background:var(--danger);color:#fff;border-radius:10px;padding:1px 7px;font-size:10.5px;margin-left:4px"></span></button>
         </div>
-        <div class="card" style="padding:0;overflow:hidden">
-          <table class="data-table">
-            <thead><tr><th>Action</th><th>Client</th><th>Owner</th><th>Due</th><th>Priority</th><th>Status</th><th>Actions</th></tr></thead>
-            <tbody id="actions-tbody"><tr><td colspan="7" style="text-align:center;padding:24px;color:var(--muted);font-family:Arial">Loading…</td></tr></tbody>
-          </table>
+
+        <div id="actions-panel-internal">
+          <div style="display:flex;justify-content:flex-end;margin-bottom:16px;">
+            <button class="btn-add" onclick="openAddActionModal()">+ Add Action</button>
+          </div>
+          <div class="card" style="padding:0;overflow:hidden">
+            <table class="data-table">
+              <thead><tr><th>Action</th><th>Client</th><th>Owner</th><th>Due</th><th>Priority</th><th>Status</th><th>Actions</th></tr></thead>
+              <tbody id="actions-tbody"><tr><td colspan="7" style="text-align:center;padding:24px;color:var(--muted);font-family:Arial">Loading…</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div id="actions-panel-client" style="display:none">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+            <select id="client-req-category-filter" onchange="loadClientRequests()" style="padding:7px 12px;border:1px solid var(--border);border-radius:9px;font-family:Arial;font-size:13px;color:var(--ink)">
+              <option value="">All Categories</option>
+              <option value="hr">HR</option>
+              <option value="social_media">Social Media</option>
+              <option value="training">Training</option>
+              <option value="operations">Operations</option>
+              <option value="finance">Finance</option>
+            </select>
+            <span style="font-size:11.5px;color:var(--muted)">Requests clients submit through their portal, auto-tagged by category</span>
+          </div>
+          <div class="card" style="padding:0;overflow:hidden">
+            <table class="data-table">
+              <thead><tr><th>Request</th><th>Client</th><th>Category</th><th>Submitted</th><th>Status</th><th>Actions</th></tr></thead>
+              <tbody id="client-requests-tbody"><tr><td colspan="6" style="text-align:center;padding:24px;color:var(--muted);font-family:Arial">Loading…</td></tr></tbody>
+            </table>
+          </div>
         </div>
       </div>
 
       <!-- CLIENT STAFF -->
+      <!-- PROJECTS / PMO -->
+      <div class="page" id="page-projects">
+        <div class="page-title">📁 Projects</div>
+        <div class="page-sub">Pipeline, tasks, timelines, risk, benefits and health — across every project, company and client</div>
+        <div style="display:flex;gap:8px;margin-bottom:16px;border-bottom:1px solid var(--border);flex-wrap:wrap">
+          <button class="inner-tab pmo-tab active" id="pmotab-pipeline" onclick="showPmoTab('pipeline')">Pipeline</button>
+          <button class="inner-tab pmo-tab" id="pmotab-health" onclick="showPmoTab('health')">Program Health</button>
+        </div>
+
+        <div id="pmo-panel-pipeline">
+          <div style="display:flex;justify-content:flex-end;margin-bottom:14px">
+            <button class="btn-add" onclick="openNewProjectModal()">+ New Project</button>
+          </div>
+          <div id="pmo-project-list" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin-bottom:20px"></div>
+
+          <!-- PROJECT DETAIL -->
+          <div id="pmo-project-detail" style="display:none">
+            <div class="card" style="padding:16px 20px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+              <div>
+                <button class="btn-sm" onclick="closePmoProjectDetail()">← Back to Pipeline</button>
+                <div id="pmo-detail-title" style="font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:600;margin-top:6px"></div>
+                <div id="pmo-detail-sub" style="font-size:12px;color:var(--muted);margin-top:2px"></div>
+              </div>
+              <div id="pmo-detail-progress" style="text-align:right"></div>
+            </div>
+            <div style="display:flex;gap:8px;margin-bottom:16px;border-bottom:1px solid var(--border);flex-wrap:wrap">
+              <button class="inner-tab pmodetail-tab active" id="pmodetail-tasks" onclick="showPmoDetailTab('tasks')">Tasks</button>
+              <button class="inner-tab pmodetail-tab" id="pmodetail-milestones" onclick="showPmoDetailTab('milestones')">Timeline</button>
+              <button class="inner-tab pmodetail-tab" id="pmodetail-risks" onclick="showPmoDetailTab('risks')">Risk Register</button>
+              <button class="inner-tab pmodetail-tab" id="pmodetail-issues" onclick="showPmoDetailTab('issues')">Issues</button>
+              <button class="inner-tab pmodetail-tab" id="pmodetail-benefits" onclick="showPmoDetailTab('benefits')">Benefit Register</button>
+              <button class="inner-tab pmodetail-tab" id="pmodetail-changes" onclick="showPmoDetailTab('changes')">Change Log</button>
+              <button class="inner-tab pmodetail-tab" id="pmodetail-cost" style="display:none" onclick="showPmoDetailTab('cost')">Cost</button>
+            </div>
+
+            <div id="pmodetail-panel-tasks">
+              <div style="display:flex;justify-content:flex-end;margin-bottom:10px"><button class="btn-add" onclick="openNewTaskModal()">+ Add Task</button></div>
+              <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px" id="pmo-task-board">
+                <div><div style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:8px;font-weight:600">To Do</div><div id="pmo-col-todo"></div></div>
+                <div><div style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:8px;font-weight:600">In Progress</div><div id="pmo-col-in_progress"></div></div>
+                <div><div style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:8px;font-weight:600">Blocked</div><div id="pmo-col-blocked"></div></div>
+                <div><div style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:8px;font-weight:600">Done</div><div id="pmo-col-done"></div></div>
+              </div>
+            </div>
+
+            <div id="pmodetail-panel-milestones" style="display:none">
+              <div style="display:flex;justify-content:flex-end;margin-bottom:10px"><button class="btn-add" onclick="openNewMilestoneModal()">+ Add Milestone / Deliverable</button></div>
+              <div id="pmo-milestones-list"></div>
+            </div>
+
+            <div id="pmodetail-panel-risks" style="display:none">
+              <div style="display:flex;justify-content:flex-end;margin-bottom:10px"><button class="btn-add" onclick="openNewRiskModal()">+ Add Risk</button></div>
+              <div class="card" style="padding:0;overflow:hidden">
+                <table class="data-table"><thead><tr><th>Risk</th><th>Likelihood</th><th>Impact</th><th>Mitigation</th><th>Status</th><th></th></tr></thead>
+                <tbody id="pmo-risks-tbody"></tbody></table>
+              </div>
+            </div>
+
+            <div id="pmodetail-panel-issues" style="display:none">
+              <div style="display:flex;justify-content:flex-end;margin-bottom:10px"><button class="btn-add" onclick="openNewIssueModal()">+ Log Issue</button></div>
+              <div class="card" style="padding:0;overflow:hidden">
+                <table class="data-table"><thead><tr><th>Issue</th><th>Severity</th><th>Raised By</th><th>Status</th><th></th></tr></thead>
+                <tbody id="pmo-issues-tbody"></tbody></table>
+              </div>
+            </div>
+
+            <div id="pmodetail-panel-benefits" style="display:none">
+              <div style="display:flex;justify-content:flex-end;margin-bottom:10px"><button class="btn-add" onclick="openNewBenefitModal()">+ Add Benefit</button></div>
+              <div class="card" style="padding:0;overflow:hidden">
+                <table class="data-table"><thead><tr><th>Benefit</th><th>How Measured</th><th>Status</th><th></th></tr></thead>
+                <tbody id="pmo-benefits-tbody"></tbody></table>
+              </div>
+            </div>
+
+            <div id="pmodetail-panel-changes" style="display:none">
+              <div style="display:flex;justify-content:flex-end;margin-bottom:10px"><button class="btn-add" onclick="openNewChangeModal()">+ Log Change Request</button></div>
+              <div class="card" style="padding:0;overflow:hidden">
+                <table class="data-table"><thead><tr><th>Change Requested</th><th>In Original Scope?</th><th>Approved</th><th>Billed</th><th></th></tr></thead>
+                <tbody id="pmo-changes-tbody"></tbody></table>
+              </div>
+            </div>
+
+            <div id="pmodetail-panel-cost" style="display:none">
+              <div class="card" style="padding:18px 20px" id="pmo-cost-summary"></div>
+            </div>
+          </div>
+        </div>
+
+        <div id="pmo-panel-health" style="display:none">
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;margin-bottom:20px">
+            <div class="card" style="padding:16px"><div style="font-size:12px;color:var(--muted);margin-bottom:8px;font-weight:600">Projects by Status</div><canvas id="pmo-chart-status" height="180"></canvas></div>
+            <div class="card" style="padding:16px"><div style="font-size:12px;color:var(--muted);margin-bottom:8px;font-weight:600">Open Risks by Impact</div><canvas id="pmo-chart-risk" height="180"></canvas></div>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px" id="pmo-health-kpis"></div>
+        </div>
+      </div>
+
       <div class="page" id="page-staff">
         <div class="page-title">Client Staff Records</div>
         <div class="page-sub">Staff members employed by clients — flags, performance notes, training records</div>
@@ -2542,6 +2673,24 @@ self.addEventListener('notificationclick',function(e){
         </div>
         <div id="portal-candidates-tab" class="portal-tab-content" style="display:none"><div id="portal-candidates-list"></div></div>
         <div id="portal-messages-tab" class="portal-tab-content" style="display:none">
+          <div class="card" style="padding:16px;margin-bottom:16px">
+            <div style="font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:10px;font-weight:600">Submit a Request</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+              <select id="creq-category" style="padding:9px 12px;border:1px solid var(--border);border-radius:9px;font-size:13px">
+                <option value="hr">HR</option>
+                <option value="social_media">Social Media</option>
+                <option value="training">Training</option>
+                <option value="operations">Operations</option>
+                <option value="finance">Finance</option>
+              </select>
+            </div>
+            <div style="display:flex;gap:8px">
+              <input type="text" id="creq-message" placeholder="What do you need?" style="flex:1;padding:9px 12px;border:1px solid var(--border);border-radius:9px;font-size:13px">
+              <button class="btn-save" onclick="submitClientRequest()">Submit</button>
+            </div>
+            <div id="creq-feedback" style="margin-top:8px"></div>
+          </div>
+          <div style="font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:10px;font-weight:600">Messages</div>
           <div id="portal-messages-thread" style="max-height:420px;overflow-y:auto;margin-bottom:14px"></div>
           <div style="display:flex;gap:8px">
             <input type="text" id="msg-input-portal" placeholder="Type a message…" style="flex:1;padding:9px 12px;border:1px solid var(--border);border-radius:9px;font-size:13px">
@@ -2869,6 +3018,129 @@ self.addEventListener('notificationclick',function(e){
       </div>
       <button class="btn-save" onclick="saveAction()" style="margin-top:16px">Save Action</button>
       <div id="action-feedback"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Add Team Calendar Event -->
+<div class="modal-overlay" id="modal-add-team-event">
+  <div class="modal">
+    <div class="modal-header"><div class="modal-title">Add Calendar Event</div><button class="modal-close" onclick="closeModal('modal-add-team-event')">×</button></div>
+    <div class="modal-body">
+      <div class="form-field"><label>Title</label><input type="text" id="tev-title" placeholder="e.g. Idowu content meeting"></div>
+      <div class="form-field" style="margin-top:10px"><label>Date</label><input type="date" id="tev-date"></div>
+      <div class="form-field" style="margin-top:10px"><label>Notes (optional)</label><textarea id="tev-notes" rows="2"></textarea></div>
+      <button class="btn-save" onclick="saveTeamEvent()" style="margin-top:12px">Save Event</button>
+      <div id="tev-feedback"></div>
+    </div>
+  </div>
+</div>
+
+<!-- New Project -->
+<div class="modal-overlay" id="modal-new-project">
+  <div class="modal">
+    <div class="modal-header"><div class="modal-title">New Project</div><button class="modal-close" onclick="closeModal('modal-new-project')">×</button></div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-field" style="grid-column:1/-1"><label>Project Name</label><input type="text" id="proj-name" placeholder="e.g. Jun Café — Kitchen Staff Hiring"></div>
+        <div class="form-field"><label>Client</label><select id="proj-client"><option value="">Internal / Company</option></select></div>
+        <div class="form-field"><label>Origin</label><select id="proj-origin"><option value="internal">Internal</option><option value="client">Client</option></select></div>
+        <div class="form-field"><label>Status</label><select id="proj-status"><option value="planning">Planning</option><option value="active">Active</option><option value="on_hold">On Hold</option><option value="completed">Completed</option></select></div>
+        <div class="form-field"><label>Owner (Department — Name)</label><select id="proj-owner"></select></div>
+        <div class="form-field"><label>Start Date</label><input type="date" id="proj-start"></div>
+        <div class="form-field"><label>Target End Date</label><input type="date" id="proj-end"></div>
+        <div class="form-field" id="proj-budget-field"><label>Budget</label><input type="number" id="proj-budget" placeholder="Optional"></div>
+      </div>
+      <button class="btn-save" onclick="saveNewProject()" style="margin-top:16px">Create Project</button>
+      <div id="proj-feedback"></div>
+    </div>
+  </div>
+</div>
+
+<!-- New Task -->
+<div class="modal-overlay" id="modal-new-task">
+  <div class="modal">
+    <div class="modal-header"><div class="modal-title">Add Task</div><button class="modal-close" onclick="closeModal('modal-new-task')">×</button></div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-field" style="grid-column:1/-1"><label>Title</label><input type="text" id="ptask-title"></div>
+        <div class="form-field"><label>Assignee (Department — Name)</label><select id="ptask-assignee"></select></div>
+        <div class="form-field"><label>Origin</label><select id="ptask-origin"><option value="internal">Internal</option><option value="client">Client</option></select></div>
+        <div class="form-field"><label>Priority</label><select id="ptask-priority"><option value="low">Low</option><option value="medium" selected>Medium</option><option value="high">High</option></select></div>
+        <div class="form-field"><label>Due Date</label><input type="date" id="ptask-due"></div>
+        <div class="form-field" style="grid-column:1/-1"><label>Description</label><textarea id="ptask-desc" rows="2"></textarea></div>
+      </div>
+      <button class="btn-save" onclick="saveNewTask()" style="margin-top:16px">Save Task</button>
+      <div id="ptask-feedback"></div>
+    </div>
+  </div>
+</div>
+
+<!-- New Milestone -->
+<div class="modal-overlay" id="modal-new-milestone">
+  <div class="modal">
+    <div class="modal-header"><div class="modal-title">Add Milestone / Deliverable</div><button class="modal-close" onclick="closeModal('modal-new-milestone')">×</button></div>
+    <div class="modal-body">
+      <div class="form-field"><label>Title</label><input type="text" id="pmile-title"></div>
+      <div class="form-field" style="margin-top:10px"><label>Target Date</label><input type="date" id="pmile-date"></div>
+      <button class="btn-save" onclick="saveNewMilestone()" style="margin-top:16px">Save Milestone</button>
+      <div id="pmile-feedback"></div>
+    </div>
+  </div>
+</div>
+
+<!-- New Risk -->
+<div class="modal-overlay" id="modal-new-risk">
+  <div class="modal">
+    <div class="modal-header"><div class="modal-title">Add Risk</div><button class="modal-close" onclick="closeModal('modal-new-risk')">×</button></div>
+    <div class="modal-body">
+      <div class="form-field"><label>Risk Description</label><textarea id="prisk-desc" rows="2"></textarea></div>
+      <div class="form-grid" style="margin-top:10px">
+        <div class="form-field"><label>Likelihood</label><select id="prisk-likelihood"><option value="low">Low</option><option value="medium" selected>Medium</option><option value="high">High</option></select></div>
+        <div class="form-field"><label>Impact</label><select id="prisk-impact"><option value="low">Low</option><option value="medium" selected>Medium</option><option value="high">High</option></select></div>
+      </div>
+      <div class="form-field" style="margin-top:10px"><label>Mitigation Plan</label><textarea id="prisk-mitigation" rows="2"></textarea></div>
+      <button class="btn-save" onclick="saveNewRisk()" style="margin-top:16px">Save Risk</button>
+      <div id="prisk-feedback"></div>
+    </div>
+  </div>
+</div>
+
+<!-- New Issue -->
+<div class="modal-overlay" id="modal-new-issue">
+  <div class="modal">
+    <div class="modal-header"><div class="modal-title">Log Issue</div><button class="modal-close" onclick="closeModal('modal-new-issue')">×</button></div>
+    <div class="modal-body">
+      <div class="form-field"><label>Issue Description</label><textarea id="pissue-desc" rows="2"></textarea></div>
+      <div class="form-field" style="margin-top:10px"><label>Severity</label><select id="pissue-severity"><option value="low">Low</option><option value="medium" selected>Medium</option><option value="high">High</option></select></div>
+      <button class="btn-save" onclick="saveNewIssue()" style="margin-top:16px">Save Issue</button>
+      <div id="pissue-feedback"></div>
+    </div>
+  </div>
+</div>
+
+<!-- New Benefit -->
+<div class="modal-overlay" id="modal-new-benefit">
+  <div class="modal">
+    <div class="modal-header"><div class="modal-title">Add Benefit</div><button class="modal-close" onclick="closeModal('modal-new-benefit')">×</button></div>
+    <div class="modal-body">
+      <div class="form-field"><label>Expected Benefit</label><textarea id="pbenefit-text" rows="2"></textarea></div>
+      <div class="form-field" style="margin-top:10px"><label>How It's Measured</label><input type="text" id="pbenefit-measure"></div>
+      <button class="btn-save" onclick="saveNewBenefit()" style="margin-top:16px">Save Benefit</button>
+      <div id="pbenefit-feedback"></div>
+    </div>
+  </div>
+</div>
+
+<!-- New Change Request -->
+<div class="modal-overlay" id="modal-new-change">
+  <div class="modal">
+    <div class="modal-header"><div class="modal-title">Log Change Request</div><button class="modal-close" onclick="closeModal('modal-new-change')">×</button></div>
+    <div class="modal-body">
+      <div class="form-field"><label>What was requested</label><textarea id="pchange-desc" rows="2"></textarea></div>
+      <div class="form-field" style="margin-top:10px;display:flex;align-items:center;gap:8px"><input type="checkbox" id="pchange-inscope" style="width:auto"><label style="margin:0">Was this in the original scope?</label></div>
+      <button class="btn-save" onclick="saveNewChange()" style="margin-top:16px">Save</button>
+      <div id="pchange-feedback"></div>
     </div>
   </div>
 </div>
@@ -4225,6 +4497,7 @@ function showApp(){
     }
   }
   loadClients();loadComplaints();loadActions();loadStaff();loadContracts();loadDocs();loadEvents();
+  if(document.getElementById('client-requests-badge'))loadClientRequests();
   renderTypeFields();
 }
 
@@ -5110,6 +5383,378 @@ async function populateActionOwnerSelect(){
 async function loadActions(){
   const {data}=await db.from('actions').select('*,clients(business_name)').order('due_date',{ascending:true});
   renderActionsTable(data||[]);
+}
+function showActionSubTab(which){
+  document.getElementById('actions-panel-internal').style.display=which==='internal'?'block':'none';
+  document.getElementById('actions-panel-client').style.display=which==='client'?'block':'none';
+  document.getElementById('actionsub-internal').classList.toggle('active',which==='internal');
+  document.getElementById('actionsub-client').classList.toggle('active',which==='client');
+  if(which==='client')loadClientRequests();
+}
+const CLIENT_REQ_CATEGORY_LABEL={hr:'HR',social_media:'Social Media',training:'Training',operations:'Operations',finance:'Finance'};
+async function loadClientRequests(){
+  const cat=document.getElementById('client-req-category-filter')?.value||'';
+  let q=db.from('client_requests').select('*,clients(business_name)').order('created_at',{ascending:false});
+  if(cat)q=q.eq('category',cat);
+  const {data}=await q;
+  renderClientRequestsTable(data||[]);
+  const badge=document.getElementById('client-requests-badge');
+  const newCount=(data||[]).filter(r=>r.status==='new').length;
+  if(badge){badge.style.display=newCount?'inline':'none';badge.textContent=newCount;}
+}
+function renderClientRequestsTable(reqs){
+  const tbody=document.getElementById('client-requests-tbody');
+  if(!reqs.length){tbody.innerHTML='<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--muted);font-family:Arial">No client requests.</td></tr>';return;}
+  const sb={new:'badge-red',in_progress:'badge-gold',done:'badge-green'};
+  tbody.innerHTML=reqs.map(r=>`<tr>
+    <td style="font-family:Arial;font-size:13px">${r.message||'—'}</td>
+    <td style="font-family:Arial;font-size:13px">${(r.clients&&r.clients.business_name)||'—'}</td>
+    <td><span class="badge badge-gray">${CLIENT_REQ_CATEGORY_LABEL[r.category]||r.category||'—'}</span></td>
+    <td style="font-family:Arial;font-size:12px">${(r.created_at||'').slice(0,10)}</td>
+    <td><span class="badge ${sb[r.status]||'badge-gray'}">${(r.status||'new').replace('_',' ')}</span></td>
+    <td style="white-space:nowrap">
+      ${r.status!=='in_progress'?`<button class="btn-sm" onclick="updateClientRequestStatus('${r.id}','in_progress')">Start</button>`:''}
+      ${r.status!=='done'?`<button class="btn-sm" onclick="updateClientRequestStatus('${r.id}','done')">Done</button>`:''}
+    </td>
+  </tr>`).join('');
+}
+async function updateClientRequestStatus(id,status){
+  await db.from('client_requests').update({status}).eq('id',id);
+  loadClientRequests();
+}
+
+// ══ PROJECTS / PMO ══
+const _pmoState={currentProjectId:null};
+function canSeeProjectCost(){
+  if(!currentUser)return false;
+  if(currentUser.isOwner)return true;
+  const dept=(currentUser.department||'').split(',').map(d=>d.trim());
+  return dept.includes('finance')||dept.includes('project_management');
+}
+function showPmoTab(which){
+  document.getElementById('pmo-panel-pipeline').style.display=which==='pipeline'?'block':'none';
+  document.getElementById('pmo-panel-health').style.display=which==='health'?'block':'none';
+  document.getElementById('pmotab-pipeline').classList.toggle('active',which==='pipeline');
+  document.getElementById('pmotab-health').classList.toggle('active',which==='health');
+  if(which==='health')loadProgramHealth();
+}
+async function populatePmoOwnerSelects(){
+  const {data:admins}=await db.from('admin_users').select('full_name,department').order('department',{ascending:true}).order('full_name',{ascending:true});
+  const deptLabel=d=>(d||'operations').split(',')[0].replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
+  const opts='<option value="">Unassigned</option>'+(admins||[]).map(a=>{const label=`${deptLabel(a.department)} — ${a.full_name}`;return `<option value="${label}">${label}</option>`;}).join('');
+  ['proj-owner','ptask-assignee'].forEach(id=>{const sel=document.getElementById(id);if(sel)sel.innerHTML=opts;});
+  const {data:clients}=await db.from('clients').select('id,business_name').neq('status','Inactive').order('business_name',{ascending:true});
+  const csel=document.getElementById('proj-client');
+  if(csel)csel.innerHTML='<option value="">Internal / Company</option>'+(clients||[]).map(c=>`<option value="${c.id}">${c.business_name}</option>`).join('');
+}
+async function loadProjects(){
+  document.getElementById('proj-budget-field').style.display=canSeeProjectCost()?'block':'none';
+  const {data}=await db.from('projects').select('*,clients(business_name)').order('created_at',{ascending:false});
+  const {data:allTasks}=await db.from('project_tasks').select('project_id,status');
+  const el=document.getElementById('pmo-project-list');
+  if(!data||!data.length){el.innerHTML='<div class="card" style="padding:30px;text-align:center;color:var(--muted);font-family:Arial;font-size:13px;grid-column:1/-1">No projects yet — create one to get started.</div>';return;}
+  const statusBadge={planning:'badge-gold',active:'badge-green',on_hold:'badge-red',completed:'badge-gray'};
+  el.innerHTML=data.map(p=>{
+    const tasks=(allTasks||[]).filter(t=>t.project_id===p.id);
+    const done=tasks.filter(t=>t.status==='done').length;
+    const pct=tasks.length?Math.round(done/tasks.length*100):0;
+    return `<div class="card" style="padding:16px;cursor:pointer" onclick="openProjectDetail('${p.id}')">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+        <div style="font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:600">${p.name}</div>
+        <span class="badge ${statusBadge[p.status]||'badge-gray'}">${(p.status||'').replace('_',' ')}</span>
+      </div>
+      <div style="font-size:12px;color:var(--muted);margin-top:4px">${(p.clients&&p.clients.business_name)||'Internal / Company'} · ${p.owner_name||'Unassigned'}</div>
+      <div style="margin-top:10px;background:var(--surface2);border-radius:6px;height:6px;overflow:hidden"><div style="width:${pct}%;height:100%;background:var(--gold)"></div></div>
+      <div style="font-size:11px;color:var(--muted);margin-top:4px">${pct}% complete · ${tasks.length} task${tasks.length===1?'':'s'}</div>
+      ${p.target_end_date?`<div style="font-size:11px;color:var(--muted);margin-top:2px">Target: ${p.target_end_date}</div>`:''}
+    </div>`;
+  }).join('');
+}
+async function openNewProjectModal(){
+  await populatePmoOwnerSelects();
+  document.getElementById('proj-name').value='';document.getElementById('proj-start').value='';document.getElementById('proj-end').value='';document.getElementById('proj-budget').value='';
+  document.getElementById('proj-feedback').innerHTML='';
+  openModal('modal-new-project');
+}
+async function saveNewProject(){
+  const fb=document.getElementById('proj-feedback');
+  const name=document.getElementById('proj-name').value.trim();
+  if(!name){fb.innerHTML='<div class="error-msg">Project name is required.</div>';return;}
+  const payload={
+    name,
+    client_id:document.getElementById('proj-client').value||null,
+    origin:document.getElementById('proj-origin').value,
+    status:document.getElementById('proj-status').value,
+    owner_name:document.getElementById('proj-owner').value||null,
+    start_date:document.getElementById('proj-start').value||null,
+    target_end_date:document.getElementById('proj-end').value||null,
+  };
+  if(canSeeProjectCost()){const b=document.getElementById('proj-budget').value;if(b)payload.budget=parseFloat(b);}
+  const {error}=await db.from('projects').insert(payload);
+  if(error){fb.innerHTML=`<div class="error-msg">${error.message}</div>`;return;}
+  fb.innerHTML='<div class="success-msg">✓ Project created.</div>';
+  setTimeout(()=>{closeModal('modal-new-project');fb.innerHTML='';loadProjects();},1000);
+}
+async function openProjectDetail(id){
+  _pmoState.currentProjectId=id;
+  const {data:p}=await db.from('projects').select('*,clients(business_name)').eq('id',id).single();
+  if(!p)return;
+  document.getElementById('pmo-project-list').parentElement; // no-op, keep list mounted
+  document.getElementById('pmo-project-detail').style.display='block';
+  document.getElementById('pmo-detail-title').textContent=p.name;
+  document.getElementById('pmo-detail-sub').textContent=`${(p.clients&&p.clients.business_name)||'Internal / Company'} · ${p.owner_name||'Unassigned'} · ${(p.status||'').replace('_',' ')}`;
+  document.getElementById('pmodetail-cost').style.display=canSeeProjectCost()?'inline-block':'none';
+  const {data:tasks}=await db.from('project_tasks').select('status').eq('project_id',id);
+  const done=(tasks||[]).filter(t=>t.status==='done').length;
+  const pct=(tasks||[]).length?Math.round(done/tasks.length*100):0;
+  document.getElementById('pmo-detail-progress').innerHTML=`<div style="font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:700;color:var(--gold)">${pct}%</div><div style="font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Complete</div>`;
+  showPmoDetailTab('tasks');
+}
+function closePmoProjectDetail(){
+  _pmoState.currentProjectId=null;
+  document.getElementById('pmo-project-detail').style.display='none';
+}
+function showPmoDetailTab(which){
+  ['tasks','milestones','risks','issues','benefits','changes','cost'].forEach(t=>{
+    const panel=document.getElementById('pmodetail-panel-'+t);if(panel)panel.style.display=t===which?'block':'none';
+    const btn=document.getElementById('pmodetail-'+t);if(btn)btn.classList.toggle('active',t===which);
+  });
+  const pid=_pmoState.currentProjectId;if(!pid)return;
+  if(which==='tasks')loadPmoTasks(pid);
+  if(which==='milestones')loadPmoMilestones(pid);
+  if(which==='risks')loadPmoRisks(pid);
+  if(which==='issues')loadPmoIssues(pid);
+  if(which==='benefits')loadPmoBenefits(pid);
+  if(which==='changes')loadPmoChanges(pid);
+  if(which==='cost')loadPmoCost(pid);
+}
+async function loadPmoTasks(pid){
+  const {data}=await db.from('project_tasks').select('*').eq('project_id',pid).order('sequence',{ascending:true});
+  const cols={todo:[],in_progress:[],blocked:[],done:[]};
+  (data||[]).forEach(t=>{(cols[t.status]||cols.todo).push(t);});
+  const priorityColor={low:'var(--muted)',medium:'var(--gold)',high:'var(--danger)'};
+  Object.keys(cols).forEach(status=>{
+    const el=document.getElementById('pmo-col-'+status);
+    el.innerHTML=cols[status].map(t=>`<div class="card" style="padding:10px 12px;margin-bottom:8px;border-left:3px solid ${priorityColor[t.priority]||'var(--muted)'}">
+      <div style="font-size:12.5px;font-weight:600;${t.status==='done'?'text-decoration:line-through;color:var(--muted)':''}">${t.title}</div>
+      ${t.assignee?`<div style="font-size:10.5px;color:var(--muted);margin-top:3px">${t.assignee}</div>`:''}
+      ${t.due_date?`<div style="font-size:10.5px;color:var(--muted);margin-top:1px">Due ${t.due_date}</div>`:''}
+      <div style="margin-top:6px"><span style="font-size:8px;background:${t.origin==='client'?'var(--gold-light,#FBF3E3)':'var(--surface2)'};color:${t.origin==='client'?'var(--gold)':'var(--muted)'};padding:2px 6px;border-radius:8px;text-transform:uppercase;letter-spacing:.4px;font-weight:600">${t.origin||'internal'}</span></div>
+      <select style="margin-top:8px;width:100%;font-size:10.5px;padding:4px" onchange="updatePmoTaskStatus('${t.id}',this.value)">
+        <option value="todo" ${t.status==='todo'?'selected':''}>To Do</option>
+        <option value="in_progress" ${t.status==='in_progress'?'selected':''}>In Progress</option>
+        <option value="blocked" ${t.status==='blocked'?'selected':''}>Blocked</option>
+        <option value="done" ${t.status==='done'?'selected':''}>Done</option>
+      </select>
+    </div>`).join('')||'<div style="font-size:11px;color:var(--muted);padding:8px 0">None</div>';
+  });
+}
+async function updatePmoTaskStatus(id,status){
+  await db.from('project_tasks').update({status}).eq('id',id);
+  loadPmoTasks(_pmoState.currentProjectId);
+  loadProjects();
+}
+async function openNewTaskModal(){
+  await populatePmoOwnerSelects();
+  document.getElementById('ptask-title').value='';document.getElementById('ptask-due').value='';document.getElementById('ptask-desc').value='';
+  document.getElementById('ptask-feedback').innerHTML='';
+  openModal('modal-new-task');
+}
+async function saveNewTask(){
+  const fb=document.getElementById('ptask-feedback');
+  const title=document.getElementById('ptask-title').value.trim();
+  if(!title){fb.innerHTML='<div class="error-msg">Title is required.</div>';return;}
+  const {error}=await db.from('project_tasks').insert({
+    project_id:_pmoState.currentProjectId,title,
+    description:document.getElementById('ptask-desc').value.trim(),
+    assignee:document.getElementById('ptask-assignee').value||null,
+    origin:document.getElementById('ptask-origin').value,
+    priority:document.getElementById('ptask-priority').value,
+    due_date:document.getElementById('ptask-due').value||null
+  });
+  if(error){fb.innerHTML=`<div class="error-msg">${error.message}</div>`;return;}
+  fb.innerHTML='<div class="success-msg">✓ Task added.</div>';
+  setTimeout(()=>{closeModal('modal-new-task');fb.innerHTML='';loadPmoTasks(_pmoState.currentProjectId);loadProjects();},900);
+}
+async function loadPmoMilestones(pid){
+  const {data}=await db.from('project_milestones').select('*').eq('project_id',pid).order('target_date',{ascending:true});
+  const statusColor={pending:'badge-gray',on_track:'badge-green',at_risk:'badge-red',delivered:'badge-green'};
+  const el=document.getElementById('pmo-milestones-list');
+  if(!data||!data.length){el.innerHTML='<div class="card" style="padding:20px;text-align:center;color:var(--muted);font-family:Arial;font-size:13px">No milestones yet.</div>';return;}
+  el.innerHTML=data.map(m=>`<div class="card" style="padding:12px 16px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center">
+    <div><strong style="font-size:13.5px">${m.title}</strong><br><span style="font-size:11.5px;color:var(--muted)">Target: ${m.target_date||'—'}</span></div>
+    <select style="font-size:11px;padding:5px" onchange="updateMilestoneStatus('${m.id}',this.value)">
+      <option value="pending" ${m.status==='pending'?'selected':''}>Pending</option>
+      <option value="on_track" ${m.status==='on_track'?'selected':''}>On Track</option>
+      <option value="at_risk" ${m.status==='at_risk'?'selected':''}>At Risk</option>
+      <option value="delivered" ${m.status==='delivered'?'selected':''}>Delivered</option>
+    </select>
+  </div>`).join('');
+}
+async function updateMilestoneStatus(id,status){await db.from('project_milestones').update({status}).eq('id',id);loadPmoMilestones(_pmoState.currentProjectId);}
+async function openNewMilestoneModal(){document.getElementById('pmile-title').value='';document.getElementById('pmile-date').value='';document.getElementById('pmile-feedback').innerHTML='';openModal('modal-new-milestone');}
+async function saveNewMilestone(){
+  const fb=document.getElementById('pmile-feedback');
+  const title=document.getElementById('pmile-title').value.trim();
+  if(!title){fb.innerHTML='<div class="error-msg">Title required.</div>';return;}
+  const {error}=await db.from('project_milestones').insert({project_id:_pmoState.currentProjectId,title,target_date:document.getElementById('pmile-date').value||null});
+  if(error){fb.innerHTML=`<div class="error-msg">${error.message}</div>`;return;}
+  fb.innerHTML='<div class="success-msg">✓ Saved.</div>';
+  setTimeout(()=>{closeModal('modal-new-milestone');fb.innerHTML='';loadPmoMilestones(_pmoState.currentProjectId);},900);
+}
+async function loadPmoRisks(pid){
+  const {data}=await db.from('project_risks').select('*').eq('project_id',pid).order('created_at',{ascending:false});
+  const tbody=document.getElementById('pmo-risks-tbody');
+  if(!data||!data.length){tbody.innerHTML='<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--muted);font-family:Arial">No risks logged.</td></tr>';return;}
+  tbody.innerHTML=data.map(r=>`<tr>
+    <td style="font-family:Arial;font-size:13px">${r.description}</td>
+    <td><span class="badge ${r.likelihood==='high'?'badge-red':r.likelihood==='medium'?'badge-gold':'badge-gray'}">${r.likelihood}</span></td>
+    <td><span class="badge ${r.impact==='high'?'badge-red':r.impact==='medium'?'badge-gold':'badge-gray'}">${r.impact}</span></td>
+    <td style="font-family:Arial;font-size:12px">${r.mitigation||'—'}</td>
+    <td><select style="font-size:11px" onchange="updateRiskStatus('${r.id}',this.value)">
+      <option value="open" ${r.status==='open'?'selected':''}>Open</option>
+      <option value="mitigated" ${r.status==='mitigated'?'selected':''}>Mitigated</option>
+      <option value="closed" ${r.status==='closed'?'selected':''}>Closed</option>
+    </select></td>
+    <td></td>
+  </tr>`).join('');
+}
+async function updateRiskStatus(id,status){await db.from('project_risks').update({status}).eq('id',id);loadPmoRisks(_pmoState.currentProjectId);}
+async function openNewRiskModal(){document.getElementById('prisk-desc').value='';document.getElementById('prisk-mitigation').value='';document.getElementById('prisk-feedback').innerHTML='';openModal('modal-new-risk');}
+async function saveNewRisk(){
+  const fb=document.getElementById('prisk-feedback');
+  const desc=document.getElementById('prisk-desc').value.trim();
+  if(!desc){fb.innerHTML='<div class="error-msg">Description required.</div>';return;}
+  const {error}=await db.from('project_risks').insert({project_id:_pmoState.currentProjectId,description:desc,likelihood:document.getElementById('prisk-likelihood').value,impact:document.getElementById('prisk-impact').value,mitigation:document.getElementById('prisk-mitigation').value.trim()});
+  if(error){fb.innerHTML=`<div class="error-msg">${error.message}</div>`;return;}
+  fb.innerHTML='<div class="success-msg">✓ Risk logged.</div>';
+  setTimeout(()=>{closeModal('modal-new-risk');fb.innerHTML='';loadPmoRisks(_pmoState.currentProjectId);},900);
+}
+async function loadPmoIssues(pid){
+  const {data}=await db.from('project_issues').select('*').eq('project_id',pid).order('created_at',{ascending:false});
+  const tbody=document.getElementById('pmo-issues-tbody');
+  if(!data||!data.length){tbody.innerHTML='<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--muted);font-family:Arial">No issues logged.</td></tr>';return;}
+  tbody.innerHTML=data.map(i=>`<tr>
+    <td style="font-family:Arial;font-size:13px">${i.description}</td>
+    <td><span class="badge ${i.severity==='high'?'badge-red':i.severity==='medium'?'badge-gold':'badge-gray'}">${i.severity}</span></td>
+    <td style="font-family:Arial;font-size:12px">${i.raised_by||'—'}</td>
+    <td><select style="font-size:11px" onchange="updateIssueStatus('${i.id}',this.value)">
+      <option value="open" ${i.status==='open'?'selected':''}>Open</option>
+      <option value="resolved" ${i.status==='resolved'?'selected':''}>Resolved</option>
+    </select></td>
+  </tr>`).join('');
+}
+async function updateIssueStatus(id,status){await db.from('project_issues').update({status}).eq('id',id);loadPmoIssues(_pmoState.currentProjectId);}
+async function openNewIssueModal(){document.getElementById('pissue-desc').value='';document.getElementById('pissue-feedback').innerHTML='';openModal('modal-new-issue');}
+async function saveNewIssue(){
+  const fb=document.getElementById('pissue-feedback');
+  const desc=document.getElementById('pissue-desc').value.trim();
+  if(!desc){fb.innerHTML='<div class="error-msg">Description required.</div>';return;}
+  const {error}=await db.from('project_issues').insert({project_id:_pmoState.currentProjectId,description:desc,severity:document.getElementById('pissue-severity').value,raised_by:(currentUser&&currentUser.name)||''});
+  if(error){fb.innerHTML=`<div class="error-msg">${error.message}</div>`;return;}
+  fb.innerHTML='<div class="success-msg">✓ Issue logged.</div>';
+  setTimeout(()=>{closeModal('modal-new-issue');fb.innerHTML='';loadPmoIssues(_pmoState.currentProjectId);},900);
+}
+async function loadPmoBenefits(pid){
+  const {data}=await db.from('project_benefits').select('*').eq('project_id',pid).order('created_at',{ascending:false});
+  const tbody=document.getElementById('pmo-benefits-tbody');
+  if(!data||!data.length){tbody.innerHTML='<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--muted);font-family:Arial">No benefits logged.</td></tr>';return;}
+  tbody.innerHTML=data.map(b=>`<tr>
+    <td style="font-family:Arial;font-size:13px">${b.benefit}</td>
+    <td style="font-family:Arial;font-size:12px">${b.measure||'—'}</td>
+    <td><select style="font-size:11px" onchange="updateBenefitStatus('${b.id}',this.value)">
+      <option value="not_realized" ${b.status==='not_realized'?'selected':''}>Not Yet Realized</option>
+      <option value="partially_realized" ${b.status==='partially_realized'?'selected':''}>Partially Realized</option>
+      <option value="realized" ${b.status==='realized'?'selected':''}>Realized</option>
+    </select></td>
+    <td></td>
+  </tr>`).join('');
+}
+async function updateBenefitStatus(id,status){await db.from('project_benefits').update({status}).eq('id',id);loadPmoBenefits(_pmoState.currentProjectId);}
+async function openNewBenefitModal(){document.getElementById('pbenefit-text').value='';document.getElementById('pbenefit-measure').value='';document.getElementById('pbenefit-feedback').innerHTML='';openModal('modal-new-benefit');}
+async function saveNewBenefit(){
+  const fb=document.getElementById('pbenefit-feedback');
+  const text=document.getElementById('pbenefit-text').value.trim();
+  if(!text){fb.innerHTML='<div class="error-msg">Benefit description required.</div>';return;}
+  const {error}=await db.from('project_benefits').insert({project_id:_pmoState.currentProjectId,benefit:text,measure:document.getElementById('pbenefit-measure').value.trim()});
+  if(error){fb.innerHTML=`<div class="error-msg">${error.message}</div>`;return;}
+  fb.innerHTML='<div class="success-msg">✓ Benefit added.</div>';
+  setTimeout(()=>{closeModal('modal-new-benefit');fb.innerHTML='';loadPmoBenefits(_pmoState.currentProjectId);},900);
+}
+async function loadPmoChanges(pid){
+  const {data}=await db.from('project_changes').select('*').eq('project_id',pid).order('created_at',{ascending:false});
+  const tbody=document.getElementById('pmo-changes-tbody');
+  if(!data||!data.length){tbody.innerHTML='<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--muted);font-family:Arial">No change requests logged.</td></tr>';return;}
+  tbody.innerHTML=data.map(c=>`<tr>
+    <td style="font-family:Arial;font-size:13px">${c.description}</td>
+    <td>${c.in_original_scope?'✓ Yes':'✗ No'}</td>
+    <td><select style="font-size:11px" onchange="updateChangeField('${c.id}','approved',this.value==='true')"><option value="">—</option><option value="true" ${c.approved===true?'selected':''}>Approved</option><option value="false" ${c.approved===false?'selected':''}>Declined</option></select></td>
+    <td><select style="font-size:11px" onchange="updateChangeField('${c.id}','billed',this.value==='true')"><option value="false" ${!c.billed?'selected':''}>No</option><option value="true" ${c.billed?'selected':''}>Yes</option></select></td>
+    <td></td>
+  </tr>`).join('');
+}
+async function updateChangeField(id,field,value){await db.from('project_changes').update({[field]:value}).eq('id',id);loadPmoChanges(_pmoState.currentProjectId);}
+async function openNewChangeModal(){document.getElementById('pchange-desc').value='';document.getElementById('pchange-inscope').checked=false;document.getElementById('pchange-feedback').innerHTML='';openModal('modal-new-change');}
+async function saveNewChange(){
+  const fb=document.getElementById('pchange-feedback');
+  const desc=document.getElementById('pchange-desc').value.trim();
+  if(!desc){fb.innerHTML='<div class="error-msg">Description required.</div>';return;}
+  const {error}=await db.from('project_changes').insert({project_id:_pmoState.currentProjectId,description:desc,in_original_scope:document.getElementById('pchange-inscope').checked});
+  if(error){fb.innerHTML=`<div class="error-msg">${error.message}</div>`;return;}
+  fb.innerHTML='<div class="success-msg">✓ Logged.</div>';
+  setTimeout(()=>{closeModal('modal-new-change');fb.innerHTML='';loadPmoChanges(_pmoState.currentProjectId);},900);
+}
+async function loadPmoCost(pid){
+  const el=document.getElementById('pmo-cost-summary');
+  if(!canSeeProjectCost()){el.innerHTML='<div style="font-size:13px;color:var(--muted)">You don\'t have access to cost data.</div>';return;}
+  const {data:p}=await db.from('projects').select('budget,actual_spend').eq('id',pid).single();
+  const budget=p&&p.budget?Number(p.budget):0;
+  const spend=p&&p.actual_spend?Number(p.actual_spend):0;
+  const pct=budget?Math.min(100,Math.round(spend/budget*100)):0;
+  el.innerHTML=`
+    <div style="display:flex;gap:30px;flex-wrap:wrap">
+      <div><div style="font-size:11px;color:var(--muted);text-transform:uppercase">Budget</div><div style="font-family:'Cormorant Garamond',serif;font-size:24px;font-weight:700">${budget?budget.toLocaleString():'Not set'}</div></div>
+      <div><div style="font-size:11px;color:var(--muted);text-transform:uppercase">Spent So Far</div><div style="font-family:'Cormorant Garamond',serif;font-size:24px;font-weight:700;color:${pct>90?'var(--danger)':'var(--ink)'}">${spend.toLocaleString()}</div></div>
+    </div>
+    ${budget?`<div style="margin-top:14px;background:var(--surface2);border-radius:6px;height:8px;overflow:hidden"><div style="width:${pct}%;height:100%;background:${pct>90?'var(--danger)':'var(--gold)'}"></div></div><div style="font-size:11px;color:var(--muted);margin-top:4px">${pct}% of budget used</div>`:''}
+    <div style="margin-top:16px;display:flex;gap:8px;align-items:center">
+      <input type="number" id="pcost-update" placeholder="Update actual spend" style="padding:7px 10px;border:1px solid var(--border);border-radius:8px;font-size:12px;width:180px">
+      <button class="btn-sm" onclick="updatePmoCost('${pid}')">Update</button>
+    </div>`;
+}
+async function updatePmoCost(pid){
+  const val=parseFloat(document.getElementById('pcost-update').value);
+  if(isNaN(val))return;
+  await db.from('projects').update({actual_spend:val}).eq('id',pid);
+  loadPmoCost(pid);
+}
+async function loadProgramHealth(){
+  const {data:projects}=await db.from('projects').select('id,status');
+  const {data:risks}=await db.from('project_risks').select('impact,status').eq('status','open');
+  const {data:tasks}=await db.from('project_tasks').select('status,due_date');
+  const today=new Date().toISOString().slice(0,10);
+  const overdueTasks=(tasks||[]).filter(t=>t.due_date&&t.due_date<today&&t.status!=='done').length;
+  const statusCounts={planning:0,active:0,on_hold:0,completed:0};
+  (projects||[]).forEach(p=>{statusCounts[p.status]=(statusCounts[p.status]||0)+1;});
+  const riskCounts={low:0,medium:0,high:0};
+  (risks||[]).forEach(r=>{riskCounts[r.impact]=(riskCounts[r.impact]||0)+1;});
+
+  const kpiHtml=(icon,val,label,tone)=>`<div class="card" style="padding:16px 18px;display:flex;align-items:center;gap:12px">
+    <div style="font-size:22px">${icon}</div>
+    <div><div style="font-size:26px;font-family:'Cormorant Garamond',serif;font-weight:700;color:${tone?`var(--${tone})`:'var(--ink)'}">${val}</div><div style="font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">${label}</div></div>
+  </div>`;
+  document.getElementById('pmo-health-kpis').innerHTML=
+    kpiHtml('📁',(projects||[]).length,'Total Projects')+
+    kpiHtml('🟢',statusCounts.active||0,'Active Projects','success')+
+    kpiHtml('⚠️',overdueTasks,'Overdue Tasks',overdueTasks?'danger':null)+
+    kpiHtml('🔺',riskCounts.high||0,'High-Impact Open Risks',riskCounts.high?'danger':null);
+
+  if(window._pmoChartStatus)window._pmoChartStatus.destroy();
+  if(window._pmoChartRisk)window._pmoChartRisk.destroy();
+  const ctx1=document.getElementById('pmo-chart-status');
+  if(ctx1)window._pmoChartStatus=new Chart(ctx1,{type:'doughnut',data:{labels:['Planning','Active','On Hold','Completed'],datasets:[{data:[statusCounts.planning,statusCounts.active,statusCounts.on_hold,statusCounts.completed],backgroundColor:['#C9A24B','#1A5C38','#C0392B','#9AA0A6']}]},options:{plugins:{legend:{position:'bottom',labels:{font:{size:11}}}}}});
+  const ctx2=document.getElementById('pmo-chart-risk');
+  if(ctx2)window._pmoChartRisk=new Chart(ctx2,{type:'bar',data:{labels:['Low','Medium','High'],datasets:[{data:[riskCounts.low,riskCounts.medium,riskCounts.high],backgroundColor:['#9AA0A6','#C9A24B','#C0392B']}]},options:{plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{stepSize:1}}}}});
 }
 
 function renderActionsTable(acts){
@@ -6491,6 +7136,18 @@ async function loadClientMessages(clientId,scope){
   const unreadIds=rows.filter(m=>!m[unreadField]).map(m=>m.id);
   if(unreadIds.length)await db.from('client_messages').update({[unreadField]:true}).in('id',unreadIds);
 }
+async function submitClientRequest(){
+  const cat=document.getElementById('creq-category').value;
+  const msg=document.getElementById('creq-message').value.trim();
+  const fb=document.getElementById('creq-feedback');
+  if(!msg){fb.innerHTML='<div class="error-msg">Please describe what you need.</div>';return;}
+  const clientId=currentUser.clientId;
+  const {error}=await db.from('client_requests').insert({client_id:clientId,category:cat,message:msg,status:'new'});
+  if(error){fb.innerHTML=`<div class="error-msg">${error.message}</div>`;return;}
+  fb.innerHTML='<div class="success-msg">✓ Request submitted — routed to the right team.</div>';
+  document.getElementById('creq-message').value='';
+  setTimeout(()=>{fb.innerHTML='';},2500);
+}
 async function sendClientMessage(scope){
   const input=document.getElementById('msg-input-'+scope);
   const text=input.value.trim();
@@ -6555,8 +7212,24 @@ async function loadDashboard(){
   };
 
   const hour=new Date().getHours();
-  const greeting=hour<12?'Good morning':hour<17?'Good afternoon':'Good evening';
-  const totalUrgent2=overdueTrainings.length+lowStock.length+overdueBills.length;
+  const timeGreeting=hour<12?'Good morning':hour<17?'Good afternoon':'Good evening';
+  const firstName=(currentUser.name||'').split(' ')[0]||currentUser.name||'';
+  const greeting=firstName?`${timeGreeting}, ${firstName}`:timeGreeting;
+  // ── Department-scoped dashboard: owner and Project Management see everything,
+  // everyone else only sees the cards relevant to their department. ──
+  const dept=(currentUser.department||'operations').split(',').map(d=>d.trim());
+  const seesAll=currentUser.isOwner||dept.includes('project_management');
+  const DASH_SECTIONS={
+    overdueTrainings:['operations','hr','social_media'],
+    leave:['hr','social_media','operations'],
+    lowStock:['operations'],
+    overdueBills:['finance'],
+    contracts:['operations','hr'],
+    candidates:['hr','social_media'],
+    payroll:['finance']
+  };
+  const dashShows=key=>seesAll||DASH_SECTIONS[key].some(d=>dept.includes(d));
+  const totalUrgent2=(dashShows('overdueTrainings')?overdueTrainings.length:0)+(dashShows('lowStock')?lowStock.length:0)+(dashShows('overdueBills')?overdueBills.length:0);
   const kpi=(icon,val,label,tone)=>`
     <div class="card" style="padding:0;overflow:hidden;text-align:left;transition:transform .12s" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
       <div style="height:4px;background:var(--${tone})"></div>
@@ -6579,27 +7252,27 @@ async function loadDashboard(){
     </div>
 
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:26px">
-      ${kpi('⚠️',overdueTrainings.length,'Overdue Trainings','danger')}
-      ${kpi('🌴',(leave||[]).length,'Pending Leave','gold')}
-      ${kpi('📦',lowStock.length,'Low Stock Items','danger')}
-      ${kpi('💸',overdueBills.length,'Overdue Bills','danger')}
-      ${kpi('📄',(contracts||[]).length,'Contracts Expiring Soon','gold')}
-      ${kpi('🧑‍🎓',(candidates||[]).length,'Candidates To Review','gold')}
+      ${dashShows('overdueTrainings')?kpi('⚠️',overdueTrainings.length,'Overdue Trainings','danger'):''}
+      ${dashShows('leave')?kpi('🌴',(leave||[]).length,'Pending Leave','gold'):''}
+      ${dashShows('lowStock')?kpi('📦',lowStock.length,'Low Stock Items','danger'):''}
+      ${dashShows('overdueBills')?kpi('💸',overdueBills.length,'Overdue Bills','danger'):''}
+      ${dashShows('contracts')?kpi('📄',(contracts||[]).length,'Contracts Expiring Soon','gold'):''}
+      ${dashShows('candidates')?kpi('🧑‍🎓',(candidates||[]).length,'Candidates To Review','gold'):''}
     </div>
 
-    ${checklist('Overdue Trainings','⚠️',overdueTrainings.map(t=>`<strong style="font-size:13px;color:var(--ink)">${(t.client_staff&&t.client_staff.name)||'—'}</strong> · <span style="font-size:12px;color:var(--muted)">${(t.client_staff&&t.client_staff.clients&&t.client_staff.clients.business_name)||'—'}</span><br><span style="font-size:12px;color:var(--danger)">${t.training_name} — was due ${t.due_date}</span>`),true)}
+    ${dashShows('overdueTrainings')?checklist('Overdue Trainings','⚠️',overdueTrainings.map(t=>`<strong style="font-size:13px;color:var(--ink)">${(t.client_staff&&t.client_staff.name)||'—'}</strong> · <span style="font-size:12px;color:var(--muted)">${(t.client_staff&&t.client_staff.clients&&t.client_staff.clients.business_name)||'—'}</span><br><span style="font-size:12px;color:var(--danger)">${t.training_name} — was due ${t.due_date}</span>`),true):''}
 
-    ${checklist('Overdue Bills','💸',overdueBills.map(b=>`<strong style="font-size:13px;color:var(--ink)">${b.vendor_name}</strong> · <span style="font-size:12px;color:var(--muted)">${(b.clients&&b.clients.business_name)||'—'}</span><br><span style="font-size:12px;color:var(--danger)">${CURRENCY_SYMBOLS[(b.clients&&b.clients.currency)||'NGN']||'₦'}${Number(b.amount||0).toLocaleString()} — due ${b.due_date}</span>`),true)}
+    ${dashShows('overdueBills')?checklist('Overdue Bills','💸',overdueBills.map(b=>`<strong style="font-size:13px;color:var(--ink)">${b.vendor_name}</strong> · <span style="font-size:12px;color:var(--muted)">${(b.clients&&b.clients.business_name)||'—'}</span><br><span style="font-size:12px;color:var(--danger)">${CURRENCY_SYMBOLS[(b.clients&&b.clients.currency)||'NGN']||'₦'}${Number(b.amount||0).toLocaleString()} — due ${b.due_date}</span>`),true):''}
 
-    ${checklist('Low Stock','📦',lowStock.map(i=>`<strong style="font-size:13px;color:var(--ink)">${i.item_name}</strong> · <span style="font-size:12px;color:var(--muted)">${(i.clients&&i.clients.business_name)||'—'}</span><br><span style="font-size:12px;color:var(--danger)">${i.quantity} ${i.unit||''} left (reorder at ${i.reorder_level})</span>`),true)}
+    ${dashShows('lowStock')?checklist('Low Stock','📦',lowStock.map(i=>`<strong style="font-size:13px;color:var(--ink)">${i.item_name}</strong> · <span style="font-size:12px;color:var(--muted)">${(i.clients&&i.clients.business_name)||'—'}</span><br><span style="font-size:12px;color:var(--danger)">${i.quantity} ${i.unit||''} left (reorder at ${i.reorder_level})</span>`),true):''}
 
-    ${checklist('Pending Leave Requests','🌴',(leave||[]).map(l=>`<strong style="font-size:13px;color:var(--ink)">${(l.client_staff&&l.client_staff.name)||'—'}</strong> · <span style="font-size:12px;color:var(--muted)">${(l.clients&&l.clients.business_name)||'—'}</span><br><span style="font-size:12px;color:var(--muted)">${l.start_date} → ${l.end_date}</span>`),false)}
+    ${dashShows('leave')?checklist('Pending Leave Requests','🌴',(leave||[]).map(l=>`<strong style="font-size:13px;color:var(--ink)">${(l.client_staff&&l.client_staff.name)||'—'}</strong> · <span style="font-size:12px;color:var(--muted)">${(l.clients&&l.clients.business_name)||'—'}</span><br><span style="font-size:12px;color:var(--muted)">${l.start_date} → ${l.end_date}</span>`),false):''}
 
-    ${checklist('Contracts Expiring Within 30 Days','📄',(contracts||[]).map(c=>`<strong style="font-size:13px;color:var(--ink)">${(c.clients&&c.clients.business_name)||'—'}</strong><br><span style="font-size:12px;color:var(--muted)">${c.contract_type||'Contract'} — expires ${c.end_date}</span>`),false)}
+    ${dashShows('contracts')?checklist('Contracts Expiring Within 30 Days','📄',(contracts||[]).map(c=>`<strong style="font-size:13px;color:var(--ink)">${(c.clients&&c.clients.business_name)||'—'}</strong><br><span style="font-size:12px;color:var(--muted)">${c.contract_type||'Contract'} — expires ${c.end_date}</span>`),false):''}
 
-    ${checklist('Candidates To Review','🧑‍🎓',(candidates||[]).map(c=>`<strong style="font-size:13px;color:var(--ink)">${c.full_name}</strong> · <span style="font-size:12px;color:var(--muted)">${(c.clients&&c.clients.business_name)||'—'}</span>`),false)}
+    ${dashShows('candidates')?checklist('Candidates To Review','🧑‍🎓',(candidates||[]).map(c=>`<strong style="font-size:13px;color:var(--ink)">${c.full_name}</strong> · <span style="font-size:12px;color:var(--muted)">${(c.clients&&c.clients.business_name)||'—'}</span>`),false):''}
 
-    ${checklist('Payroll Not Yet Run This Month','💰',clientsMissingPayroll.map(c=>`<strong style="font-size:13px;color:var(--ink)">${c.business_name}</strong>`),false)}
+    ${dashShows('payroll')?checklist('Payroll Not Yet Run This Month','💰',clientsMissingPayroll.map(c=>`<strong style="font-size:13px;color:var(--ink)">${c.business_name}</strong>`),false):''}
 
     ${totalUrgent2===0&&!(leave||[]).length&&!(contracts||[]).length&&!(candidates||[]).length&&!clientsMissingPayroll.length?`<div class="card" style="padding:40px;text-align:center"><div style="font-size:32px;margin-bottom:8px">✨</div><div style="font-family:'Cormorant Garamond',serif;font-size:20px;color:var(--ink)">Nothing outstanding right now</div><div style="font-size:12px;color:var(--muted);margin-top:4px">Everything's on track across every client.</div></div>`:''}
   `;
@@ -6768,6 +7441,24 @@ async function deleteTemplateQuestion(id,templateId){
 }
 
 // ══ GLOBAL CALENDAR — cross-client, next 14 days ══
+async function openAddTeamEventModal(){
+  document.getElementById('tev-title').value='';
+  document.getElementById('tev-date').value=new Date().toISOString().slice(0,10);
+  document.getElementById('tev-notes').value='';
+  document.getElementById('tev-feedback').innerHTML='';
+  openModal('modal-add-team-event');
+}
+async function saveTeamEvent(){
+  const title=document.getElementById('tev-title').value.trim();
+  const date=document.getElementById('tev-date').value;
+  const notes=document.getElementById('tev-notes').value.trim();
+  const fb=document.getElementById('tev-feedback');
+  if(!title||!date){fb.innerHTML='<div class="error-msg">Title and date are required.</div>';return;}
+  const {error}=await db.from('team_calendar_events').insert({title,event_date:date,notes,added_by:(currentUser&&currentUser.name)||'Unknown'});
+  if(error){fb.innerHTML=`<div class="error-msg">${error.message}</div>`;return;}
+  fb.innerHTML='<div class="success-msg">✓ Event added.</div>';
+  setTimeout(()=>{closeModal('modal-add-team-event');fb.innerHTML='';loadGlobalCalendar();},1000);
+}
 async function loadGlobalCalendar(){
   const el=document.getElementById('calendar-content');if(!el)return;
   el.innerHTML='<p style="font-size:13px;color:var(--muted)">Loading…</p>';
@@ -6776,11 +7467,12 @@ async function loadGlobalCalendar(){
   const endDate=new Date(today);endDate.setDate(endDate.getDate()+13);
   const end=endDate.toISOString().slice(0,10);
 
-  const [{data:clients},{data:staffRows},{data:shiftRows},{data:leaveRows}]=await Promise.all([
+  const [{data:clients},{data:staffRows},{data:shiftRows},{data:leaveRows},{data:teamEvents}]=await Promise.all([
     db.from('clients').select('id,business_name').neq('status','Inactive'),
     db.from('client_staff').select('id,name,client_id').neq('status','Terminated'),
     db.from('shifts').select('*').gte('shift_date',start).lte('shift_date',end),
     db.from('staff_leave_requests').select('*,client_staff(name,client_id)').eq('status','Approved').lte('start_date',end).gte('end_date',start),
+    db.from('team_calendar_events').select('*').gte('event_date',start).lte('event_date',end),
   ]);
   const clientMap={};(clients||[]).forEach(c=>clientMap[c.id]=c.business_name);
   const staffByClient={};(staffRows||[]).forEach(s=>{(staffByClient[s.client_id]=staffByClient[s.client_id]||[]).push(s);});
@@ -6822,12 +7514,20 @@ async function loadGlobalCalendar(){
       </div>`;
     }).join('');
 
+    const dayTeamEvents=(teamEvents||[]).filter(e=>e.event_date===dStr);
+    const teamEventBlocks=dayTeamEvents.map(e=>`<div style="margin-top:6px;padding:8px 10px;border-radius:8px;background:var(--gold-light,#FBF3E3);border-left:3px solid var(--gold)">
+      <div style="font-size:12px;font-weight:600;color:var(--ink)">📌 ${e.title}</div>
+      ${e.notes?`<div style="font-size:11.5px;color:var(--muted);margin-top:2px">${e.notes}</div>`:''}
+      <div style="font-size:10.5px;color:var(--muted);margin-top:2px">Added by ${e.added_by||'—'}</div>
+    </div>`).join('');
+
     html+=`<div class="card" style="padding:14px 18px;margin-bottom:10px;${heavyLeaveAny?'border-left:4px solid var(--danger)':''}">
       <strong style="font-size:14px">${d.toLocaleDateString([], {weekday:'short',month:'short',day:'numeric'})}</strong>
-      ${clientBlocks||'<div style="font-size:12px;color:var(--muted);margin-top:6px">No shifts or approved leave on record for this day.</div>'}
+      ${clientBlocks||(dayTeamEvents.length?'':'<div style="font-size:12px;color:var(--muted);margin-top:6px">No shifts or approved leave on record for this day.</div>')}
+      ${teamEventBlocks}
     </div>`;
   }
-  el.innerHTML=`<div style="font-size:12px;color:var(--muted);margin-bottom:14px">Next 14 days, across ${(clients||[]).length} active client${(clients||[]).length===1?'':'s'}</div>`+html;
+  el.innerHTML=`<div style="font-size:12px;color:var(--muted);margin-bottom:14px">Next 14 days, across ${(clients||[]).length} active client${(clients||[]).length===1?'':'s'} — any team member can add an event</div>`+html;
 }
 
 // ══ TALENT DEVELOPMENT: shared helper — populate client dropdowns ══
@@ -9760,6 +10460,7 @@ function showAdminTab(tab,btn){
   if(tab==='talentpool') loadTalentPool();
   if(tab==='dashboard') loadDashboard();
   if(tab==='calendar') loadGlobalCalendar();
+  if(tab==='projects'){loadProjects();document.getElementById('pmo-project-detail').style.display='none';}
   if(tab==='training') loadTrainingCompanies();
   if(tab==='courses') loadCourses();
   if(tab==='interviews') loadInterviews();
