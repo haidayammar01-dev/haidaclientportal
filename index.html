@@ -706,6 +706,8 @@ self.addEventListener('notificationclick',function(e){
       <button class="tab-btn" data-dept="finance" onclick="showAdminTab('payroll',this)">💰 Payroll & Tax</button>
       <button class="tab-btn" data-dept="finance" onclick="showAdminTab('accounting',this)">📚 Accounting</button>
       <button class="tab-btn" id="activitylog-tab-btn" data-dept="owner" style="display:none" onclick="showAdminTab('activitylog',this)">🕵 Activity Log</button>
+      <button class="tab-btn" id="teamratings-tab-btn" data-dept="owner" style="display:none" onclick="showAdminTab('teamratings',this)">🏅 Team Ratings</button>
+      <button class="tab-btn" id="staffhr-tab-btn" data-dept="owner" style="display:none" onclick="showAdminTab('staffhr',this)">🗂 Staff HR Files</button>
     </nav>
 
     <div class="content-area">
@@ -714,6 +716,7 @@ self.addEventListener('notificationclick',function(e){
       <div class="page active" id="page-dashboard">
         <div class="page-title">Dashboard</div>
         <div class="page-sub">Everything that needs your attention today, in one place</div>
+        <div id="my-rank-badge-box" class="card" style="display:none;padding:12px 18px;margin-bottom:16px;align-items:center;gap:12px;max-width:320px"></div>
         <div id="dashboard-content"></div>
       </div>
       <div class="page" id="page-myprofile">
@@ -736,6 +739,30 @@ self.addEventListener('notificationclick',function(e){
             </div>
             <button class="btn-save" onclick="changeMyPassword()" style="margin-top:12px">Update Access Code</button>
             <div id="mp-pass-feedback" style="margin-top:8px"></div>
+          </div>
+
+          <div style="border-top:1px solid var(--border);margin-top:20px;padding-top:18px">
+            <div style="font-size:13px;font-weight:600;margin-bottom:4px">Personal &amp; HR Details</div>
+            <div style="font-family:Arial;font-size:11px;color:var(--muted);margin-bottom:12px">Only the owner can see this section — fill it in fully, this is what stands in for a signed contract on file.</div>
+            <div class="form-grid">
+              <div class="form-field"><label>Date of Birth</label><input type="date" id="hr-dob"></div>
+              <div class="form-field"><label>Blood Group</label>
+                <select id="hr-blood-group"><option value="">Select</option><option>O+</option><option>O-</option><option>A+</option><option>A-</option><option>B+</option><option>B-</option><option>AB+</option><option>AB-</option></select>
+              </div>
+              <div class="form-field"><label>Phone Number</label><input type="text" id="hr-phone"></div>
+              <div class="form-field" style="grid-column:1/-1"><label>Full Home Address</label><input type="text" id="hr-address"></div>
+              <div class="form-field"><label>Guarantor Name</label><input type="text" id="hr-guarantor-name"></div>
+              <div class="form-field"><label>Guarantor Phone</label><input type="text" id="hr-guarantor-phone"></div>
+              <div class="form-field" style="grid-column:1/-1"><label>Guarantor Address</label><input type="text" id="hr-guarantor-address"></div>
+              <div class="form-field"><label>Emergency Contact Name</label><input type="text" id="hr-emergency-name"></div>
+              <div class="form-field"><label>Emergency Contact Phone</label><input type="text" id="hr-emergency-phone"></div>
+            </div>
+            <div class="form-field" style="margin-top:10px"><label>Agreed Schedule / Duties</label><textarea id="hr-duties" rows="3" placeholder="Your agreed working days, hours, and core duties"></textarea></div>
+            <label style="display:flex;align-items:center;gap:8px;font-family:Arial;font-size:12px;color:var(--ink);margin-top:10px">
+              <input type="checkbox" id="hr-agree" style="width:auto"> I confirm the details above are accurate and I agree to the schedule and duties stated.
+            </label>
+            <button class="btn-save" onclick="saveMyHRDetails()" style="margin-top:14px">Save HR Details</button>
+            <div id="hr-feedback" style="margin-top:8px"></div>
           </div>
         </div>
       </div>
@@ -1975,6 +2002,7 @@ self.addEventListener('notificationclick',function(e){
           <button class="inner-tab cv-tab" id="cvtab-cv-candidates" onclick="loadClientViewTab('cv-candidates')" style="color:var(--gold);font-weight:600">🧑‍🎓 Candidates</button>
           <button class="inner-tab cv-tab" id="cvtab-cv-messages" onclick="loadClientViewTab('cv-messages')" style="color:var(--brand);font-weight:600">💬 Messages</button>
           <button class="inner-tab cv-tab" id="cvtab-cv-enquiries" onclick="loadClientViewTab('cv-enquiries')" style="color:var(--brand);font-weight:600">☎ Customer Enquiries</button>
+          <button class="inner-tab cv-tab" id="cvtab-cv-credentials" style="display:none;color:var(--danger);font-weight:600" onclick="loadClientViewTab('cv-credentials')">🔐 Access Vault</button>
         </div>
         <div id="cv-reports-panel" class="cv-tab-content">
           <div style="margin-bottom:10px"><button class="btn-sm" onclick="exportClientReportsCSV()">⬇ Export to Excel</button></div>
@@ -2100,6 +2128,13 @@ self.addEventListener('notificationclick',function(e){
             <div id="enq-feedback" style="margin-top:8px"></div>
           </div>
           <div id="cv-enquiries-list"></div>
+        </div>
+        <div id="cv-credentials-panel" class="cv-tab-content" style="display:none">
+          <div class="page-sub" style="margin-bottom:14px">Logins and access this client has shared with us. Owner-only — no other admin or staff sees this tab.</div>
+          <div style="display:flex;justify-content:flex-end;margin-bottom:14px">
+            <button class="btn-add" onclick="openAddCredentialModal(_currentViewClientId)">+ Add Access</button>
+          </div>
+          <div id="cv-cred-list"></div>
         </div>
       </div>
 
@@ -2343,6 +2378,23 @@ self.addEventListener('notificationclick',function(e){
         <div id="activity-log-list"></div>
       </div>
 
+      <!-- TEAM RATINGS PAGE (owner only) -->
+      <div class="page" id="page-teamratings">
+        <div class="page-title">Team Ratings</div>
+        <div class="page-sub">Set each team member's monthly rank — S, A, or B. Everyone starts the month as S Rank until you change it.</div>
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:16px">
+          <select id="tr-month-filter" onchange="loadTeamRatings()" style="padding:7px 12px;border:1px solid var(--border);border-radius:9px;background:white;font-size:13px"></select>
+        </div>
+        <div id="team-ratings-list"></div>
+      </div>
+
+      <!-- STAFF HR FILES PAGE (owner only) -->
+      <div class="page" id="page-staffhr">
+        <div class="page-title">Staff HR Files</div>
+        <div class="page-sub">Personal details, guarantor, and agreed duties each team member has filled in themselves — visible only to you</div>
+        <div id="staff-hr-list"></div>
+      </div>
+
       <!-- EXPENDITURE PAGE -->
       <div class="page" id="page-expenditure">
         <div class="page-title">Expenditure Tracker</div>
@@ -2426,7 +2478,15 @@ self.addEventListener('notificationclick',function(e){
           <button class="ptab" data-service="staffing" onclick="switchPortalTab('portal-candidates-tab',this);loadCandidates(currentUser.clientId,'portal-candidates-list',false)" style="font-weight:600;color:var(--gold)">🧑‍🎓 Candidates</button>
           <button class="ptab" onclick="switchPortalTab('portal-projects-tab',this);loadPortalProjects(currentUser.clientId)">📁 Projects</button>
           <button class="ptab" onclick="switchPortalTab('portal-messages-tab',this);loadClientMessages(currentUser.clientId,'portal')" style="font-weight:600;color:var(--brand)">💬 Messages</button>
+          <button class="ptab" onclick="switchPortalTab('portal-credentials-tab',this);loadClientCredentials(currentUser.clientId,'pc',true)" style="font-weight:600;color:var(--danger)">🔐 Access & Logins</button>
           <button class="ptab" onclick="switchPortalTab('portal-requests-tab',this)" style="font-weight:600;color:var(--brand)">+ New Request</button>
+        </div>
+        <div id="portal-credentials-tab" class="portal-tab-content" style="display:none">
+          <div class="page-sub" style="margin-bottom:14px">Share and keep track of any logins or access you've given us for your accounts. Only you and Wahida can see this.</div>
+          <div style="display:flex;justify-content:flex-end;margin-bottom:14px">
+            <button class="btn-add" onclick="openAddCredentialModal(currentUser.clientId)">+ Add Access</button>
+          </div>
+          <div id="pc-cred-list"></div>
         </div>
         <div id="portal-reports-tab" class="portal-tab-content"></div>
         <div id="portal-invoices-tab" class="portal-tab-content" style="display:none"></div>
@@ -3422,6 +3482,153 @@ async function loadActivityLog(){
     <div style="font-size:11px;color:var(--muted);white-space:nowrap">${new Date(r.created_at).toLocaleString([], {month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})}</div>
   </div>`).join('');
 }
+// ══ TEAM RATINGS (S / A / B RANK — OWNER ONLY) ══
+const MERIT_RANK_META={
+  S:{label:'S Rank',color:'#C9A24B',bg:'#F6EFE1'},
+  A:{label:'A Rank',color:'#3E7B4F',bg:'#E7F3EA'},
+  B:{label:'B Rank',color:'#8A7660',bg:'#F1EBE3'}
+};
+function _trPopulateMonths(){
+  const sel=document.getElementById('tr-month-filter');
+  if(!sel||sel.options.length)return;
+  const now=new Date();
+  let opts='';
+  for(let i=0;i<6;i++){
+    const d=new Date(now.getFullYear(),now.getMonth()-i,1);
+    const m=d.getMonth()+1,y=d.getFullYear();
+    opts+=`<option value="${m}-${y}">${d.toLocaleString('default',{month:'long'})} ${y}</option>`;
+  }
+  sel.innerHTML=opts;
+}
+async function loadTeamRatings(){
+  const el=document.getElementById('team-ratings-list');if(!el)return;
+  _trPopulateMonths();
+  const [m,y]=(document.getElementById('tr-month-filter').value||'').split('-').map(Number);
+  const period_month=m||(new Date().getMonth()+1),period_year=y||new Date().getFullYear();
+  el.innerHTML='<p style="font-family:Arial;font-size:12px;color:var(--muted)">Loading…</p>';
+  const [{data:admins},{data:ratings}]=await Promise.all([
+    db.from('admin_users').select('username,full_name,department').eq('is_owner',false).order('full_name',{ascending:true}),
+    db.from('merit_ratings').select('*').eq('period_month',period_month).eq('period_year',period_year)
+  ]);
+  const rMap={};(ratings||[]).forEach(r=>rMap[r.admin_username]=r);
+  const roster=admins||[];
+  if(!roster.length){el.innerHTML='<p style="font-family:Arial;font-size:13px;color:var(--muted)">No staff on file yet.</p>';return;}
+  el.innerHTML=roster.map(a=>{
+    const existing=rMap[a.username];
+    const rank=existing?existing.rank_value:'S';
+    const note=existing?(existing.note||''):'';
+    return `<div class="card" style="padding:14px 18px;margin-bottom:10px;display:flex;gap:14px;align-items:center;flex-wrap:wrap">
+      <div style="width:34px;height:34px;border-radius:50%;background:${MERIT_RANK_META[rank].bg};color:${MERIT_RANK_META[rank].color};display:flex;align-items:center;justify-content:center;font-weight:700;font-family:'Cormorant Garamond',serif;font-size:16px;flex-shrink:0" id="tr-badge-${a.username}">${rank}</div>
+      <div style="flex:1;min-width:140px">
+        <div style="font-size:14px;font-weight:600;color:var(--ink)">${a.full_name}</div>
+        <div style="font-size:11px;color:var(--muted);text-transform:capitalize">${a.department||''}</div>
+      </div>
+      <select id="tr-rank-${a.username}" onchange="document.getElementById('tr-badge-${a.username}').textContent=this.value;document.getElementById('tr-badge-${a.username}').style.background=MERIT_RANK_META[this.value].bg;document.getElementById('tr-badge-${a.username}').style.color=MERIT_RANK_META[this.value].color;" style="padding:7px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px">
+        <option value="S" ${rank==='S'?'selected':''}>S Rank</option>
+        <option value="A" ${rank==='A'?'selected':''}>A Rank</option>
+        <option value="B" ${rank==='B'?'selected':''}>B Rank</option>
+      </select>
+      <input type="text" id="tr-note-${a.username}" value="${(note||'').replace(/"/g,'&quot;')}" placeholder="Optional note" style="flex:1;min-width:160px;padding:7px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px">
+      <button class="btn-save" style="padding:7px 16px" onclick="saveMeritRating('${a.username}',${period_month},${period_year})">Save</button>
+    </div>`;
+  }).join('');
+}
+async function saveMeritRating(username,period_month,period_year){
+  const rank_value=document.getElementById('tr-rank-'+username).value;
+  const note=document.getElementById('tr-note-'+username).value;
+  const {error}=await db.from('merit_ratings').upsert({
+    admin_username:username,period_month,period_year,rank_value,note:note||null,rated_at:new Date().toISOString()
+  },{onConflict:'admin_username,period_month,period_year'});
+  if(error){alert('Could not save rating: '+error.message);return;}
+  await logActivity('Set merit rating',`${username} → ${rank_value} Rank (${period_month}/${period_year})`);
+}
+// Badge shown to each staff member on their own dashboard
+async function loadMyRankBadge(){
+  const box=document.getElementById('my-rank-badge-box');
+  if(!box||!currentUser||currentUser.isOwner)return;
+  const now=new Date();
+  const {data}=await db.from('merit_ratings').select('rank_value').eq('admin_username',currentUser.username).eq('period_month',now.getMonth()+1).eq('period_year',now.getFullYear()).maybeSingle();
+  const rank=(data&&data.rank_value)||'S';
+  const meta=MERIT_RANK_META[rank];
+  box.style.display='flex';
+  box.innerHTML=`
+    <div style="width:38px;height:38px;border-radius:50%;background:${meta.bg};color:${meta.color};display:flex;align-items:center;justify-content:center;font-weight:700;font-family:'Cormorant Garamond',serif;font-size:17px;flex-shrink:0">${rank}</div>
+    <div>
+      <div style="font-size:13px;font-weight:600;color:var(--ink)">${meta.label} this month</div>
+      <div style="font-size:11px;color:var(--muted)">${now.toLocaleString('default',{month:'long'})} ${now.getFullYear()}</div>
+    </div>`;
+}
+// ══ CLIENT ACCESS VAULT (logins/access a client has shared — owner + that client only) ══
+function openAddCredentialModal(clientId){
+  document.getElementById('cred-client-id').value=clientId;
+  document.getElementById('cred-system-name').value='';
+  document.getElementById('cred-url').value='';
+  document.getElementById('cred-username').value='';
+  document.getElementById('cred-secret').value='';
+  document.getElementById('cred-notes').value='';
+  document.getElementById('cred-feedback').innerHTML='';
+  openModal('modal-add-credential');
+}
+async function saveClientCredential(){
+  const fb=document.getElementById('cred-feedback');
+  const clientId=document.getElementById('cred-client-id').value;
+  const system_name=document.getElementById('cred-system-name').value.trim();
+  if(!clientId||!system_name){fb.innerHTML='<div class="error-msg">Enter at least a system/platform name.</div>';return;}
+  const payload={
+    client_id:clientId,
+    system_name,
+    portal_url:document.getElementById('cred-url').value.trim()||null,
+    login_username:document.getElementById('cred-username').value.trim()||null,
+    login_secret:document.getElementById('cred-secret').value.trim()||null,
+    notes:document.getElementById('cred-notes').value.trim()||null,
+    added_by:currentUser?(currentUser.name||currentUser.username):'—'
+  };
+  const {error}=await db.from('client_credentials').insert(payload);
+  if(error){fb.innerHTML='<div class="error-msg">Could not save: '+error.message+'</div>';return;}
+  await logActivity('Added client access/login',system_name,clientId);
+  closeModal('modal-add-credential');
+  // Refresh whichever panel is currently in view
+  if(currentUser&&currentUser.role==='client')loadClientCredentials(clientId,'pc',true);
+  else loadClientCredentials(clientId,'cv',true);
+}
+async function loadClientCredentials(clientId,prefix,canManage){
+  const el=document.getElementById(prefix+'-cred-list');if(!el)return;
+  el.innerHTML='<p style="font-family:Arial;font-size:12px;color:var(--muted)">Loading…</p>';
+  const {data}=await db.from('client_credentials').select('*').eq('client_id',clientId).order('created_at',{ascending:false});
+  const rows=data||[];
+  if(!rows.length){el.innerHTML='<p style="font-family:Arial;font-size:13px;color:var(--muted)">No access details on file yet.</p>';return;}
+  el.innerHTML=rows.map(c=>{
+    const safeSecret=(c.login_secret||'').replace(/'/g,"\\'").replace(/"/g,'&quot;');
+    return `<div class="card" style="padding:12px 16px;margin-bottom:8px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap">
+        <div style="flex:1;min-width:220px">
+          <div style="font-size:13px;font-weight:600;color:var(--ink)">${c.system_name}${c.portal_url?` · <a href="${c.portal_url}" target="_blank" style="color:var(--gold);font-size:12px;font-weight:400">Open ↗</a>`:''}</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:4px">Username/Email: ${c.login_username||'—'}</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:2px;display:flex;align-items:center;gap:6px">
+            Password/Access: <span id="cred-secret-${c.id}" style="font-family:monospace;letter-spacing:1px">${c.login_secret?'••••••••':'—'}</span>
+            ${c.login_secret?`<button class="btn-sm" style="padding:2px 8px;font-size:11px" onclick="toggleCredentialSecret('${c.id}','${safeSecret}',this)">Show</button>`:''}
+          </div>
+          ${c.notes?`<div style="font-size:11px;color:var(--muted);margin-top:5px">${c.notes}</div>`:''}
+          <div style="font-size:10.5px;color:var(--muted);margin-top:5px">Added by ${c.added_by||'—'} · ${(c.created_at||'').slice(0,10)}</div>
+        </div>
+        ${canManage?`<button class="btn-danger" style="padding:4px 10px;font-size:11px" onclick="deleteClientCredential('${c.id}','${clientId}','${prefix}')">Delete</button>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+function toggleCredentialSecret(id,secret,btn){
+  const span=document.getElementById('cred-secret-'+id);
+  const showing=span.textContent!=='••••••••';
+  span.textContent=showing?'••••••••':secret;
+  if(btn)btn.textContent=showing?'Show':'Hide';
+}
+async function deleteClientCredential(id,clientId,prefix){
+  if(!confirm('Delete this access record? This cannot be undone.'))return;
+  const {error}=await db.from('client_credentials').delete().eq('id',id);
+  if(error){alert('Could not delete: '+error.message);return;}
+  await logActivity('Deleted client access/login','',clientId);
+  loadClientCredentials(clientId,prefix,true);
+}
 // ══ INDEPENDENT TRAINING PORTAL ══
 let _tpCompanyId=null,_tpStaffRowCount=0;
 function showTrainingPortal(company){
@@ -4225,6 +4432,8 @@ function showApp(){
     document.getElementById('income-tab-btn').style.display='';
     document.getElementById('admin-section').style.display='';
     if(currentUser.isOwner)document.getElementById('activitylog-tab-btn').style.display='';
+    if(currentUser.isOwner)document.getElementById('teamratings-tab-btn').style.display='';
+    if(currentUser.isOwner)document.getElementById('staffhr-tab-btn').style.display='';
     document.getElementById('onboarding-tab-btn').style.display='';
     loadInvoices();
     loadExpenditure();
@@ -6017,6 +6226,8 @@ async function viewClient(clientId){
 
   // Switch to a full client view — hide all other pages, show client-view page
   showPage('page-client-view');
+  const credTabBtn=document.getElementById('cvtab-cv-credentials');
+  if(credTabBtn)credTabBtn.style.display=(currentUser&&currentUser.isOwner)?'':'none';
 
   document.getElementById('client-view-name').textContent=client.business_name;
   document.getElementById('client-view-niche').textContent=nicheLabels[client.niche]||client.niche||'—';
@@ -6107,6 +6318,9 @@ async function loadClientViewTab(tab,clientId){
     await loadClientMessages(cid,'cv');
   } else if(tab==='cv-enquiries'){
     await loadCustomerEnquiries(cid);
+  } else if(tab==='cv-credentials'){
+    if(!currentUser||!currentUser.isOwner)return;
+    await loadClientCredentials(cid,'cv',true);
   }
 }
 
@@ -6531,6 +6745,7 @@ async function sendClientMessage(scope){
 async function loadDashboard(){
   const el=document.getElementById('dashboard-content');
   if(!el)return;
+  loadMyRankBadge();
   el.innerHTML='<p style="font-size:13px;color:var(--muted)">Loading…</p>';
   const today=new Date().toISOString().slice(0,10);
   const in30=new Date();in30.setDate(in30.getDate()+30);
@@ -6681,6 +6896,7 @@ async function loadMyProfile(){
   document.getElementById('mp-pass-feedback').innerHTML='';
   document.getElementById('mp-new-pass').value='';
   document.getElementById('mp-confirm-pass').value='';
+  loadMyHRDetails();
 }
 async function saveMyProfile(){
   const fb=document.getElementById('mp-feedback');
@@ -6705,6 +6921,82 @@ async function changeMyPassword(){
   fb.innerHTML='<span style="color:var(--success);font-size:12px">Access code updated. Use it next time you log in.</span>';
   document.getElementById('mp-new-pass').value='';
   document.getElementById('mp-confirm-pass').value='';
+}
+// ══ STAFF PERSONAL / HR DETAILS (self-filled, owner-only visibility) ══
+async function loadMyHRDetails(){
+  if(!currentUser||!currentUser.username||currentUser.isOwner)return;
+  const {data}=await db.from('staff_hr_details').select('*').eq('admin_username',currentUser.username).maybeSingle();
+  const set=(id,val)=>{const el=document.getElementById(id);if(el)el.value=val||'';};
+  if(data){
+    set('hr-dob',data.dob);
+    set('hr-blood-group',data.blood_group);
+    set('hr-phone',data.phone);
+    set('hr-address',data.home_address);
+    set('hr-guarantor-name',data.guarantor_name);
+    set('hr-guarantor-phone',data.guarantor_phone);
+    set('hr-guarantor-address',data.guarantor_address);
+    set('hr-emergency-name',data.emergency_contact_name);
+    set('hr-emergency-phone',data.emergency_contact_phone);
+    set('hr-duties',data.agreed_duties);
+    const agreeEl=document.getElementById('hr-agree');if(agreeEl)agreeEl.checked=!!data.agreed_confirmed;
+  }
+}
+async function saveMyHRDetails(){
+  const fb=document.getElementById('hr-feedback');
+  if(!currentUser||!currentUser.username){fb.innerHTML='<span style="color:var(--danger);font-size:12px">Not available for this login type.</span>';return;}
+  const payload={
+    admin_username:currentUser.username,
+    dob:document.getElementById('hr-dob').value||null,
+    blood_group:document.getElementById('hr-blood-group').value||null,
+    phone:document.getElementById('hr-phone').value.trim()||null,
+    home_address:document.getElementById('hr-address').value.trim()||null,
+    guarantor_name:document.getElementById('hr-guarantor-name').value.trim()||null,
+    guarantor_phone:document.getElementById('hr-guarantor-phone').value.trim()||null,
+    guarantor_address:document.getElementById('hr-guarantor-address').value.trim()||null,
+    emergency_contact_name:document.getElementById('hr-emergency-name').value.trim()||null,
+    emergency_contact_phone:document.getElementById('hr-emergency-phone').value.trim()||null,
+    agreed_duties:document.getElementById('hr-duties').value.trim()||null,
+    agreed_confirmed:document.getElementById('hr-agree').checked,
+    updated_at:new Date().toISOString()
+  };
+  const {error}=await db.from('staff_hr_details').upsert(payload,{onConflict:'admin_username'});
+  if(error){fb.innerHTML=`<span style="color:var(--danger);font-size:12px">${error.message}</span>`;return;}
+  fb.innerHTML='<span style="color:var(--success);font-size:12px">Saved.</span>';
+}
+// Owner-only roster viewer
+async function loadStaffHRFiles(){
+  const el=document.getElementById('staff-hr-list');if(!el)return;
+  el.innerHTML='<p style="font-family:Arial;font-size:12px;color:var(--muted)">Loading…</p>';
+  const [{data:admins},{data:details}]=await Promise.all([
+    db.from('admin_users').select('username,full_name,department').eq('is_owner',false).order('full_name',{ascending:true}),
+    db.from('staff_hr_details').select('*')
+  ]);
+  const dMap={};(details||[]).forEach(d=>dMap[d.admin_username]=d);
+  const roster=admins||[];
+  if(!roster.length){el.innerHTML='<p style="font-family:Arial;font-size:13px;color:var(--muted)">No staff on file yet.</p>';return;}
+  el.innerHTML=roster.map(a=>{
+    const d=dMap[a.username];
+    const filled=!!d;
+    return `<div class="card" style="padding:16px 20px;margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+        <div>
+          <div style="font-size:14px;font-weight:600;color:var(--ink)">${a.full_name}</div>
+          <div style="font-size:11px;color:var(--muted);text-transform:capitalize">${a.department||''}</div>
+        </div>
+        <span class="badge ${filled?(d.agreed_confirmed?'badge-green':'badge-gold'):'badge-red'}">${filled?(d.agreed_confirmed?'Confirmed':'Filled — not confirmed'):'Not filled yet'}</span>
+      </div>
+      ${filled?`<div style="margin-top:12px;display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px;font-family:Arial;font-size:12px;color:var(--ink2)">
+        <div><strong>DOB:</strong> ${d.dob||'—'}</div>
+        <div><strong>Blood Group:</strong> ${d.blood_group||'—'}</div>
+        <div><strong>Phone:</strong> ${d.phone||'—'}</div>
+        <div style="grid-column:1/-1"><strong>Address:</strong> ${d.home_address||'—'}</div>
+        <div><strong>Guarantor:</strong> ${d.guarantor_name||'—'} (${d.guarantor_phone||'—'})</div>
+        <div style="grid-column:1/-1"><strong>Guarantor Address:</strong> ${d.guarantor_address||'—'}</div>
+        <div><strong>Emergency Contact:</strong> ${d.emergency_contact_name||'—'} (${d.emergency_contact_phone||'—'})</div>
+        <div style="grid-column:1/-1"><strong>Agreed Duties:</strong> ${d.agreed_duties||'—'}</div>
+      </div>`:'<div style="margin-top:10px;font-family:Arial;font-size:12px;color:var(--muted)">This person hasn\'t filled in their My Profile HR details yet.</div>'}
+    </div>`;
+  }).join('');
 }
 
 // ══ PROJECTS ══
@@ -9999,11 +10291,15 @@ function closeModal(id){document.getElementById(id).classList.remove('open');}
 function showAdminTab(tab,btn){
   if(tab==='invoices'&&(!currentUser||!currentUser.isOwner)){return;}
   if(tab==='activitylog'&&(!currentUser||!currentUser.isOwner)){return;}
+  if(tab==='teamratings'&&(!currentUser||!currentUser.isOwner)){return;}
+  if(tab==='staffhr'&&(!currentUser||!currentUser.isOwner)){return;}
   document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
   showPage('page-'+tab);
   if(tab==='compliance') loadCompliancePage();
   if(tab==='activitylog') loadActivityLog();
+  if(tab==='teamratings') loadTeamRatings();
+  if(tab==='staffhr') loadStaffHRFiles();
   if(tab==='payroll') loadPayrollPage();
   if(tab==='accounting') loadAccountingPageInit();
   if(tab==='income') loadCompanyIncome();
@@ -11084,6 +11380,31 @@ document.getElementById('rf-client').addEventListener('change',()=>renderTypeFie
         <button class="btn-cancel" onclick="closeModal('modal-generic-edit')">Cancel</button>
         <span id="generic-edit-note" style="font-family:Arial;font-size:12px;color:var(--warn);margin-left:8px"></span>
       </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-add-credential">
+  <div class="modal" style="width:520px">
+    <div class="modal-header">
+      <div class="modal-title">Add Access / Login</div>
+      <button class="modal-close" onclick="closeModal('modal-add-credential')">×</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="cred-client-id">
+      <div class="form-grid">
+        <div class="form-field" style="grid-column:1/-1"><label>System / Platform Name</label><input type="text" id="cred-system-name" placeholder="e.g. Instagram, Gmail, POS System"></div>
+        <div class="form-field" style="grid-column:1/-1"><label>Login Link (optional)</label><input type="text" id="cred-url" placeholder="https://..."></div>
+        <div class="form-field"><label>Username / Email</label><input type="text" id="cred-username"></div>
+        <div class="form-field"><label>Password / Access Code</label><input type="text" id="cred-secret"></div>
+        <div class="form-field" style="grid-column:1/-1"><label>Notes (optional)</label><textarea id="cred-notes" rows="2" placeholder="PIN, security question, who to contact, etc."></textarea></div>
+      </div>
+      <div style="font-family:Arial;font-size:11px;color:var(--muted);margin-top:6px">Only the owner and this client can see entries here — no one else on the team has access to this tab.</div>
+      <div style="margin-top:16px;display:flex;gap:8px;align-items:center">
+        <button class="btn-save" onclick="saveClientCredential()">Save</button>
+        <button class="btn-cancel" onclick="closeModal('modal-add-credential')">Cancel</button>
+      </div>
+      <div id="cred-feedback" style="margin-top:8px"></div>
     </div>
   </div>
 </div>
