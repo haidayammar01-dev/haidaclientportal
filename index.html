@@ -746,17 +746,42 @@ self.addEventListener('notificationclick',function(e){
             <div style="font-family:Arial;font-size:11px;color:var(--muted);margin-bottom:12px">Only the owner can see this section — fill it in fully, this is what stands in for a signed contract on file.</div>
             <div class="form-grid">
               <div class="form-field"><label>Date of Birth</label><input type="date" id="hr-dob"></div>
+              <div class="form-field"><label>Gender</label>
+                <select id="hr-gender"><option value="">Select</option><option>Female</option><option>Male</option><option>Prefer not to say</option></select>
+              </div>
+              <div class="form-field"><label>Marital Status</label>
+                <select id="hr-marital"><option value="">Select</option><option>Single</option><option>Married</option><option>Other</option></select>
+              </div>
               <div class="form-field"><label>Blood Group</label>
                 <select id="hr-blood-group"><option value="">Select</option><option>O+</option><option>O-</option><option>A+</option><option>A-</option><option>B+</option><option>B-</option><option>AB+</option><option>AB-</option></select>
               </div>
+              <div class="form-field"><label>Nationality</label><input type="text" id="hr-nationality"></div>
+              <div class="form-field"><label>State of Origin</label><input type="text" id="hr-state-origin"></div>
               <div class="form-field"><label>Phone Number</label><input type="text" id="hr-phone"></div>
               <div class="form-field" style="grid-column:1/-1"><label>Full Home Address</label><input type="text" id="hr-address"></div>
+
+              <div class="form-field"><label>Next of Kin Name</label><input type="text" id="hr-nok-name"></div>
+              <div class="form-field"><label>Next of Kin Relationship</label><input type="text" id="hr-nok-relationship"></div>
+              <div class="form-field" style="grid-column:1/-1"><label>Next of Kin Phone</label><input type="text" id="hr-nok-phone"></div>
+
               <div class="form-field"><label>Guarantor Name</label><input type="text" id="hr-guarantor-name"></div>
               <div class="form-field"><label>Guarantor Phone</label><input type="text" id="hr-guarantor-phone"></div>
               <div class="form-field" style="grid-column:1/-1"><label>Guarantor Address</label><input type="text" id="hr-guarantor-address"></div>
+
               <div class="form-field"><label>Emergency Contact Name</label><input type="text" id="hr-emergency-name"></div>
               <div class="form-field"><label>Emergency Contact Phone</label><input type="text" id="hr-emergency-phone"></div>
+
+              <div class="form-field"><label>Uniform / T-Shirt Size</label>
+                <select id="hr-uniform-size"><option value="">Select</option><option>XS</option><option>S</option><option>M</option><option>L</option><option>XL</option><option>XXL</option></select>
+              </div>
+              <div class="form-field"><label>Preferred Contact Method</label>
+                <select id="hr-preferred-contact"><option value="">Select</option><option>Call</option><option>WhatsApp</option><option>Email</option></select>
+              </div>
+              <div class="form-field" style="grid-column:1/-1"><label>Food Allergies / Dietary Restrictions</label><input type="text" id="hr-allergies" placeholder="e.g. none, peanuts, vegetarian"></div>
+              <div class="form-field" style="grid-column:1/-1"><label>Skills / Strengths</label><input type="text" id="hr-skills" placeholder="Things you're especially good at"></div>
+              <div class="form-field" style="grid-column:1/-1"><label>Hobbies / Interests</label><input type="text" id="hr-hobbies"></div>
             </div>
+            <div class="form-field" style="margin-top:10px"><label>About You</label><textarea id="hr-bio" rows="2" placeholder="A short bio — tell us a bit about yourself"></textarea></div>
             <div class="form-field" style="margin-top:10px"><label>Agreed Schedule / Duties</label><textarea id="hr-duties" rows="3" placeholder="Your agreed working days, hours, and core duties"></textarea></div>
             <label style="display:flex;align-items:center;gap:8px;font-family:Arial;font-size:12px;color:var(--ink);margin-top:10px">
               <input type="checkbox" id="hr-agree" style="width:auto"> I confirm the details above are accurate and I agree to the schedule and duties stated.
@@ -879,6 +904,14 @@ self.addEventListener('notificationclick',function(e){
       <div class="page" id="page-actions">
         <div class="page-title">Action Tracker</div>
         <div class="page-sub">All outstanding actions across every client — nothing falls through</div>
+
+        <div id="act-incoming-box" style="display:none;margin-bottom:22px">
+          <div style="font-size:13px;font-weight:600;color:var(--ink);margin-bottom:8px;display:flex;align-items:center;gap:8px">
+            📥 Incoming Client Requests <span id="act-incoming-count" style="background:var(--danger);color:#fff;border-radius:10px;padding:1px 8px;font-size:11px"></span>
+          </div>
+          <div id="act-incoming-list"></div>
+        </div>
+
         <div style="display:flex;justify-content:flex-end;margin-bottom:16px;">
           <button class="btn-add" onclick="openAddActionModal()">+ Add Action</button>
         </div>
@@ -2875,6 +2908,7 @@ self.addEventListener('notificationclick',function(e){
   <div class="modal">
     <div class="modal-header"><div class="modal-title">Add Action Item</div><button class="modal-close" onclick="closeModal('modal-add-action')">×</button></div>
     <div class="modal-body">
+      <input type="hidden" id="act-source-request-id">
       <div class="form-grid">
         <div class="form-field"><label>Client</label><select id="act-client"><option value="">Select client…</option></select></div>
         <div class="form-field"><label>Due Date</label><input type="date" id="act-due"></div>
@@ -5324,9 +5358,60 @@ async function saveComplaint(){
 }
 
 // ══ ACTIONS ══
-async function openAddActionModal(){
+async function openAddActionModal(prefill){
   await populateActionOwnerSelect();
+  document.getElementById('act-source-request-id').value='';
+  document.getElementById('act-client').value='';
+  document.getElementById('act-due').value='';
+  document.getElementById('act-desc').value='';
+  document.getElementById('act-notes').value='';
+  document.getElementById('act-priority').value='Medium';
+  document.getElementById('act-status').value='Outstanding';
+  if(prefill){
+    document.getElementById('act-source-request-id').value=prefill.requestId||'';
+    document.getElementById('act-client').value=prefill.clientId||'';
+    document.getElementById('act-due').value=prefill.due||'';
+    document.getElementById('act-desc').value=prefill.desc||'';
+    document.getElementById('act-notes').value=prefill.notes||'';
+    if(prefill.priority)document.getElementById('act-priority').value=prefill.priority;
+  }
   openModal('modal-add-action');
+}
+// ══ INCOMING CLIENT REQUESTS → ACTION TRACKER ══
+async function loadIncomingClientRequests(){
+  const box=document.getElementById('act-incoming-box');if(!box)return;
+  const {data}=await db.from('client_requests').select('*,clients(business_name)').eq('status','Submitted').order('created_at',{ascending:true});
+  const reqs=data||[];
+  if(!reqs.length){box.style.display='none';return;}
+  box.style.display='block';
+  document.getElementById('act-incoming-count').textContent=reqs.length;
+  document.getElementById('act-incoming-list').innerHTML=reqs.map(r=>`
+    <div class="card" style="padding:12px 16px;margin-bottom:8px;border:1.5px solid var(--gold);display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap">
+      <div style="flex:1;min-width:220px">
+        <div style="font-size:13px;font-weight:600;color:var(--ink)">${r.title}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px">${(r.clients&&r.clients.business_name)||'—'} · ${r.service||''} · Priority: ${r.urgency||'—'}${r.deadline?' · Deadline: '+r.deadline:''}</div>
+        ${r.description?`<div style="font-size:12px;color:var(--ink2);margin-top:4px">${r.description}</div>`:''}
+      </div>
+      <div style="display:flex;gap:6px;flex-shrink:0">
+        <button class="btn-sm" onclick='convertRequestToAction(${JSON.stringify(r).replace(/'/g,"&apos;")})'>→ Sort into Action Tracker</button>
+        <button class="btn-sm" style="opacity:.7" onclick="dismissClientRequest('${r.id}')">Dismiss</button>
+      </div>
+    </div>`).join('');
+}
+function convertRequestToAction(r){
+  openAddActionModal({
+    requestId:r.id,
+    clientId:r.client_id||'',
+    due:r.deadline||'',
+    desc:r.title,
+    notes:r.description||'',
+    priority:r.urgency||'Medium'
+  });
+}
+async function dismissClientRequest(id){
+  if(!confirm('Dismiss this request without turning it into an action?'))return;
+  await db.from('client_requests').update({status:'Dismissed'}).eq('id',id);
+  loadIncomingClientRequests();
 }
 async function populateActionOwnerSelect(){
   const sel=document.getElementById('act-owner');if(!sel)return;
@@ -5338,6 +5423,7 @@ async function populateActionOwnerSelect(){
   }).join('');
 }
 async function loadActions(){
+  loadIncomingClientRequests();
   const {data}=await db.from('actions').select('*,clients(business_name)').order('due_date',{ascending:true});
   renderActionsTable(data||[]);
 }
@@ -5373,6 +5459,11 @@ async function saveAction(){
   if(!desc){fb.innerHTML='<div class="error-msg">Description is required.</div>';return;}
   const {error}=await db.from('actions').insert({client_id:clientId||null,description:desc,owner:document.getElementById('act-owner').value.trim(),due_date:document.getElementById('act-due').value,priority:document.getElementById('act-priority').value,status:document.getElementById('act-status').value,notes:document.getElementById('act-notes').value.trim()});
   if(error){fb.innerHTML=`<div class="error-msg">${error.message}</div>`;return;}
+  const sourceRequestId=document.getElementById('act-source-request-id').value;
+  if(sourceRequestId){
+    await db.from('client_requests').update({status:'Actioned'}).eq('id',sourceRequestId);
+    await logActivity('Sorted client request into Action Tracker',desc,clientId||null);
+  }
   fb.innerHTML='<div class="success-msg">✓ Action saved.</div>';loadActions();setTimeout(()=>{closeModal('modal-add-action');fb.innerHTML='';},1500);
 }
 
@@ -6929,14 +7020,27 @@ async function loadMyHRDetails(){
   const set=(id,val)=>{const el=document.getElementById(id);if(el)el.value=val||'';};
   if(data){
     set('hr-dob',data.dob);
+    set('hr-gender',data.gender);
+    set('hr-marital',data.marital_status);
     set('hr-blood-group',data.blood_group);
+    set('hr-nationality',data.nationality);
+    set('hr-state-origin',data.state_of_origin);
     set('hr-phone',data.phone);
     set('hr-address',data.home_address);
+    set('hr-nok-name',data.next_of_kin_name);
+    set('hr-nok-relationship',data.next_of_kin_relationship);
+    set('hr-nok-phone',data.next_of_kin_phone);
     set('hr-guarantor-name',data.guarantor_name);
     set('hr-guarantor-phone',data.guarantor_phone);
     set('hr-guarantor-address',data.guarantor_address);
     set('hr-emergency-name',data.emergency_contact_name);
     set('hr-emergency-phone',data.emergency_contact_phone);
+    set('hr-uniform-size',data.uniform_size);
+    set('hr-preferred-contact',data.preferred_contact_method);
+    set('hr-allergies',data.allergies);
+    set('hr-skills',data.skills);
+    set('hr-hobbies',data.hobbies);
+    set('hr-bio',data.bio);
     set('hr-duties',data.agreed_duties);
     const agreeEl=document.getElementById('hr-agree');if(agreeEl)agreeEl.checked=!!data.agreed_confirmed;
   }
@@ -6947,14 +7051,27 @@ async function saveMyHRDetails(){
   const payload={
     admin_username:currentUser.username,
     dob:document.getElementById('hr-dob').value||null,
+    gender:document.getElementById('hr-gender').value||null,
+    marital_status:document.getElementById('hr-marital').value||null,
     blood_group:document.getElementById('hr-blood-group').value||null,
+    nationality:document.getElementById('hr-nationality').value.trim()||null,
+    state_of_origin:document.getElementById('hr-state-origin').value.trim()||null,
     phone:document.getElementById('hr-phone').value.trim()||null,
     home_address:document.getElementById('hr-address').value.trim()||null,
+    next_of_kin_name:document.getElementById('hr-nok-name').value.trim()||null,
+    next_of_kin_relationship:document.getElementById('hr-nok-relationship').value.trim()||null,
+    next_of_kin_phone:document.getElementById('hr-nok-phone').value.trim()||null,
     guarantor_name:document.getElementById('hr-guarantor-name').value.trim()||null,
     guarantor_phone:document.getElementById('hr-guarantor-phone').value.trim()||null,
     guarantor_address:document.getElementById('hr-guarantor-address').value.trim()||null,
     emergency_contact_name:document.getElementById('hr-emergency-name').value.trim()||null,
     emergency_contact_phone:document.getElementById('hr-emergency-phone').value.trim()||null,
+    uniform_size:document.getElementById('hr-uniform-size').value||null,
+    preferred_contact_method:document.getElementById('hr-preferred-contact').value||null,
+    allergies:document.getElementById('hr-allergies').value.trim()||null,
+    skills:document.getElementById('hr-skills').value.trim()||null,
+    hobbies:document.getElementById('hr-hobbies').value.trim()||null,
+    bio:document.getElementById('hr-bio').value.trim()||null,
     agreed_duties:document.getElementById('hr-duties').value.trim()||null,
     agreed_confirmed:document.getElementById('hr-agree').checked,
     updated_at:new Date().toISOString()
@@ -6987,12 +7104,23 @@ async function loadStaffHRFiles(){
       </div>
       ${filled?`<div style="margin-top:12px;display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px;font-family:Arial;font-size:12px;color:var(--ink2)">
         <div><strong>DOB:</strong> ${d.dob||'—'}</div>
+        <div><strong>Gender:</strong> ${d.gender||'—'}</div>
+        <div><strong>Marital Status:</strong> ${d.marital_status||'—'}</div>
         <div><strong>Blood Group:</strong> ${d.blood_group||'—'}</div>
+        <div><strong>Nationality:</strong> ${d.nationality||'—'}</div>
+        <div><strong>State of Origin:</strong> ${d.state_of_origin||'—'}</div>
         <div><strong>Phone:</strong> ${d.phone||'—'}</div>
         <div style="grid-column:1/-1"><strong>Address:</strong> ${d.home_address||'—'}</div>
+        <div><strong>Next of Kin:</strong> ${d.next_of_kin_name||'—'} (${d.next_of_kin_relationship||'—'}) — ${d.next_of_kin_phone||'—'}</div>
         <div><strong>Guarantor:</strong> ${d.guarantor_name||'—'} (${d.guarantor_phone||'—'})</div>
         <div style="grid-column:1/-1"><strong>Guarantor Address:</strong> ${d.guarantor_address||'—'}</div>
         <div><strong>Emergency Contact:</strong> ${d.emergency_contact_name||'—'} (${d.emergency_contact_phone||'—'})</div>
+        <div><strong>Uniform Size:</strong> ${d.uniform_size||'—'}</div>
+        <div><strong>Preferred Contact:</strong> ${d.preferred_contact_method||'—'}</div>
+        <div style="grid-column:1/-1"><strong>Allergies/Dietary:</strong> ${d.allergies||'—'}</div>
+        <div style="grid-column:1/-1"><strong>Skills:</strong> ${d.skills||'—'}</div>
+        <div style="grid-column:1/-1"><strong>Hobbies:</strong> ${d.hobbies||'—'}</div>
+        <div style="grid-column:1/-1"><strong>About:</strong> ${d.bio||'—'}</div>
         <div style="grid-column:1/-1"><strong>Agreed Duties:</strong> ${d.agreed_duties||'—'}</div>
       </div>`:'<div style="margin-top:10px;font-family:Arial;font-size:12px;color:var(--muted)">This person hasn\'t filled in their My Profile HR details yet.</div>'}
     </div>`;
