@@ -912,7 +912,12 @@ self.addEventListener('notificationclick',function(e){
           <div id="act-incoming-list"></div>
         </div>
 
-        <div style="display:flex;justify-content:flex-end;margin-bottom:16px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+          <select id="act-status-filter" onchange="loadActions()" style="padding:7px 12px;border:1px solid var(--border);border-radius:9px;background:white;font-family:Arial;font-size:13px">
+            <option value="active">Active (hide completed)</option>
+            <option value="done">Completed only</option>
+            <option value="all">All</option>
+          </select>
           <button class="btn-add" onclick="openAddActionModal()">+ Add Action</button>
         </div>
         <div class="card" style="padding:0;overflow:hidden">
@@ -920,6 +925,9 @@ self.addEventListener('notificationclick',function(e){
             <thead><tr><th>Action</th><th>Client</th><th>Owner</th><th>Due</th><th>Priority</th><th>Status</th><th>Actions</th></tr></thead>
             <tbody id="actions-tbody"><tr><td colspan="7" style="text-align:center;padding:24px;color:var(--muted);font-family:Arial">Loading…</td></tr></tbody>
           </table>
+        </div>
+        <div style="margin-top:14px;display:flex;justify-content:flex-end">
+          <button class="btn-sm" style="opacity:.7" onclick="purgeOldCompletedActions()">🗑 Clear completed older than 90 days</button>
         </div>
       </div>
 
@@ -5424,7 +5432,11 @@ async function populateActionOwnerSelect(){
 }
 async function loadActions(){
   loadIncomingClientRequests();
-  const {data}=await db.from('actions').select('*,clients(business_name)').order('due_date',{ascending:true});
+  const filter=document.getElementById('act-status-filter')?.value||'active';
+  let q=db.from('actions').select('*,clients(business_name)').order('due_date',{ascending:true});
+  if(filter==='active')q=q.neq('status','Done');
+  else if(filter==='done')q=q.eq('status','Done');
+  const {data}=await q;
   renderActionsTable(data||[]);
 }
 
@@ -5451,7 +5463,18 @@ function renderActionsTable(acts){
   }).join('');
 }
 
-async function markActionDone(id){await db.from('actions').update({status:'Done'}).eq('id',id);loadActions();}
+async function markActionDone(id){await db.from('actions').update({status:'Done',completed_at:new Date().toISOString()}).eq('id',id);loadActions();}
+async function purgeOldCompletedActions(){
+  const cutoff=new Date();cutoff.setDate(cutoff.getDate()-90);
+  const cutoffStr=cutoff.toISOString();
+  const {data:old}=await db.from('actions').select('id').eq('status','Done').lt('completed_at',cutoffStr);
+  const rows=old||[];
+  if(!rows.length){alert('Nothing to clear — no completed actions older than 90 days.');return;}
+  if(!confirm(`Permanently delete ${rows.length} completed action(s) older than 90 days? This can't be undone.`))return;
+  await db.from('actions').delete().eq('status','Done').lt('completed_at',cutoffStr);
+  await logActivity('Cleared old completed actions',`${rows.length} action(s) older than 90 days`);
+  loadActions();
+}
 
 async function saveAction(){
   const clientId=document.getElementById('act-client').value;const fb=document.getElementById('action-feedback');
