@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Jost:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <style>
 :root{
   --ink:#1B2A4A;--ink2:#28395e;--gold:#C9A24B;--gold-light:#F7F5F0;--gold-mid:#e8d9b5;
@@ -454,8 +455,9 @@ self.addEventListener('notificationclick',function(e){
 <body>
 
 <!-- LOGIN -->
-<div id="login-screen">
-  <div class="login-card">
+<div id="login-screen" style="position:relative;overflow:hidden">
+  <canvas id="login-3d-canvas" style="position:absolute;inset:0;width:100%;height:100%;z-index:0"></canvas>
+  <div class="login-card" style="position:relative;z-index:1">
     <div class="login-header">
       <div class="wordmark">Haida Yammar Consulting</div>
       <h1>Client Portal</h1>
@@ -594,10 +596,30 @@ self.addEventListener('notificationclick',function(e){
       <div id="sp-leave-list" style="margin-top:8px"></div>
     </div>
 
+    <!-- ROTA CALENDAR -->
+    <div style="background:white;border:1px solid var(--border);border-radius:12px;padding:24px;margin-bottom:16px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <div style="font-family:Arial;font-size:11px;text-transform:uppercase;color:var(--muted)">📅 Team Rota</div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <button class="btn-sm" onclick="spRotaShiftMonth(-1)">‹</button>
+          <span id="sp-rota-month-label" style="font-family:Arial;font-size:12px;color:var(--ink);min-width:110px;text-align:center;display:inline-block"></span>
+          <button class="btn-sm" onclick="spRotaShiftMonth(1)">›</button>
+        </div>
+      </div>
+      <div style="font-family:Arial;font-size:11.5px;color:var(--muted);margin-bottom:10px">Everyone's shifts at a glance — yours are highlighted gold.</div>
+      <div id="sp-rota-calendar" style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px"></div>
+    </div>
+
     <!-- SHIFTS -->
     <div style="background:white;border:1px solid var(--border);border-radius:12px;padding:24px;margin-bottom:16px">
       <div style="font-family:Arial;font-size:11px;text-transform:uppercase;color:var(--muted);margin-bottom:10px">📆 Available Shifts</div>
       <div id="sp-shifts-list"></div>
+    </div>
+
+    <!-- SWAP REQUESTS -->
+    <div style="background:white;border:1px solid var(--border);border-radius:12px;padding:24px;margin-bottom:16px">
+      <div style="font-family:Arial;font-size:11px;text-transform:uppercase;color:var(--muted);margin-bottom:10px">🔁 My Swap Requests</div>
+      <div id="sp-swaps-list"></div>
     </div>
 
     <!-- STRIKES -->
@@ -708,6 +730,7 @@ self.addEventListener('notificationclick',function(e){
       <button class="tab-btn" id="activitylog-tab-btn" data-dept="owner" style="display:none" onclick="showAdminTab('activitylog',this)">🕵 Activity Log</button>
       <button class="tab-btn" id="teamratings-tab-btn" data-dept="owner" style="display:none" onclick="showAdminTab('teamratings',this)">🏅 Team Ratings</button>
       <button class="tab-btn" id="staffhr-tab-btn" data-dept="owner" style="display:none" onclick="showAdminTab('staffhr',this)">🗂 Staff HR Files</button>
+      <button class="tab-btn" id="teamtraining-tab-btn" data-dept="owner" style="display:none" onclick="showAdminTab('teamtraining',this)">🎯 Team Training</button>
     </nav>
 
     <div class="content-area">
@@ -717,6 +740,7 @@ self.addEventListener('notificationclick',function(e){
         <div class="page-title">Dashboard</div>
         <div class="page-sub">Everything that needs your attention today, in one place</div>
         <div id="my-rank-badge-box" class="card" style="display:none;padding:12px 18px;margin-bottom:16px;align-items:center;gap:12px;max-width:320px"></div>
+        <div id="my-training-reminder-box" style="display:none"></div>
         <div id="dashboard-content"></div>
       </div>
       <div class="page" id="page-myprofile">
@@ -817,10 +841,14 @@ self.addEventListener('notificationclick',function(e){
       <div class="page" id="page-clients">
         <div class="page-title">Clients</div>
         <div class="page-sub">Manage all active and onboarding clients</div>
-        <div style="display:flex;justify-content:flex-end;margin-bottom:16px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+          <div style="display:flex;gap:6px">
+            <button class="btn-sm" id="clients-view-table-btn" onclick="setClientsView('table')">☰ Table</button>
+            <button class="btn-sm" id="clients-view-cards-btn" onclick="setClientsView('cards')">◈ Cards</button>
+          </div>
           <button class="btn-add" onclick="gateAddClient()">+ Add Client</button>
         </div>
-        <div class="card" style="padding:0;overflow:hidden">
+        <div class="card" id="clients-table-wrap" style="padding:0;overflow:hidden">
           <table class="data-table">
             <thead><tr>
               <th>Client</th><th>Niche</th><th>Package</th><th>Status</th><th>Reports</th><th>Location</th><th>Actions</th>
@@ -828,6 +856,7 @@ self.addEventListener('notificationclick',function(e){
             <tbody id="clients-tbody"><tr><td colspan="7" style="text-align:center;padding:24px;color:var(--muted);font-family:Arial">Loading…</td></tr></tbody>
           </table>
         </div>
+        <div id="clients-cards-wrap" style="display:none;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px;perspective:900px"></div>
       </div>
 
       <!-- REPORTS TAB -->
@@ -2022,6 +2051,7 @@ self.addEventListener('notificationclick',function(e){
             <button class="btn-sm" id="cv-reset-btn" onclick="resetClientAccess(_currentViewClientId,'')">🔑 Reset Access</button>
           </div>
         </div>
+        <div id="cv-low-stock-banner" style="display:none;background:var(--danger-light);border:1.5px solid var(--danger);border-radius:9px;padding:10px 16px;margin-bottom:16px;font-family:Arial;font-size:13px;color:var(--danger);cursor:pointer" onclick="loadClientViewTab('cv-inventory')"></div>
         <div class="inner-tabs" style="margin-bottom:20px">
           <button class="inner-tab cv-tab active" id="cvtab-cv-reports" onclick="loadClientViewTab('cv-reports')">Reports</button>
           <button class="inner-tab cv-tab" id="cvtab-cv-complaints" onclick="loadClientViewTab('cv-complaints')">Complaints</button>
@@ -2117,6 +2147,7 @@ self.addEventListener('notificationclick',function(e){
             <input type="number" id="sh-slots" placeholder="Slots" style="width:70px;padding:7px 10px;border:1px solid var(--border);border-radius:9px;font-family:Arial;font-size:12px" value="1">
             <button class="btn-add" onclick="addShift()">+ Create Shift</button>
           </div>
+          <div id="cv-shifts-list-swaps"></div>
           <div id="cv-shifts-list"></div>
         </div>
         <div id="cv-kb-panel" class="cv-tab-content" style="display:none">
@@ -2224,6 +2255,9 @@ self.addEventListener('notificationclick',function(e){
             <option value="">All statuses</option>
             <option>New</option><option>Reviewed</option><option>Shortlisted</option><option>Rejected</option>
           </select>
+          <label style="display:flex;align-items:center;gap:6px;font-family:Arial;font-size:13px;color:var(--ink)">
+            <input type="checkbox" id="tp-priority-filter" onchange="loadTalentPool()" style="width:auto"> ⭐ Priority only
+          </label>
         </div>
         <div id="talentpool-list"></div>
       </div>
@@ -2436,6 +2470,22 @@ self.addEventListener('notificationclick',function(e){
         <div id="staff-hr-list"></div>
       </div>
 
+      <!-- TEAM TRAINING PAGE (owner only) -->
+      <div class="page" id="page-teamtraining">
+        <div class="page-title">Team Training</div>
+        <div class="page-sub">Skill-building opportunities you've made available to the team. Anyone who hasn't ticked one off keeps seeing a reminder on their dashboard.</div>
+        <div class="card" style="padding:16px 20px;margin-bottom:20px">
+          <div style="font-size:13px;font-weight:600;margin-bottom:10px">+ Add Training</div>
+          <div class="form-grid">
+            <div class="form-field" style="grid-column:1/-1"><label>Title</label><input type="text" id="tt-title" placeholder="e.g. Customer De-escalation Basics"></div>
+            <div class="form-field" style="grid-column:1/-1"><label>Description / Link</label><textarea id="tt-desc" rows="2" placeholder="What it covers, and a link to the material if there is one"></textarea></div>
+          </div>
+          <button class="btn-add" onclick="addTeamTraining()" style="margin-top:10px">+ Add Training</button>
+          <div id="tt-feedback" style="margin-top:8px"></div>
+        </div>
+        <div id="team-training-list"></div>
+      </div>
+
       <!-- EXPENDITURE PAGE -->
       <div class="page" id="page-expenditure">
         <div class="page-title">Expenditure Tracker</div>
@@ -2566,6 +2616,7 @@ self.addEventListener('notificationclick',function(e){
             <input type="number" id="sh-slots-p" placeholder="Slots" style="width:70px;padding:7px 10px;border:1px solid var(--border);border-radius:9px;font-family:Arial;font-size:12px" value="1">
             <button class="btn-add" onclick="addShift()">+ Create Shift</button>
           </div>
+          <div id="portal-shifts-list-swaps"></div>
           <div id="portal-shifts-list"></div>
         </div>
         <div id="portal-accounting-tab" class="portal-tab-content" style="display:none"><div id="portal-accounting-content"></div></div>
@@ -4476,6 +4527,7 @@ function showApp(){
     if(currentUser.isOwner)document.getElementById('activitylog-tab-btn').style.display='';
     if(currentUser.isOwner)document.getElementById('teamratings-tab-btn').style.display='';
     if(currentUser.isOwner)document.getElementById('staffhr-tab-btn').style.display='';
+    if(currentUser.isOwner)document.getElementById('teamtraining-tab-btn').style.display='';
     document.getElementById('onboarding-tab-btn').style.display='';
     loadInvoices();
     loadExpenditure();
@@ -4787,6 +4839,8 @@ async function showStaffPortal(staff){
   await loadSpAttendance();
   await loadSpLeave();
   await loadSpShifts();
+  await loadSpRotaCalendar();
+  await loadSpSwapRequests();
 }
 
 async function loadSpReports(){
@@ -4923,6 +4977,7 @@ async function submitLeaveRequest(){
 }
 
 // ══ STAFF SHIFTS (view available + claim) ══
+let _spRotaMonth=new Date();
 async function loadSpShifts(){
   const {data:shiftRows}=await db.from('shifts').select('*').eq('client_id',_spClientId).order('shift_date',{ascending:true});
   const shiftsList=shiftRows||[];
@@ -4937,9 +4992,82 @@ async function loadSpShifts(){
     return`<div style="display:flex;justify-content:space-between;align-items:center;border:1px solid var(--border);border-radius:9px;padding:10px 14px;margin-bottom:8px;${mine?'background:var(--gold-light)':''}">
       <div><strong style="font-family:Arial;font-size:13px">${s.shift_name||'Shift'}</strong> · ${s.shift_date||''}<br>
       <span style="font-family:Arial;font-size:12px;color:var(--muted)">${s.start_time||''}–${s.end_time||''} · ${taken.length}/${s.slots||1} filled</span></div>
-      ${mine?'<span class="badge badge-green">You\'re on this</span>':(full?'<span class="badge badge-gray">Full</span>':`<button class="btn-sm" onclick="claimShift('${s.id}')">Take Shift</button>`)}
+      ${mine?`<div style="display:flex;gap:6px;align-items:center"><span class="badge badge-green">You're on this</span><button class="btn-sm" onclick="openRequestSwapModal('${s.id}','${(s.shift_name||'Shift').replace(/'/g,"\\'")} · ${s.shift_date||''}')">Request Swap</button></div>`:(full?'<span class="badge badge-gray">Full</span>':`<button class="btn-sm" onclick="claimShift('${s.id}')">Take Shift</button>`)}
     </div>`;
   }).join('');
+}
+// ══ TEAM ROTA CALENDAR (staff self-portal) ══
+async function spRotaShiftMonth(delta){
+  _spRotaMonth.setMonth(_spRotaMonth.getMonth()+delta);
+  await loadSpRotaCalendar();
+}
+async function loadSpRotaCalendar(){
+  const grid=document.getElementById('sp-rota-calendar');if(!grid)return;
+  const label=document.getElementById('sp-rota-month-label');
+  const y=_spRotaMonth.getFullYear(),m=_spRotaMonth.getMonth();
+  label.textContent=_spRotaMonth.toLocaleString('default',{month:'long',year:'numeric'});
+  const firstDay=new Date(y,m,1),lastDay=new Date(y,m+1,0);
+  const startStr=firstDay.toISOString().slice(0,10),endStr=lastDay.toISOString().slice(0,10);
+  const {data:shiftRows}=await db.from('shifts').select('*').eq('client_id',_spClientId).gte('shift_date',startStr).lte('shift_date',endStr);
+  const shiftsList=shiftRows||[];
+  const {data:assignRows}=await db.from('shift_assignments').select('*,client_staff(name)').in('shift_id',shiftsList.map(s=>s.id).length?shiftsList.map(s=>s.id):['00000000-0000-0000-0000-000000000000']);
+  const assigns=assignRows||[];
+  const byDate={};
+  shiftsList.forEach(s=>{(byDate[s.shift_date]=byDate[s.shift_date]||[]).push(s);});
+  const dow=['S','M','T','W','T','F','S'];
+  let html=dow.map(d=>`<div style="font-family:Arial;font-size:10px;color:var(--muted);text-align:center;font-weight:600">${d}</div>`).join('');
+  for(let i=0;i<firstDay.getDay();i++)html+='<div></div>';
+  for(let d=1;d<=lastDay.getDate();d++){
+    const dateStr=new Date(y,m,d).toISOString().slice(0,10);
+    const dayShifts=byDate[dateStr]||[];
+    const cells=dayShifts.map(s=>{
+      const names=assigns.filter(a=>a.shift_id===s.id).map(a=>(a.client_staff&&a.client_staff.name)||'—');
+      const mine=assigns.some(a=>a.shift_id===s.id&&a.staff_id===_spStaffId);
+      return `<div title="${s.shift_name||'Shift'} ${s.start_time||''}-${s.end_time||''}: ${names.join(', ')||'Open'}" style="font-size:8.5px;background:${mine?'#C9A24B':'#E7E0D2'};color:${mine?'#1B2A4A':'#5E4F46'};border-radius:3px;padding:1px 3px;margin-top:2px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">${names.length?names.join(', '):'Open'}</div>`;
+    }).join('');
+    html+=`<div style="min-height:56px;border:1px solid var(--border);border-radius:6px;padding:3px;font-family:Arial">
+      <div style="font-size:10px;color:var(--muted)">${d}</div>${cells}
+    </div>`;
+  }
+  grid.innerHTML=html;
+}
+// ══ SHIFT SWAP REQUESTS ══
+async function openRequestSwapModal(shiftId,shiftLabel){
+  document.getElementById('swap-shift-id').value=shiftId;
+  document.getElementById('swap-shift-summary').textContent=shiftLabel;
+  document.getElementById('swap-reason').value='';
+  document.getElementById('swap-feedback').innerHTML='';
+  const {data:staffRows}=await db.from('client_staff').select('id,name').eq('client_id',_spClientId).neq('status','Terminated').neq('id',_spStaffId).order('name',{ascending:true});
+  document.getElementById('swap-target-staff').innerHTML='<option value="">Select a colleague…</option>'+(staffRows||[]).map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
+  openModal('modal-request-swap');
+}
+async function submitSwapRequest(){
+  const fb=document.getElementById('swap-feedback');
+  const shiftId=document.getElementById('swap-shift-id').value;
+  const targetId=document.getElementById('swap-target-staff').value;
+  if(!targetId){fb.innerHTML='<div class="error-msg">Choose who you\'d like to swap with.</div>';return;}
+  const {data:me}=await db.from('client_staff').select('name').eq('id',_spStaffId).single();
+  const {data:target}=await db.from('client_staff').select('name').eq('id',targetId).single();
+  const {error}=await db.from('shift_swap_requests').insert({
+    shift_id:shiftId,client_id:_spClientId,
+    requesting_staff_id:_spStaffId,requesting_staff_name:me?me.name:'',
+    target_staff_id:targetId,target_staff_name:target?target.name:'',
+    reason:document.getElementById('swap-reason').value.trim()||null,status:'Pending'
+  });
+  if(error){fb.innerHTML=`<div class="error-msg">${error.message}</div>`;return;}
+  fb.innerHTML='<div class="success-msg">✓ Request sent to HR.</div>';
+  setTimeout(()=>{closeModal('modal-request-swap');loadSpSwapRequests();},1200);
+}
+async function loadSpSwapRequests(){
+  const el=document.getElementById('sp-swaps-list');if(!el)return;
+  const {data}=await db.from('shift_swap_requests').select('*,shifts(shift_name,shift_date)').eq('requesting_staff_id',_spStaffId).order('created_at',{ascending:false});
+  const rows=data||[];
+  if(!rows.length){el.innerHTML='<p style="font-family:Arial;font-size:12px;color:var(--muted)">No swap requests yet.</p>';return;}
+  const sb={Pending:'badge-gold',Approved:'badge-green',Denied:'badge-red'};
+  el.innerHTML=rows.map(r=>`<div style="display:flex;justify-content:space-between;align-items:center;border:1px solid var(--border);border-radius:9px;padding:9px 14px;margin-bottom:6px">
+    <div style="font-family:Arial;font-size:12.5px;color:var(--ink)">${(r.shifts&&r.shifts.shift_name)||'Shift'} · ${(r.shifts&&r.shifts.shift_date)||''}<br><span style="font-size:11px;color:var(--muted)">Swap with ${r.target_staff_name}</span></div>
+    <span class="badge ${sb[r.status]||'badge-gray'}">${r.status}</span>
+  </div>`).join('');
 }
 async function claimShift(shiftId){
   const shift=(await db.from('shifts').select('*').eq('id',shiftId).single()).data;
@@ -4956,7 +5084,7 @@ async function claimShift(shiftId){
 async function loadClients(){
   if(!currentUser||currentUser.role==='client') return; // clients never load full client list
   const {data}=await db.from('clients').select('*,reports(count)').neq('status','Inactive').order('created_at',{ascending:false});
-  allClients=data||[];renderClientsTable();populateAllDropdowns();
+  allClients=data||[];renderClientsTable();if(_clientsView==='cards')renderClientsCards();populateAllDropdowns();
 }
 
 function renderClientsTable(){
@@ -4976,6 +5104,40 @@ function renderClientsTable(){
       <button class="btn-danger" onclick="deleteClient('${c.id}','${c.business_name}')">Remove</button>
     </td>
   </tr>`).join('');
+}
+
+let _clientsView='table';
+function setClientsView(view){
+  _clientsView=view;
+  document.getElementById('clients-table-wrap').style.display=view==='table'?'block':'none';
+  document.getElementById('clients-cards-wrap').style.display=view==='cards'?'grid':'none';
+  document.getElementById('clients-view-table-btn').style.fontWeight=view==='table'?'700':'400';
+  document.getElementById('clients-view-cards-btn').style.fontWeight=view==='cards'?'700':'400';
+  if(view==='cards')renderClientsCards();
+}
+function renderClientsCards(){
+  const wrap=document.getElementById('clients-cards-wrap');if(!wrap)return;
+  if(!allClients.length){wrap.innerHTML='<p style="font-family:Arial;font-size:13px;color:var(--muted)">No clients yet.</p>';return;}
+  const sb={Active:'badge-green',Onboarding:'badge-gold',Paused:'badge-gray'};
+  wrap.innerHTML=allClients.map(c=>`
+    <div class="card client-3d-card" style="padding:18px;cursor:pointer" onclick="viewClient('${c.id}')">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+        <div>
+          <div style="font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:600;color:var(--ink)">${c.business_name}</div>
+          <div style="font-family:Arial;font-size:11px;color:var(--muted);margin-top:2px">${nicheLabels[c.niche]||'—'}</div>
+        </div>
+        <span class="badge ${sb[c.status]||'badge-gray'}">${c.status}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;font-family:Arial;font-size:12px;color:var(--muted)">
+        <span>${c.package}</span>
+        <span>${(c.reports&&c.reports[0]&&c.reports[0].count)||0} reports</span>
+      </div>
+      <div style="margin-top:10px;display:flex;gap:6px" onclick="event.stopPropagation()">
+        <button class="btn-sm" onclick="goAddReport('${c.id}')">+ Report</button>
+        <button class="btn-danger" style="padding:4px 10px;font-size:11px" onclick="deleteClient('${c.id}','${c.business_name}')">Remove</button>
+      </div>
+    </div>`).join('');
+  attachTiltEffect('.client-3d-card',wrap);
 }
 
 function populateAllDropdowns(){
@@ -6351,6 +6513,15 @@ async function viewClient(clientId){
   // Load all reports for this client — persisted in DB, always up to date
   loadClientViewReports(clientId);
   loadClientViewTab('cv-reports',clientId);
+  checkClientLowStockBanner(clientId);
+}
+async function checkClientLowStockBanner(clientId){
+  const banner=document.getElementById('cv-low-stock-banner');if(!banner)return;
+  const {data}=await db.from('client_inventory').select('item_name,quantity,reorder_level').eq('client_id',clientId);
+  const low=(data||[]).filter(i=>i.reorder_level!=null&&i.quantity<=i.reorder_level);
+  if(!low.length){banner.style.display='none';return;}
+  banner.style.display='block';
+  banner.innerHTML=`⚠ ${low.length} item${low.length===1?'':'s'} at or below reorder level: ${low.map(i=>i.item_name).join(', ')} — click to view Inventory`;
 }
 
 let _lastClientReports=[];
@@ -6860,6 +7031,7 @@ async function loadDashboard(){
   const el=document.getElementById('dashboard-content');
   if(!el)return;
   loadMyRankBadge();
+  loadMyTrainingReminders();
   el.innerHTML='<p style="font-size:13px;color:var(--muted)">Loading…</p>';
   const today=new Date().toISOString().slice(0,10);
   const in30=new Date();in30.setDate(in30.getDate()+30);
@@ -6867,12 +7039,11 @@ async function loadDashboard(){
   const thisMonth=new Date().getMonth()+1,thisYear=new Date().getFullYear();
 
   const [
-    {data:trainings},{data:leave},{data:inventory},{data:bills},
+    {data:trainings},{data:leave},{data:bills},
     {data:contracts},{data:candidates},{data:activeClients},{data:payrollRuns}
   ]=await Promise.all([
     db.from('staff_trainings').select('*,client_staff(name,client_id,clients(business_name))').neq('status','Completed'),
     db.from('staff_leave_requests').select('*,client_staff(name),clients(business_name)').eq('status','Pending'),
-    db.from('client_inventory').select('*,clients(business_name)'),
     db.from('ap_bills').select('*,clients(business_name,currency)').eq('status','Unpaid'),
     db.from('contracts').select('*,clients(business_name)').lte('end_date',in30Str).gte('end_date',today),
     db.from('staff_candidates').select('*,clients(business_name)').eq('status','Under Review'),
@@ -6881,7 +7052,6 @@ async function loadDashboard(){
   ]);
 
   const overdueTrainings=(trainings||[]).filter(t=>t.due_date&&t.due_date<today);
-  const lowStock=(inventory||[]).filter(i=>i.reorder_level!=null&&parseFloat(i.quantity)<=parseFloat(i.reorder_level));
   const overdueBills=(bills||[]).filter(b=>b.due_date&&b.due_date<today);
   const paidClientIds=new Set((payrollRuns||[]).map(r=>r.client_id));
   const clientsMissingPayroll=(activeClients||[]).filter(c=>!paidClientIds.has(c.id));
@@ -6907,9 +7077,9 @@ async function loadDashboard(){
 
   const hour=new Date().getHours();
   const greeting=hour<12?'Good morning':hour<17?'Good afternoon':'Good evening';
-  const totalUrgent2=overdueTrainings.length+lowStock.length+overdueBills.length;
+  const totalUrgent2=overdueTrainings.length+overdueBills.length;
   const kpi=(icon,val,label,tone)=>`
-    <div class="card" style="padding:0;overflow:hidden;text-align:left;transition:transform .12s" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
+    <div class="card kpi-tile" style="padding:0;overflow:hidden;text-align:left">
       <div style="height:4px;background:var(--${tone})"></div>
       <div style="padding:16px 18px;display:flex;align-items:center;gap:12px">
         <div style="font-size:22px;line-height:1">${icon}</div>
@@ -6929,10 +7099,9 @@ async function loadDashboard(){
       ${totalUrgent2>0?`<div style="background:var(--danger);color:#fff;padding:8px 16px;border-radius:20px;font-size:12px;font-weight:600;letter-spacing:.02em">⚠ ${totalUrgent2} urgent</div>`:`<div style="background:var(--success);color:#fff;padding:8px 16px;border-radius:20px;font-size:12px;font-weight:600;letter-spacing:.02em">✓ Nothing on fire</div>`}
     </div>
 
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:26px">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:26px;perspective:800px">
       ${kpi('⚠️',overdueTrainings.length,'Overdue Trainings','danger')}
       ${kpi('🌴',(leave||[]).length,'Pending Leave','gold')}
-      ${kpi('📦',lowStock.length,'Low Stock Items','danger')}
       ${kpi('💸',overdueBills.length,'Overdue Bills','danger')}
       ${kpi('📄',(contracts||[]).length,'Contracts Expiring Soon','gold')}
       ${kpi('🧑‍🎓',(candidates||[]).length,'Candidates To Review','gold')}
@@ -6941,8 +7110,6 @@ async function loadDashboard(){
     ${checklist('Overdue Trainings','⚠️',overdueTrainings.map(t=>`<strong style="font-size:13px;color:var(--ink)">${(t.client_staff&&t.client_staff.name)||'—'}</strong> · <span style="font-size:12px;color:var(--muted)">${(t.client_staff&&t.client_staff.clients&&t.client_staff.clients.business_name)||'—'}</span><br><span style="font-size:12px;color:var(--danger)">${t.training_name} — was due ${t.due_date}</span>`),true)}
 
     ${checklist('Overdue Bills','💸',overdueBills.map(b=>`<strong style="font-size:13px;color:var(--ink)">${b.vendor_name}</strong> · <span style="font-size:12px;color:var(--muted)">${(b.clients&&b.clients.business_name)||'—'}</span><br><span style="font-size:12px;color:var(--danger)">${CURRENCY_SYMBOLS[(b.clients&&b.clients.currency)||'NGN']||'₦'}${Number(b.amount||0).toLocaleString()} — due ${b.due_date}</span>`),true)}
-
-    ${checklist('Low Stock','📦',lowStock.map(i=>`<strong style="font-size:13px;color:var(--ink)">${i.item_name}</strong> · <span style="font-size:12px;color:var(--muted)">${(i.clients&&i.clients.business_name)||'—'}</span><br><span style="font-size:12px;color:var(--danger)">${i.quantity} ${i.unit||''} left (reorder at ${i.reorder_level})</span>`),true)}
 
     ${checklist('Pending Leave Requests','🌴',(leave||[]).map(l=>`<strong style="font-size:13px;color:var(--ink)">${(l.client_staff&&l.client_staff.name)||'—'}</strong> · <span style="font-size:12px;color:var(--muted)">${(l.clients&&l.clients.business_name)||'—'}</span><br><span style="font-size:12px;color:var(--muted)">${l.start_date} → ${l.end_date}</span>`),false)}
 
@@ -6954,7 +7121,8 @@ async function loadDashboard(){
 
     ${totalUrgent2===0&&!(leave||[]).length&&!(contracts||[]).length&&!(candidates||[]).length&&!clientsMissingPayroll.length?`<div class="card" style="padding:40px;text-align:center"><div style="font-size:32px;margin-bottom:8px">✨</div><div style="font-family:'Cormorant Garamond',serif;font-size:20px;color:var(--ink)">Nothing outstanding right now</div><div style="font-size:12px;color:var(--muted);margin-top:4px">Everything's on track across every client.</div></div>`:''}
   `;
-  const totalUrgent=overdueTrainings.length+lowStock.length+overdueBills.length;
+  attachTiltEffect('.kpi-tile',el);
+  const totalUrgent=overdueTrainings.length+overdueBills.length;
   const badge=document.getElementById('dashboard-badge');
   if(badge){
     if(totalUrgent>0){badge.textContent=totalUrgent;badge.style.display='inline';}
@@ -7148,6 +7316,90 @@ async function loadStaffHRFiles(){
       </div>`:'<div style="margin-top:10px;font-family:Arial;font-size:12px;color:var(--muted)">This person hasn\'t filled in their My Profile HR details yet.</div>'}
     </div>`;
   }).join('');
+}
+
+// ══ TEAM TRAINING (internal skill-building — owner assigns, staff ticks off) ══
+async function addTeamTraining(){
+  const fb=document.getElementById('tt-feedback');
+  const title=document.getElementById('tt-title').value.trim();
+  const desc=document.getElementById('tt-desc').value.trim();
+  if(!title){fb.innerHTML='<span style="color:var(--danger);font-size:12px">Enter a title.</span>';return;}
+  const {error}=await db.from('internal_trainings').insert({title,description:desc||null,active:true});
+  if(error){fb.innerHTML=`<span style="color:var(--danger);font-size:12px">${error.message}</span>`;return;}
+  fb.innerHTML='<span style="color:var(--success);font-size:12px">Added.</span>';
+  document.getElementById('tt-title').value='';document.getElementById('tt-desc').value='';
+  loadTeamTraining();
+  setTimeout(()=>fb.innerHTML='',2000);
+}
+async function loadTeamTraining(){
+  const el=document.getElementById('team-training-list');if(!el)return;
+  el.innerHTML='<p style="font-family:Arial;font-size:12px;color:var(--muted)">Loading…</p>';
+  const [{data:trainings},{data:admins},{data:completions}]=await Promise.all([
+    db.from('internal_trainings').select('*').order('created_at',{ascending:false}),
+    db.from('admin_users').select('username,full_name').eq('is_owner',false),
+    db.from('internal_training_completions').select('*')
+  ]);
+  const roster=admins||[];
+  const list=trainings||[];
+  if(!list.length){el.innerHTML='<p style="font-family:Arial;font-size:13px;color:var(--muted)">No training items added yet.</p>';return;}
+  el.innerHTML=list.map(t=>{
+    const done=new Set((completions||[]).filter(c=>c.training_id===t.id).map(c=>c.admin_username));
+    const pending=roster.filter(a=>!done.has(a.username));
+    return `<div class="card" style="padding:16px 20px;margin-bottom:12px${t.active?'':';opacity:.55'}">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap">
+        <div>
+          <div style="font-size:14px;font-weight:600;color:var(--ink)">${t.title}${t.active?'':' (inactive)'}</div>
+          ${t.description?`<div style="font-size:12px;color:var(--muted);margin-top:3px;max-width:520px">${t.description}</div>`:''}
+        </div>
+        <span class="badge ${pending.length?'badge-gold':'badge-green'}">${done.size}/${roster.length} completed</span>
+      </div>
+      ${pending.length?`<div style="font-size:11.5px;color:var(--muted);margin-top:8px">Still pending: ${pending.map(p=>p.full_name).join(', ')}</div>`:''}
+      <div style="margin-top:10px;display:flex;gap:8px">
+        ${t.active?`<button class="btn-sm" onclick="toggleTeamTrainingActive('${t.id}',false)">Mark Inactive</button>`:`<button class="btn-sm" onclick="toggleTeamTrainingActive('${t.id}',true)">Reactivate</button>`}
+        <button class="btn-danger" style="padding:4px 10px;font-size:11px" onclick="deleteTeamTraining('${t.id}')">Delete</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+async function toggleTeamTrainingActive(id,active){
+  await db.from('internal_trainings').update({active}).eq('id',id);
+  loadTeamTraining();
+}
+async function deleteTeamTraining(id){
+  if(!confirm('Delete this training item and everyone\'s completion record for it?'))return;
+  await db.from('internal_training_completions').delete().eq('training_id',id);
+  await db.from('internal_trainings').delete().eq('id',id);
+  loadTeamTraining();
+}
+// Staff-side: persistent reminder until ticked complete
+async function loadMyTrainingReminders(){
+  const box=document.getElementById('my-training-reminder-box');
+  if(!box||!currentUser||currentUser.isOwner||!currentUser.username)return;
+  const [{data:trainings},{data:mine}]=await Promise.all([
+    db.from('internal_trainings').select('*').eq('active',true),
+    db.from('internal_training_completions').select('training_id').eq('admin_username',currentUser.username)
+  ]);
+  const doneIds=new Set((mine||[]).map(m=>m.training_id));
+  const pending=(trainings||[]).filter(t=>!doneIds.has(t.id));
+  if(!pending.length){box.style.display='none';box.innerHTML='';return;}
+  box.style.display='block';
+  box.innerHTML=`<div class="card" style="padding:16px 20px;margin-bottom:16px;border:1.5px solid var(--gold);background:var(--gold-light)">
+    <div style="font-size:13px;font-weight:600;color:var(--ink);margin-bottom:10px">🎯 Training available for you — ${pending.length} not yet marked complete</div>
+    ${pending.map(t=>`<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
+      <div>
+        <div style="font-size:13px;color:var(--ink)">${t.title}</div>
+        ${t.description?`<div style="font-size:11.5px;color:var(--muted);margin-top:2px">${t.description}</div>`:''}
+      </div>
+      <button class="btn-sm" onclick="markTrainingComplete('${t.id}')">✓ Mark Complete</button>
+    </div>`).join('')}
+  </div>`;
+}
+async function markTrainingComplete(trainingId){
+  if(!currentUser||!currentUser.username)return;
+  await db.from('internal_training_completions').upsert({
+    training_id:trainingId,admin_username:currentUser.username,completed_at:new Date().toISOString()
+  },{onConflict:'training_id,admin_username'});
+  loadMyTrainingReminders();
 }
 
 // ══ PROJECTS ══
@@ -7979,8 +8231,10 @@ async function loadTalentPool(){
   el.innerHTML='<p style="font-size:13px;color:var(--muted)">Loading…</p>';
   const search=(document.getElementById('tp-search')?.value||'').trim().toLowerCase();
   const statusFilter=document.getElementById('tp-status-filter')?.value||'';
-  let q=db.from('talent_pool').select('*').order('created_at',{ascending:false});
+  const priorityOnly=document.getElementById('tp-priority-filter')?.checked;
+  let q=db.from('talent_pool').select('*').order('priority',{ascending:false}).order('created_at',{ascending:false});
   if(statusFilter)q=q.eq('status',statusFilter);
+  if(priorityOnly)q=q.eq('priority',true);
   const {data}=await q;
   let rows=data||[];
   if(search)rows=rows.filter(r=>(r.position_applied||'').toLowerCase().includes(search)||(r.full_name||'').toLowerCase().includes(search));
@@ -7989,9 +8243,9 @@ async function loadTalentPool(){
   const clientOptions=(clients||[]).map(c=>`<option value="${c.id}">${c.business_name}</option>`).join('');
   const sb={New:'badge-gold',Reviewed:'badge-gray',Shortlisted:'badge-green',Rejected:'badge-red'};
   el.innerHTML=`<div class="staff-grid" style="grid-template-columns:repeat(auto-fill,minmax(300px,1fr))">`+rows.map(r=>`
-    <div class="card" style="padding:16px 18px">
+    <div class="card" style="padding:16px 18px${r.priority?';border:1.5px solid var(--gold)':''}">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
-        <div><strong style="font-size:14px">${r.full_name}</strong><br><span style="font-size:12px;color:var(--muted)">${r.position_applied||'—'} · ${r.experience||'—'} yrs</span></div>
+        <div><strong style="font-size:14px">${r.full_name}</strong>${r.priority?' <span class="badge badge-gold" style="margin-left:4px">⭐ Priority</span>':''}<br><span style="font-size:12px;color:var(--muted)">${r.position_applied||'—'} · ${r.experience||'—'} yrs</span></div>
         <select onchange="updateTalentStatus('${r.id}',this.value)" style="padding:4px 8px;border:1px solid var(--border);border-radius:9px;font-size:11px">
           ${['New','Reviewed','Shortlisted','Rejected'].map(s=>`<option ${s===r.status?'selected':''}>${s}</option>`).join('')}
         </select>
@@ -8005,6 +8259,9 @@ async function loadTalentPool(){
         ${r.cv_link?`<a href="${r.cv_link}" target="_blank" style="font-size:12px;color:var(--gold)">View CV →</a>`:''}
         ${r.portfolio?`<a href="${r.portfolio}" target="_blank" style="font-size:12px;color:var(--gold)">Portfolio →</a>`:''}
       </div>
+      <label style="display:flex;align-items:center;gap:6px;margin-top:8px;font-family:Arial;font-size:11.5px;color:var(--ink)">
+        <input type="checkbox" style="width:auto" ${r.priority?'checked':''} onchange="toggleTalentPriority('${r.id}',this.checked)"> Priority — consider first for the next opening
+      </label>
       <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);display:flex;gap:6px;align-items:center;flex-wrap:wrap">
         <select id="tp-sendto-${r.id}" style="flex:1;padding:5px 8px;border:1px solid var(--border);border-radius:9px;font-size:12px"><option value="">Send to client…</option>${clientOptions}</select>
         <button class="btn-sm" onclick="sendTalentToPipeline('${r.id}')">→ Add to Pipeline</button>
@@ -8013,6 +8270,11 @@ async function loadTalentPool(){
         <button class="btn-danger" onclick="deleteRow('talent_pool','${r.id}',loadTalentPool)">Del</button>
       </div>
     </div>`).join('')+`</div>`;
+}
+async function toggleTalentPriority(id,priority){
+  await db.from('talent_pool').update({priority}).eq('id',id);
+  await logActivity(priority?'Marked talent pool applicant as priority':'Removed priority flag','',null);
+  loadTalentPool();
 }
 async function updateTalentStatus(id,status){
   await db.from('talent_pool').update({status}).eq('id',id);
@@ -8546,6 +8808,7 @@ async function decideLeave(id,status,targetId,clientId){
 let _shClientId=null;
 async function loadShifts(clientId,targetId,canManage){
   _shClientId=clientId;
+  loadSwapRequestsForClient(clientId,targetId+'-swaps');
   const {data:shiftRows}=await db.from('shifts').select('*').eq('client_id',clientId).order('shift_date',{ascending:true});
   const shiftsList=shiftRows||[];
   const {data:assignRows}=await db.from('shift_assignments').select('*,client_staff(name)').in('shift_id',shiftsList.map(s=>s.id).length?shiftsList.map(s=>s.id):['00000000-0000-0000-0000-000000000000']);
@@ -8598,6 +8861,46 @@ async function unassignShift(assignmentId,targetId,clientId){
   if(error){alert('Could not remove: '+error.message);return;}
   loadShifts(clientId,targetId,true);
 }
+// ══ SHIFT SWAP REQUESTS — HR/owner finalises, client view is read-only ══
+async function loadSwapRequestsForClient(clientId,boxId){
+  const box=document.getElementById(boxId);if(!box)return;
+  const canFinalise=!!(currentUser&&currentUser.role!=='client'); // internal team only, not the client
+  const {data}=await db.from('shift_swap_requests').select('*,shifts(shift_name,shift_date,start_time,end_time)').eq('client_id',clientId).eq('status','Pending').order('created_at',{ascending:true});
+  const rows=data||[];
+  if(!rows.length){box.innerHTML='';box.style.marginBottom='0';return;}
+  box.style.marginBottom='14px';
+  box.innerHTML=`<div style="font-size:12.5px;font-weight:600;color:var(--ink);margin-bottom:8px">🔁 Pending Shift Swaps${canFinalise?'':' (awaiting HR)'}</div>`+
+  rows.map(r=>`<div style="border:1.5px solid var(--gold);border-radius:9px;padding:10px 14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+    <div style="font-family:Arial;font-size:12.5px;color:var(--ink)">
+      <strong>${r.requesting_staff_name}</strong> wants <strong>${r.target_staff_name}</strong> to take <strong>${(r.shifts&&r.shifts.shift_name)||'a shift'}</strong> · ${(r.shifts&&r.shifts.shift_date)||''}
+      ${r.reason?`<br><span style="color:var(--muted);font-size:11.5px">Reason: ${r.reason}</span>`:''}
+    </div>
+    ${canFinalise?`<div style="display:flex;gap:6px;flex-shrink:0">
+      <button class="btn-sm" onclick="finalizeSwapRequest('${r.id}','${clientId}','${boxId.replace('-swaps','')}')">✓ Finalise</button>
+      <button class="btn-danger" style="padding:4px 10px;font-size:11px" onclick="denySwapRequest('${r.id}','${clientId}','${boxId.replace('-swaps','')}')">Deny</button>
+    </div>`:'<span class="badge badge-gold">Pending</span>'}
+  </div>`).join('');
+}
+async function finalizeSwapRequest(reqId,clientId,shiftsTargetId){
+  const {data:req}=await db.from('shift_swap_requests').select('*').eq('id',reqId).single();
+  if(!req){alert('Request not found.');return;}
+  if(!confirm(`Give this shift to ${req.target_staff_name} instead of ${req.requesting_staff_name}?`))return;
+  const {data:assignment}=await db.from('shift_assignments').select('*').eq('shift_id',req.shift_id).eq('staff_id',req.requesting_staff_id).maybeSingle();
+  if(assignment){
+    const {error}=await db.from('shift_assignments').update({staff_id:req.target_staff_id,assigned_by:`Swap approved by ${currentUser.name||'HR'}`}).eq('id',assignment.id);
+    if(error){alert('Could not update the rota: '+error.message);return;}
+  } else {
+    await db.from('shift_assignments').insert({shift_id:req.shift_id,staff_id:req.target_staff_id,assigned_by:`Swap approved by ${currentUser.name||'HR'}`,status:'Assigned'});
+  }
+  await db.from('shift_swap_requests').update({status:'Approved',resolved_at:new Date().toISOString(),resolved_by:currentUser.name||'HR'}).eq('id',reqId);
+  await logActivity('Finalised shift swap',`${req.requesting_staff_name} → ${req.target_staff_name}`,clientId);
+  loadShifts(clientId,shiftsTargetId,true);
+}
+async function denySwapRequest(reqId,clientId,shiftsTargetId){
+  if(!confirm('Deny this swap request?'))return;
+  await db.from('shift_swap_requests').update({status:'Denied',resolved_at:new Date().toISOString(),resolved_by:currentUser.name||'HR'}).eq('id',reqId);
+  loadShifts(clientId,shiftsTargetId,true);
+}
 async function addShift(){
   if(!_shClientId)return;
   const p=currentUser&&currentUser.role==='client'?'-p':'';
@@ -8615,7 +8918,9 @@ async function loadInventory(clientId,targetId,canEdit){
   const {data}=await db.from('client_inventory').select('*').eq('client_id',clientId).order('item_name',{ascending:true});
   const items=data||[];const el=document.getElementById(targetId);if(!el)return;
   if(!items.length){el.innerHTML='<p style="font-family:Arial;font-size:13px;color:var(--muted)">No inventory items yet.</p>';return;}
-  el.innerHTML=`<table class="data-table"><thead><tr><th>Item</th><th>Category</th><th>Qty</th><th>Reorder At</th><th>Updated</th>${canEdit?'<th></th>':''}</tr></thead><tbody>`+
+  const lowItems=items.filter(i=>i.reorder_level!=null&&i.quantity<=i.reorder_level);
+  const banner=lowItems.length?`<div style="background:var(--danger-light);border:1.5px solid var(--danger);border-radius:9px;padding:10px 14px;margin-bottom:12px;font-family:Arial;font-size:13px;color:var(--danger)">⚠ ${lowItems.length} item${lowItems.length===1?'':'s'} at or below reorder level: ${lowItems.map(i=>i.item_name).join(', ')}</div>`:'';
+  el.innerHTML=banner+`<table class="data-table"><thead><tr><th>Item</th><th>Category</th><th>Qty</th><th>Reorder At</th><th>Updated</th>${canEdit?'<th></th>':''}</tr></thead><tbody>`+
     items.map(i=>{
       const low=i.reorder_level!=null&&i.quantity<=i.reorder_level;
       return`<tr${low?' style="background:var(--danger-light)"':''}>
@@ -10436,6 +10741,23 @@ function gateAddClient(){
   openModal('modal-add-client');
 }
 
+// ══ 3D TILT HELPER (used on dashboard tiles + client cards) ══
+function attachTiltEffect(selector,root){
+  const scope=root||document;
+  scope.querySelectorAll(selector).forEach(card=>{
+    if(card.dataset.tiltBound)return;
+    card.dataset.tiltBound='1';
+    card.style.transformStyle='preserve-3d';
+    card.style.transition='transform .15s ease';
+    card.addEventListener('mousemove',e=>{
+      const r=card.getBoundingClientRect();
+      const x=(e.clientX-r.left)/r.width-0.5;
+      const y=(e.clientY-r.top)/r.height-0.5;
+      card.style.transform=`rotateY(${x*10}deg) rotateX(${-y*10}deg) translateZ(4px)`;
+    });
+    card.addEventListener('mouseleave',()=>{card.style.transform='rotateY(0deg) rotateX(0deg) translateZ(0)';});
+  });
+}
 function openModal(id){document.getElementById(id).classList.add('open');}
 function closeModal(id){document.getElementById(id).classList.remove('open');}
 
@@ -10444,6 +10766,7 @@ function showAdminTab(tab,btn){
   if(tab==='activitylog'&&(!currentUser||!currentUser.isOwner)){return;}
   if(tab==='teamratings'&&(!currentUser||!currentUser.isOwner)){return;}
   if(tab==='staffhr'&&(!currentUser||!currentUser.isOwner)){return;}
+  if(tab==='teamtraining'&&(!currentUser||!currentUser.isOwner)){return;}
   document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
   showPage('page-'+tab);
@@ -10451,6 +10774,7 @@ function showAdminTab(tab,btn){
   if(tab==='activitylog') loadActivityLog();
   if(tab==='teamratings') loadTeamRatings();
   if(tab==='staffhr') loadStaffHRFiles();
+  if(tab==='teamtraining') loadTeamTraining();
   if(tab==='payroll') loadPayrollPage();
   if(tab==='accounting') loadAccountingPageInit();
   if(tab==='income') loadCompanyIncome();
@@ -11556,6 +11880,92 @@ document.getElementById('rf-client').addEventListener('change',()=>renderTypeFie
         <button class="btn-cancel" onclick="closeModal('modal-add-credential')">Cancel</button>
       </div>
       <div id="cred-feedback" style="margin-top:8px"></div>
+    </div>
+  </div>
+</div>
+<script>
+(function(){
+  function initLogin3D(){
+    if(typeof THREE==='undefined')return;
+    const canvas=document.getElementById('login-3d-canvas');
+    if(!canvas||canvas.dataset.inited)return;
+    canvas.dataset.inited='1';
+    const scene=new THREE.Scene();
+    const camera=new THREE.PerspectiveCamera(50,canvas.clientWidth/canvas.clientHeight,0.1,100);
+    camera.position.z=7;
+    const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+    function resize(){
+      const w=canvas.clientWidth||window.innerWidth,h=canvas.clientHeight||window.innerHeight;
+      renderer.setSize(w,h,false);
+      camera.aspect=w/h;camera.updateProjectionMatrix();
+    }
+    resize();
+    window.addEventListener('resize',resize);
+
+    const group=new THREE.Group();
+    scene.add(group);
+    const geo=new THREE.IcosahedronGeometry(2.6,1);
+    const wire=new THREE.WireframeGeometry(geo);
+    const mat=new THREE.LineBasicMaterial({color:0xC9A24B,transparent:true,opacity:0.35});
+    const shape=new THREE.LineSegments(wire,mat);
+    group.add(shape);
+
+    const dotsGeo=new THREE.BufferGeometry();
+    const count=120;
+    const positions=new Float32Array(count*3);
+    for(let i=0;i<count;i++){
+      const r=6+Math.random()*4;
+      const theta=Math.random()*Math.PI*2;
+      const phi=Math.acos((Math.random()*2)-1);
+      positions[i*3]=r*Math.sin(phi)*Math.cos(theta);
+      positions[i*3+1]=r*Math.sin(phi)*Math.sin(theta);
+      positions[i*3+2]=r*Math.cos(phi);
+    }
+    dotsGeo.setAttribute('position',new THREE.BufferAttribute(positions,3));
+    const dotsMat=new THREE.PointsMaterial({color:0xC9A24B,size:0.05,transparent:true,opacity:0.5});
+    const dots=new THREE.Points(dotsGeo,dotsMat);
+    scene.add(dots);
+
+    let mouseX=0,mouseY=0;
+    document.getElementById('login-screen').addEventListener('mousemove',e=>{
+      mouseX=(e.clientX/window.innerWidth)-0.5;
+      mouseY=(e.clientY/window.innerHeight)-0.5;
+    });
+
+    function animate(){
+      requestAnimationFrame(animate);
+      group.rotation.y+=0.0025;
+      group.rotation.x+=0.001;
+      dots.rotation.y-=0.0008;
+      camera.position.x+=(mouseX*1.5-camera.position.x)*0.03;
+      camera.position.y+=(-mouseY*1.5-camera.position.y)*0.03;
+      camera.lookAt(scene.position);
+      renderer.render(scene,camera);
+    }
+    animate();
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',initLogin3D);
+  else initLogin3D();
+})();
+</script>
+<div class="modal-overlay" id="modal-request-swap">
+  <div class="modal" style="width:460px">
+    <div class="modal-header">
+      <div class="modal-title">Request Shift Swap</div>
+      <button class="modal-close" onclick="closeModal('modal-request-swap')">×</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="swap-shift-id">
+      <div id="swap-shift-summary" style="font-family:Arial;font-size:13px;color:var(--ink);margin-bottom:12px;background:var(--surface2);padding:10px 12px;border-radius:9px"></div>
+      <div class="form-field"><label>Swap with</label><select id="swap-target-staff"><option value="">Select a colleague…</option></select></div>
+      <div class="form-field" style="margin-top:10px"><label>Reason (optional)</label><textarea id="swap-reason" rows="2" placeholder="Why you need the swap"></textarea></div>
+      <div style="font-family:Arial;font-size:11px;color:var(--muted);margin-top:6px">This just sends a request — nothing changes on the rota until HR finalises it.</div>
+      <div style="margin-top:16px;display:flex;gap:8px;align-items:center">
+        <button class="btn-save" onclick="submitSwapRequest()">Send Request</button>
+        <button class="btn-cancel" onclick="closeModal('modal-request-swap')">Cancel</button>
+      </div>
+      <div id="swap-feedback" style="margin-top:8px"></div>
     </div>
   </div>
 </div>
