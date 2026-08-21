@@ -2391,10 +2391,11 @@ self.addEventListener('notificationclick',function(e){
               </select>
             </div>
             <div class="form-field"><label>Year</label><input type="number" id="pr-year" value="2026" style="width:100px"></div>
-            <button class="btn-save" onclick="runPayroll()">Run Payroll</button>
+            <button class="btn-save" onclick="previewPayroll()">Preview Payroll</button>
           </div>
           <div id="pr-run-feedback" style="margin-top:8px"></div>
         </div>
+        <div id="pr-preview"></div>
         <div id="pr-results"></div>
         <div class="card" style="padding:18px 20px;margin-top:16px">
           <div style="font-size:13px;font-weight:600;color:var(--ink);margin-bottom:10px">Remittance Schedules (for tax/pension audits)</div>
@@ -7149,7 +7150,7 @@ function calculateNigeriaPayroll(staff){
   const other=parseFloat(staff.other_allowances)||0;
   const grossMonthly=basic+housing+transport+other;
   const pensionable=basic+housing+transport; // pension basis excludes "other allowances"
-  const pensionEmployeeMonthly=staff.pension_opt_in?pensionable*0.08:0;
+  const pensionEmployeeMonthly=staff.pension_opt_in?pensionable*0.05:0;
   const pensionEmployerMonthly=staff.pension_opt_in?pensionable*0.10:0; // employer cost, informational — not deducted from staff pay
   const nhfMonthly=staff.nhf_opt_in?basic*0.025:0;
   const annualRent=parseFloat(staff.annual_rent)||0;
@@ -8832,44 +8833,107 @@ async function loadPayrollPage(){
   document.getElementById('pr-results').innerHTML='';
   document.getElementById('pr-remittance-report').innerHTML='';
 }
-async function runPayroll(){
+async function previewPayroll(){
   const clientId=document.getElementById('pr-client').value;
-  const month=parseInt(document.getElementById('pr-month').value);
-  const year=parseInt(document.getElementById('pr-year').value);
   const fb=document.getElementById('pr-run-feedback');
+  document.getElementById('pr-results').innerHTML='';
   if(!clientId){fb.innerHTML='<div class="error-msg">Select a client first.</div>';return;}
   const {data:staffList}=await db.from('client_staff').select('*').eq('client_id',clientId).eq('status','Active');
   const payable=(staffList||[]).filter(s=>(parseFloat(s.basic_salary)||0)>0);
   if(!payable.length){fb.innerHTML='<div class="error-msg">No active staff with a salary set up for this client yet. Set salaries from each staff member\'s profile first.</div>';return;}
+  fb.innerHTML='';
+  const fmt=n=>_activeCurrencySymbol+Number(n||0).toLocaleString(undefined,{maximumFractionDigits:0});
+  const el=document.getElementById('pr-preview');
+  el.innerHTML=`<div class="card" style="padding:18px 20px;margin-bottom:16px">
+    <div style="font-size:13px;font-weight:600;color:var(--ink);margin-bottom:4px">Review before running</div>
+    <div style="font-family:Arial;font-size:11.5px;color:var(--muted);margin-bottom:14px">Add any one-off extra payment or deduction for this month only — bonuses, fines, advance repayments, etc. Leave blank if none.</div>
+    <table class="data-table"><thead><tr><th>Staff</th><th>Basic Gross</th><th>Extra Payment</th><th>Extra Deduction</th><th>Note</th></tr></thead><tbody>
+    ${payable.map(s=>{
+      const p=calculateNigeriaPayroll(s);
+      return `<tr>
+        <td style="font-size:13px">${s.name}</td>
+        <td style="font-family:'IBM Plex Mono',monospace;font-size:12px">${fmt(p.gross_pay)}</td>
+        <td><input type="number" id="pr-extra-pay-${s.id}" placeholder="0" style="width:100px;padding:5px 8px;border:1px solid var(--border);border-radius:7px;font-size:12px"></td>
+        <td><input type="number" id="pr-extra-ded-${s.id}" placeholder="0" style="width:100px;padding:5px 8px;border:1px solid var(--border);border-radius:7px;font-size:12px"></td>
+        <td><input type="text" id="pr-extra-note-${s.id}" placeholder="reason" style="width:140px;padding:5px 8px;border:1px solid var(--border);border-radius:7px;font-size:12px"></td>
+      </tr>`;
+    }).join('')}
+    </tbody></table>
+    <button class="btn-save" onclick="confirmRunPayroll('${clientId}')" style="margin-top:14px">Confirm &amp; Run Payroll</button>
+  </div>`;
+  el.dataset.payableIds=JSON.stringify(payable.map(s=>s.id));
+}
+async function confirmRunPayroll(clientId){
+  const month=parseInt(document.getElementById('pr-month').value);
+  const year=parseInt(document.getElementById('pr-year').value);
+  const fb=document.getElementById('pr-run-feedback');
+  const {data:staffList}=await db.from('client_staff').select('*').eq('client_id',clientId).eq('status','Active');
+  const payableIds=JSON.parse(document.getElementById('pr-preview').dataset.payableIds||'[]');
+  const payable=(staffList||[]).filter(s=>payableIds.includes(s.id));
+  if(!payable.length){fb.innerHTML='<div class="error-msg">Nothing to run — preview again.</div>';return;}
   const {data:run,error:runErr}=await db.from('payroll_runs').insert({client_id:clientId,period_month:month,period_year:year,status:'Draft',created_by:currentUser.name}).select().single();
   if(runErr){fb.innerHTML=`<div class="error-msg">${runErr.message}</div>`;return;}
   let totalGross=0,totalDeductions=0,totalNet=0;
   const slips=payable.map(s=>{
     const p=calculateNigeriaPayroll(s);
-    totalGross+=p.gross_pay;totalDeductions+=p.total_deductions;totalNet+=p.net_pay;
-    return {payroll_run_id:run.id,staff_id:s.id,client_id:clientId,...p};
+    const extraPay=parseFloat(document.getElementById('pr-extra-pay-'+s.id)?.value)||0;
+    const extraDed=parseFloat(document.getElementById('pr-extra-ded-'+s.id)?.value)||0;
+    const note=document.getElementById('pr-extra-note-'+s.id)?.value.trim()||null;
+    const adjustment_amount=extraPay-extraDed;
+    const netWithAdjustment=p.net_pay+adjustment_amount;
+    totalGross+=p.gross_pay;totalDeductions+=p.total_deductions;totalNet+=netWithAdjustment;
+    return {payroll_run_id:run.id,staff_id:s.id,client_id:clientId,...p,net_pay:netWithAdjustment,adjustment_amount,adjustment_note:note};
   });
   const {error:slipErr}=await db.from('payslips').insert(slips);
   if(slipErr){fb.innerHTML=`<div class="error-msg">${slipErr.message}</div>`;return;}
   await db.from('payroll_runs').update({total_gross:totalGross,total_deductions:totalDeductions,total_net:totalNet}).eq('id',run.id);
   await logActivity('Ran payroll',`${payable.length} staff, ${month}/${year}`,clientId);
   fb.innerHTML='<div class="success-msg">✓ Payroll run complete.</div>';
-  displayPayrollResults(run.id,payable,slips);
+  document.getElementById('pr-preview').innerHTML='';
+  displayPayrollResults(run.id,payable,slips,clientId,month,year,totalGross);
 }
-function displayPayrollResults(runId,staffList,slips){
+function staffBankDetailsHtml(staff,hr){
+  // Prefer admin-entered payroll bank fields; fall back to the staff's self-reported ones
+  const bankName=staff.bank_name||(hr&&hr.bank_name)||'';
+  const acctNum=staff.bank_account_number||(hr&&hr.bank_account_number)||'';
+  const acctName=staff.bank_account_name||(hr&&hr.bank_account_name)||'';
+  if(!bankName&&!acctNum)return '<span style="color:var(--danger)">Not on file</span>';
+  return `${bankName||'—'} · ${acctNum||'—'} · ${acctName||'—'}`;
+}
+function displayPayrollResults(runId,staffList,slips,clientId,month,year,totalGross){
   const fmt=n=>_activeCurrencySymbol+Number(n||0).toLocaleString(undefined,{maximumFractionDigits:0});
   const el=document.getElementById('pr-results');
   el.innerHTML=`<div class="card" style="padding:18px 20px">
     <div style="font-size:13px;font-weight:600;color:var(--ink);margin-bottom:10px">Payslip Results</div>
-    <table class="data-table"><thead><tr><th>Staff</th><th>Gross</th><th>Pension</th><th>NHF</th><th>PAYE</th><th>Net Pay</th></tr></thead><tbody>
-    ${slips.map(sl=>{
-      const staff=staffList.find(s=>s.id===sl.staff_id);
-      return`<tr><td style="font-size:13px">${staff?staff.name:'—'}</td><td style="font-family:'IBM Plex Mono',monospace;font-size:12px">${fmt(sl.gross_pay)}</td><td style="font-family:'IBM Plex Mono',monospace;font-size:12px">${fmt(sl.pension_employee)}</td><td style="font-family:'IBM Plex Mono',monospace;font-size:12px">${fmt(sl.nhf)}</td><td style="font-family:'IBM Plex Mono',monospace;font-size:12px">${fmt(sl.paye_tax)}</td><td style="font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:600">${fmt(sl.net_pay)}</td></tr>`;
-    }).join('')}
+    <table class="data-table"><thead><tr><th>Staff</th><th>Gross</th><th>Pension (5%)</th><th>NHF</th><th>PAYE</th><th>Adjustment</th><th>Net Pay</th><th>Bank Details</th></tr></thead><tbody id="pr-results-tbody">
+    <tr><td colspan="8" style="text-align:center;padding:16px;color:var(--muted);font-family:Arial">Loading bank details…</td></tr>
     </tbody></table>
-    <button class="btn-save" onclick="markPayrollPaid('${runId}')" style="margin-top:12px">Mark as Paid</button>
+    <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn-save" onclick="markPayrollPaid('${runId}')">Mark as Paid</button>
+      ${clientId?`<button class="btn-add" onclick="createInvoiceFromPayroll('${clientId}',${totalGross||0},${month},${year})">🧾 Create Invoice</button>`:''}
+    </div>
     <div id="pr-mark-paid-feedback" style="margin-top:8px"></div>
   </div>`;
+  (async()=>{
+    const staffIds=staffList.map(s=>s.id);
+    const {data:hrRows}=await db.from('client_staff_hr_details').select('*').in('staff_id',staffIds.length?staffIds:['00000000-0000-0000-0000-000000000000']);
+    const hrMap={};(hrRows||[]).forEach(h=>hrMap[h.staff_id]=h);
+    document.getElementById('pr-results-tbody').innerHTML=slips.map(sl=>{
+      const staff=staffList.find(s=>s.id===sl.staff_id);
+      return`<tr><td style="font-size:13px">${staff?staff.name:'—'}</td><td style="font-family:'IBM Plex Mono',monospace;font-size:12px">${fmt(sl.gross_pay)}</td><td style="font-family:'IBM Plex Mono',monospace;font-size:12px">${fmt(sl.pension_employee)}</td><td style="font-family:'IBM Plex Mono',monospace;font-size:12px">${fmt(sl.nhf)}</td><td style="font-family:'IBM Plex Mono',monospace;font-size:12px">${fmt(sl.paye_tax)}</td><td style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:${(sl.adjustment_amount||0)<0?'var(--danger)':'var(--success)'}">${sl.adjustment_amount?fmt(sl.adjustment_amount):'—'}${sl.adjustment_note?` <span style="color:var(--muted);font-family:Arial">(${sl.adjustment_note})</span>`:''}</td><td style="font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:600">${fmt(sl.net_pay)}</td><td style="font-family:Arial;font-size:11.5px;color:var(--ink2)">${staff?staffBankDetailsHtml(staff,hrMap[staff.id]):'—'}</td></tr>`;
+    }).join('');
+  })();
+}
+async function createInvoiceFromPayroll(clientId,totalGross,month,year){
+  const monthNames=['','January','February','March','April','May','June','July','August','September','October','November','December'];
+  openAddInvoice();
+  document.getElementById('inv-client').value=clientId;
+  document.getElementById('inv-desc').value=`Staff Payroll — ${monthNames[month]} ${year}`;
+  document.getElementById('inv-amount').value=Math.round(totalGross||0);
+  const due=new Date();due.setDate(due.getDate()+7);
+  document.getElementById('inv-due').value=due.toISOString().slice(0,10);
+  document.getElementById('inv-date').value=new Date().toISOString().slice(0,10);
+  calcVAT();
 }
 async function markPayrollPaid(runId){
   await db.from('payroll_runs').update({status:'Paid'}).eq('id',runId);
