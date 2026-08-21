@@ -499,6 +499,48 @@ self.addEventListener('notificationclick',function(e){
       </div>
     </div>
 
+    <!-- MY DETAILS NAG + FORM -->
+    <div id="sp-details-nag" style="display:none;background:var(--gold-light);border:1.5px solid var(--gold);border-radius:12px;padding:16px 20px;margin-bottom:16px;cursor:pointer" onclick="document.getElementById('sp-details-form-box').scrollIntoView({behavior:'smooth'})">
+      <div style="font-family:Arial;font-size:13px;font-weight:600;color:var(--ink)">📝 Complete your details</div>
+      <div style="font-family:Arial;font-size:12px;color:var(--ink2);margin-top:2px">We're missing some of your personal info — fill it in below so your file is complete.</div>
+    </div>
+    <div id="sp-details-form-box" style="background:white;border:1px solid var(--border);border-radius:12px;padding:24px;margin-bottom:16px">
+      <div style="font-family:Arial;font-size:11px;text-transform:uppercase;color:var(--muted);margin-bottom:4px">📝 My Details</div>
+      <div style="font-family:Arial;font-size:11.5px;color:var(--muted);margin-bottom:14px">Only Haida Consulting's HR team can see this — keep it accurate, it stands in for a filled HR file.</div>
+      <div class="form-grid">
+        <div class="form-field"><label>Date of Birth</label><input type="date" id="csd-dob"></div>
+        <div class="form-field"><label>Gender</label><select id="csd-gender"><option value="">Select</option><option>Female</option><option>Male</option><option>Prefer not to say</option></select></div>
+        <div class="form-field"><label>Marital Status</label><select id="csd-marital"><option value="">Select</option><option>Single</option><option>Married</option><option>Other</option></select></div>
+        <div class="form-field"><label>Blood Group</label><select id="csd-blood-group"><option value="">Select</option><option>O+</option><option>O-</option><option>A+</option><option>A-</option><option>B+</option><option>B-</option><option>AB+</option><option>AB-</option></select></div>
+        <div class="form-field"><label>Nationality</label><input type="text" id="csd-nationality"></div>
+        <div class="form-field"><label>State of Origin</label><input type="text" id="csd-state-origin"></div>
+        <div class="form-field"><label>Phone Number</label><input type="text" id="csd-phone"></div>
+        <div class="form-field" style="grid-column:1/-1"><label>Full Home Address</label><input type="text" id="csd-address"></div>
+
+        <div class="form-field"><label>Next of Kin Name</label><input type="text" id="csd-nok-name"></div>
+        <div class="form-field"><label>Next of Kin Relationship</label><input type="text" id="csd-nok-relationship"></div>
+        <div class="form-field" style="grid-column:1/-1"><label>Next of Kin Phone</label><input type="text" id="csd-nok-phone"></div>
+
+        <div class="form-field"><label>Guarantor Name</label><input type="text" id="csd-guarantor-name"></div>
+        <div class="form-field"><label>Guarantor Phone</label><input type="text" id="csd-guarantor-phone"></div>
+        <div class="form-field" style="grid-column:1/-1"><label>Guarantor Address</label><input type="text" id="csd-guarantor-address"></div>
+
+        <div class="form-field"><label>Emergency Contact Name</label><input type="text" id="csd-emergency-name"></div>
+        <div class="form-field"><label>Emergency Contact Phone</label><input type="text" id="csd-emergency-phone"></div>
+
+        <div class="form-field"><label>Bank Name</label><input type="text" id="csd-bank-name"></div>
+        <div class="form-field"><label>Account Number</label><input type="text" id="csd-bank-account-number"></div>
+        <div class="form-field" style="grid-column:1/-1"><label>Account Name</label><input type="text" id="csd-bank-account-name"></div>
+
+        <div class="form-field" style="grid-column:1/-1"><label>Food Allergies / Dietary Restrictions</label><input type="text" id="csd-allergies"></div>
+      </div>
+      <label style="display:flex;align-items:center;gap:8px;font-family:Arial;font-size:12px;color:var(--ink);margin-top:14px">
+        <input type="checkbox" id="csd-agree" style="width:auto"> I confirm the details above are accurate.
+      </label>
+      <button class="btn-save" onclick="saveClientStaffDetails()" style="margin-top:12px">Save My Details</button>
+      <div id="csd-feedback" style="margin-top:8px"></div>
+    </div>
+
     <!-- LEADERBOARD MINI WIDGET -->
     <div id="sp-leaderboard-box" style="background:var(--gold-light);border:1px solid var(--gold);border-radius:12px;padding:14px 20px;margin-bottom:16px;display:none">
       <div style="font-family:Arial;font-size:11px;text-transform:uppercase;color:var(--muted);margin-bottom:6px">🏆 Team Leaderboard</div>
@@ -711,7 +753,7 @@ self.addEventListener('notificationclick',function(e){
       <button class="tab-btn" onclick="showAdminTab('eventplanner',this)">🎪 Event Planner</button>
       <button class="tab-btn" onclick="showAdminTab('actions',this)">Action Tracker</button>
       <button class="tab-btn" onclick="showAdminTab('projects',this)">📁 Projects</button>
-      <button class="tab-btn" onclick="showAdminTab('staff',this)">Client Staff</button>
+      <button class="tab-btn" onclick="showAdminTab('staff',this)">Client Staff (Placed at Clients)</button>
       <button class="tab-btn" onclick="showAdminTab('contracts',this)">Contracts</button>
       <button class="tab-btn" onclick="showAdminTab('documents',this)">Documents</button>
       <button class="tab-btn" id="compliance-tab-btn" onclick="showAdminTab('compliance',this)">🗂 Compliance</button>
@@ -727,9 +769,10 @@ self.addEventListener('notificationclick',function(e){
       <button class="tab-btn" onclick="showAdminTab('screening',this)">📝 Screening Tests</button>
       <button class="tab-btn" data-dept="finance" onclick="showAdminTab('payroll',this)">💰 Payroll & Tax</button>
       <button class="tab-btn" data-dept="finance" onclick="showAdminTab('accounting',this)">📚 Accounting</button>
+      <div class="tab-section" id="ownersection" style="display:none">Your Team (Internal)</div>
       <button class="tab-btn" id="activitylog-tab-btn" data-dept="owner" style="display:none" onclick="showAdminTab('activitylog',this)">🕵 Activity Log</button>
       <button class="tab-btn" id="teamratings-tab-btn" data-dept="owner" style="display:none" onclick="showAdminTab('teamratings',this)">🏅 Team Ratings</button>
-      <button class="tab-btn" id="staffhr-tab-btn" data-dept="owner" style="display:none" onclick="showAdminTab('staffhr',this)">🗂 Staff HR Files</button>
+      <button class="tab-btn" id="staffhr-tab-btn" data-dept="owner" style="display:none" onclick="showAdminTab('staffhr',this)">🗂 Team HR Files (Internal)</button>
       <button class="tab-btn" id="teamtraining-tab-btn" data-dept="owner" style="display:none" onclick="showAdminTab('teamtraining',this)">🎯 Team Training</button>
     </nav>
 
@@ -766,7 +809,7 @@ self.addEventListener('notificationclick',function(e){
           </div>
 
           <div style="border-top:1px solid var(--border);margin-top:20px;padding-top:18px">
-            <div style="font-size:13px;font-weight:600;margin-bottom:4px">Personal &amp; HR Details</div>
+            <div style="font-size:13px;font-weight:600;margin-bottom:4px">Personal &amp; HR Details (Internal Team)</div>
             <div style="font-family:Arial;font-size:11px;color:var(--muted);margin-bottom:12px">Only the owner can see this section — fill it in fully, this is what stands in for a signed contract on file.</div>
             <div class="form-grid">
               <div class="form-field"><label>Date of Birth</label><input type="date" id="hr-dob"></div>
@@ -2465,8 +2508,8 @@ self.addEventListener('notificationclick',function(e){
 
       <!-- STAFF HR FILES PAGE (owner only) -->
       <div class="page" id="page-staffhr">
-        <div class="page-title">Staff HR Files</div>
-        <div class="page-sub">Personal details, guarantor, and agreed duties each team member has filled in themselves — visible only to you</div>
+        <div class="page-title">Team HR Files (Internal)</div>
+        <div class="page-sub">Your own team's personal details, guarantor, and agreed duties — not client-placed staff. Visible only to you</div>
         <div id="staff-hr-list"></div>
       </div>
 
@@ -3068,6 +3111,12 @@ self.addEventListener('notificationclick',function(e){
         <div class="form-field" style="margin-top:10px"><label>Performance Notes</label><textarea id="sd-e-notes" rows="2"></textarea></div>
         <button class="btn-save" onclick="saveSdProfile()" style="margin-top:12px">Save Profile</button>
         <div id="sd-e-feedback" style="margin-top:8px"></div>
+      </div>
+
+      <!-- PERSONAL & HR DETAILS (self-filled by the staff member) -->
+      <div class="card" style="padding:18px 20px;margin-bottom:16px">
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:12px;font-weight:600">📝 Personal &amp; HR Details (Client Staff)</div>
+        <div id="sd-hr-details"></div>
       </div>
 
       <!-- SALARY & PAYROLL -->
@@ -4528,6 +4577,7 @@ function showApp(){
     if(currentUser.isOwner)document.getElementById('teamratings-tab-btn').style.display='';
     if(currentUser.isOwner)document.getElementById('staffhr-tab-btn').style.display='';
     if(currentUser.isOwner)document.getElementById('teamtraining-tab-btn').style.display='';
+    if(currentUser.isOwner)document.getElementById('ownersection').style.display='';
     document.getElementById('onboarding-tab-btn').style.display='';
     loadInvoices();
     loadExpenditure();
@@ -4841,6 +4891,58 @@ async function showStaffPortal(staff){
   await loadSpShifts();
   await loadSpRotaCalendar();
   await loadSpSwapRequests();
+  await loadClientStaffDetails();
+}
+// ══ CLIENT STAFF PERSONAL/HR DETAILS (self-filled, HR-visible) ══
+async function loadClientStaffDetails(){
+  const {data}=await db.from('client_staff_hr_details').select('*').eq('staff_id',_spStaffId).maybeSingle();
+  const nag=document.getElementById('sp-details-nag');
+  const set=(id,val)=>{const el=document.getElementById(id);if(el)el.value=val||'';};
+  if(data){
+    set('csd-dob',data.dob);set('csd-gender',data.gender);set('csd-marital',data.marital_status);
+    set('csd-blood-group',data.blood_group);set('csd-nationality',data.nationality);set('csd-state-origin',data.state_of_origin);
+    set('csd-phone',data.phone);set('csd-address',data.home_address);
+    set('csd-nok-name',data.next_of_kin_name);set('csd-nok-relationship',data.next_of_kin_relationship);set('csd-nok-phone',data.next_of_kin_phone);
+    set('csd-guarantor-name',data.guarantor_name);set('csd-guarantor-phone',data.guarantor_phone);set('csd-guarantor-address',data.guarantor_address);
+    set('csd-emergency-name',data.emergency_contact_name);set('csd-emergency-phone',data.emergency_contact_phone);
+    set('csd-bank-name',data.bank_name);set('csd-bank-account-number',data.bank_account_number);set('csd-bank-account-name',data.bank_account_name);
+    set('csd-allergies',data.allergies);
+    const agreeEl=document.getElementById('csd-agree');if(agreeEl)agreeEl.checked=!!data.agreed_confirmed;
+  }
+  if(nag)nag.style.display=(data&&data.agreed_confirmed)?'none':'block';
+}
+async function saveClientStaffDetails(){
+  const fb=document.getElementById('csd-feedback');
+  const payload={
+    staff_id:_spStaffId,
+    dob:document.getElementById('csd-dob').value||null,
+    gender:document.getElementById('csd-gender').value||null,
+    marital_status:document.getElementById('csd-marital').value||null,
+    blood_group:document.getElementById('csd-blood-group').value||null,
+    nationality:document.getElementById('csd-nationality').value.trim()||null,
+    state_of_origin:document.getElementById('csd-state-origin').value.trim()||null,
+    phone:document.getElementById('csd-phone').value.trim()||null,
+    home_address:document.getElementById('csd-address').value.trim()||null,
+    next_of_kin_name:document.getElementById('csd-nok-name').value.trim()||null,
+    next_of_kin_relationship:document.getElementById('csd-nok-relationship').value.trim()||null,
+    next_of_kin_phone:document.getElementById('csd-nok-phone').value.trim()||null,
+    guarantor_name:document.getElementById('csd-guarantor-name').value.trim()||null,
+    guarantor_phone:document.getElementById('csd-guarantor-phone').value.trim()||null,
+    guarantor_address:document.getElementById('csd-guarantor-address').value.trim()||null,
+    emergency_contact_name:document.getElementById('csd-emergency-name').value.trim()||null,
+    emergency_contact_phone:document.getElementById('csd-emergency-phone').value.trim()||null,
+    bank_name:document.getElementById('csd-bank-name').value.trim()||null,
+    bank_account_number:document.getElementById('csd-bank-account-number').value.trim()||null,
+    bank_account_name:document.getElementById('csd-bank-account-name').value.trim()||null,
+    allergies:document.getElementById('csd-allergies').value.trim()||null,
+    agreed_confirmed:document.getElementById('csd-agree').checked,
+    updated_at:new Date().toISOString()
+  };
+  const {error}=await db.from('client_staff_hr_details').upsert(payload,{onConflict:'staff_id'});
+  if(error){fb.innerHTML=`<span style="color:var(--danger);font-size:12px">${error.message}</span>`;return;}
+  fb.innerHTML='<span style="color:var(--success);font-size:12px">Saved. Thank you.</span>';
+  const nag=document.getElementById('sp-details-nag');
+  if(nag)nag.style.display=payload.agreed_confirmed?'none':'block';
 }
 
 async function loadSpReports(){
@@ -5788,8 +5890,32 @@ async function openStaffDetail(staffId){
   document.getElementById('sd-sal-pension').checked=staff.pension_opt_in!==false;
   document.getElementById('sd-sal-nhf').checked=!!staff.nhf_opt_in;
   renderSalaryPreview(staff);
-  loadSdTrainings();loadSdNotes();loadSdReports();loadSdIncidents();loadSdLeave();loadSdAttendance();
+  loadSdTrainings();loadSdNotes();loadSdReports();loadSdIncidents();loadSdLeave();loadSdAttendance();loadSdHRDetails(staffId);
   openModal('modal-staff-detail');
+}
+async function loadSdHRDetails(staffId){
+  const el=document.getElementById('sd-hr-details');if(!el)return;
+  el.innerHTML='<p style="font-family:Arial;font-size:12px;color:var(--muted)">Loading…</p>';
+  const {data:d}=await db.from('client_staff_hr_details').select('*').eq('staff_id',staffId).maybeSingle();
+  const showSensitive=!!(currentUser&&currentUser.role!=='client'); // bank/guarantor: internal team only
+  if(!d){el.innerHTML='<p style="font-family:Arial;font-size:12px;color:var(--muted)">This team member hasn\'t filled in their details yet.</p>';return;}
+  el.innerHTML=`<span class="badge ${d.agreed_confirmed?'badge-green':'badge-gold'}" style="margin-bottom:10px;display:inline-block">${d.agreed_confirmed?'Confirmed by staff':'Filled — not confirmed'}</span>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;font-family:Arial;font-size:12px;color:var(--ink2)">
+    <div><strong>DOB:</strong> ${d.dob||'—'}</div>
+    <div><strong>Gender:</strong> ${d.gender||'—'}</div>
+    <div><strong>Marital Status:</strong> ${d.marital_status||'—'}</div>
+    <div><strong>Blood Group:</strong> ${d.blood_group||'—'}</div>
+    <div><strong>Nationality:</strong> ${d.nationality||'—'}</div>
+    <div><strong>State of Origin:</strong> ${d.state_of_origin||'—'}</div>
+    <div><strong>Phone:</strong> ${d.phone||'—'}</div>
+    <div style="grid-column:1/-1"><strong>Address:</strong> ${d.home_address||'—'}</div>
+    <div><strong>Next of Kin:</strong> ${d.next_of_kin_name||'—'} (${d.next_of_kin_relationship||'—'}) — ${d.next_of_kin_phone||'—'}</div>
+    <div><strong>Emergency Contact:</strong> ${d.emergency_contact_name||'—'} (${d.emergency_contact_phone||'—'})</div>
+    <div style="grid-column:1/-1"><strong>Allergies/Dietary:</strong> ${d.allergies||'—'}</div>
+    ${showSensitive?`<div><strong>Guarantor:</strong> ${d.guarantor_name||'—'} (${d.guarantor_phone||'—'})</div>
+    <div style="grid-column:1/-1"><strong>Guarantor Address:</strong> ${d.guarantor_address||'—'}</div>
+    <div style="grid-column:1/-1"><strong>Self-reported Bank:</strong> ${d.bank_name||'—'} · ${d.bank_account_number||'—'} · ${d.bank_account_name||'—'}</div>`:''}
+  </div>`;
 }
 async function saveSdProfile(){
   const fb=document.getElementById('sd-e-feedback');
@@ -6260,21 +6386,66 @@ async function loadPortalRequests(clientId){
     </div>`).join('');
 }
 
+// ══ STAFF RETENTION RISK (shared: client's own dashboard + internal admin view) ══
+async function computeStaffRiskMap(staffList){
+  const staffIds=staffList.map(s=>s.id);
+  const map={};
+  if(!staffIds.length)return map;
+  const ninety=new Date();ninety.setDate(ninety.getDate()-90);
+  const sixty=new Date();sixty.setDate(sixty.getDate()-60);
+  const today=new Date().toISOString().slice(0,10);
+  const [{data:strikes},{data:trainings},{data:leaves}]=await Promise.all([
+    db.from('staff_strikes').select('staff_id,date').in('staff_id',staffIds).gte('date',ninety.toISOString().slice(0,10)),
+    db.from('staff_trainings').select('staff_id,status,due_date').in('staff_id',staffIds).neq('status','Completed'),
+    db.from('staff_leave_requests').select('staff_id,created_at').in('staff_id',staffIds).gte('created_at',sixty.toISOString())
+  ]);
+  staffList.forEach(s=>{
+    let score=0;const reasons=[];
+    if(s.rating!=null){
+      if(s.rating<50){score+=3;reasons.push('Low rating ('+s.rating+')');}
+      else if(s.rating<70){score+=1;reasons.push('Below-average rating ('+s.rating+')');}
+    }
+    const myStrikes=(strikes||[]).filter(x=>x.staff_id===s.id);
+    if(myStrikes.length){score+=Math.min(myStrikes.length*2,4);reasons.push(myStrikes.length+' strike(s) in the last 90 days');}
+    const myOverdue=(trainings||[]).filter(x=>x.staff_id===s.id&&x.due_date&&x.due_date<today);
+    if(myOverdue.length){score+=Math.min(myOverdue.length,2);reasons.push(myOverdue.length+' overdue training(s)');}
+    const myLeaves=(leaves||[]).filter(x=>x.staff_id===s.id);
+    if(myLeaves.length>=3){score+=1;reasons.push(myLeaves.length+' leave request(s) in the last 60 days');}
+    let level='Low';
+    if(score>=5)level='High';else if(score>=3)level='Medium';
+    map[s.id]={score,level,reasons};
+  });
+  return map;
+}
+function riskBadgeHtml(risk){
+  if(!risk||risk.level==='Low')return'';
+  const tone=risk.level==='High'?'badge-red':'badge-gold';
+  return `<span class="badge ${tone}" title="${risk.reasons.join(' · ')}">🚩 ${risk.level} Risk</span>`;
+}
+function riskBannerHtml(staff,riskMap){
+  const flagged=staff.filter(s=>riskMap[s.id]&&riskMap[s.id].level!=='Low');
+  if(!flagged.length)return'';
+  return `<div class="card" style="padding:14px 18px;margin-bottom:16px;border:1.5px solid var(--danger);background:var(--danger-light)">
+    <div style="font-family:Arial;font-size:13px;font-weight:600;color:var(--danger)">⚠ Staff Retention Watch — ${flagged.length} team member${flagged.length===1?'':'s'} showing signs of not lasting</div>
+    <div style="font-family:Arial;font-size:12px;color:var(--ink2);margin-top:6px">${flagged.map(s=>`<strong>${s.name}</strong> (${riskMap[s.id].level})`).join(', ')} — see flagged cards below.</div>
+  </div>`;
+}
 async function loadPortalStaff(clientId){
   const {data}=await db.from('client_staff').select('*').eq('client_id',clientId).order('name',{ascending:true});
   const tab=document.getElementById('portal-staff-tab');
   if(!tab)return;
   const staff=data||[];
   if(!staff.length){tab.innerHTML='<p style="font-size:13px;color:var(--muted)">No staff records on file yet.</p>';return;}
+  const riskMap=await computeStaffRiskMap(staff);
   const sb={Active:'badge-green',Probation:'badge-gold',Flagged:'badge-red',Terminated:'badge-gray'};
-  tab.innerHTML=`<div style="font-size:13px;color:var(--muted);margin-bottom:16px">${staff.length} staff member${staff.length!==1?'s':''} on record</div>`+
+  tab.innerHTML=riskBannerHtml(staff,riskMap)+`<div style="font-size:13px;color:var(--muted);margin-bottom:16px">${staff.length} staff member${staff.length!==1?'s':''} on record</div>`+
     `<div class="staff-grid">`+staff.map(s=>{
       const initial=(s.name||'?').charAt(0).toUpperCase();
       return`<div class="staff-card" onclick="openStaffDetail('${s.id}')">
         ${s.photo_url?`<img src="${s.photo_url}" class="staff-photo">`:`<div class="staff-photo ph">${initial}</div>`}
         <div class="sc-name">${s.name}</div>
         <div class="sc-role">${s.role||'—'}${s.employee_id?' · '+s.employee_id:''}</div>
-        <div class="sc-meta"><span class="badge ${sb[s.status]||'badge-gray'}">${s.status}</span></div>
+        <div class="sc-meta"><span class="badge ${sb[s.status]||'badge-gray'}">${s.status}</span> ${riskBadgeHtml(riskMap[s.id])}</div>
         <div class="sc-meta">Rating <span class="sc-rating">${s.rating!=null?s.rating:'—'}</span> · Trained ${s.last_training_date||'—'}</div>
         <div style="margin-top:10px;display:flex;gap:6px;justify-content:center" onclick="event.stopPropagation()">
           <button class="btn-sm" onclick="openStaffDetail('${s.id}')">View / Note</button>
@@ -6558,14 +6729,16 @@ async function loadClientViewTab(tab,clientId){
     document.getElementById('cv-actions-list').innerHTML=data&&data.length?data.map(a=>'<div style="padding:10px 0;border-bottom:1px solid var(--border);font-family:Arial;font-size:13px"><strong>'+a.description+'</strong><br><span style="color:var(--muted);font-size:11px">Due: '+a.due_date+' · Owner: '+a.owner+' · Priority: '+a.priority+'</span></div>').join(''):'<p style="font-family:Arial;font-size:13px;color:var(--muted)">No outstanding actions.</p>';
   } else if(tab==='cv-staff'){
     const {data}=await db.from('client_staff').select('*').eq('client_id',cid).order('name',{ascending:true});
+    const staff=data||[];
+    const riskMap=await computeStaffRiskMap(staff);
     const sb={Active:'badge-green',Probation:'badge-gold',Flagged:'badge-red',Terminated:'badge-gray'};
-    document.getElementById('cv-staff-list').innerHTML=data&&data.length?`<div class="staff-grid">`+data.map(s=>{
+    document.getElementById('cv-staff-list').innerHTML=staff.length?riskBannerHtml(staff,riskMap)+`<div class="staff-grid">`+staff.map(s=>{
       const initial=(s.name||'?').charAt(0).toUpperCase();
       return`<div class="staff-card" onclick="openStaffDetail('${s.id}')">
         ${s.photo_url?`<img src="${s.photo_url}" class="staff-photo">`:`<div class="staff-photo ph">${initial}</div>`}
         <div class="sc-name">${s.name}</div>
         <div class="sc-role">${s.role||'—'}${s.employee_id?' · '+s.employee_id:''}</div>
-        <div class="sc-meta"><span class="badge ${sb[s.status]||'badge-gray'}">${s.status}</span></div>
+        <div class="sc-meta"><span class="badge ${sb[s.status]||'badge-gray'}">${s.status}</span> ${riskBadgeHtml(riskMap[s.id])}</div>
         <div class="sc-meta">Rating <span class="sc-rating">${s.rating!=null?s.rating:'—'}</span> · Trained ${s.last_training_date||'—'}</div>
       </div>`;
     }).join('')+`</div>`:'<p style="font-size:13px;color:var(--muted)">No staff records.</p>';
@@ -6696,14 +6869,19 @@ async function updateCandidateStatus(id,status,targetId,clientId){
 async function convertCandidateToStaff(candidateId,clientId){
   const {data:cand}=await db.from('staff_candidates').select('*').eq('id',candidateId).single();
   if(!cand)return;
-  const {error}=await db.from('client_staff').insert({
-    client_id:clientId,name:cand.full_name,status:'Active',start_date:new Date().toISOString().slice(0,10),
+  const role=cand.position_applied||cand.role||'';
+  const empId='HY-'+Date.now().toString().slice(-6);
+  const username=(cand.full_name||'staff').toLowerCase().replace(/[^a-z]/g,'').slice(0,10)+Math.floor(1000+Math.random()*9000);
+  const accessCode=Math.floor(100000+Math.random()*900000).toString();
+  const {data:inserted,error}=await db.from('client_staff').insert({
+    client_id:clientId,name:cand.full_name,role,status:'Active',start_date:new Date().toISOString().slice(0,10),
+    employee_id:empId,username,access_code:accessCode,phone:cand.phone||null,
     performance_notes:cand.cv_notes||''
-  });
+  }).select().single();
   if(error){alert('Could not convert: '+error.message);return;}
   await db.from('staff_candidates').update({status:'Hired'}).eq('id',candidateId);
   await logActivity('Converted candidate to staff',cand.full_name,clientId);
-  alert(cand.full_name+' has been added to the active staff roster. Set up their trainings from their new profile.');
+  alert(`${cand.full_name} has been added to the active staff roster.\n\nTheir login (share with them so they can complete their profile):\nUsername: ${username}\nAccess Code: ${accessCode}\n\nSet up their trainings from their new profile, and ask them to log in and fill in "My Details" — that's where their DOB, guarantor, next of kin, and bank details go.`);
   loadCandidates(clientId,'cv-candidates-list',true);
   if(typeof loadStaff==='function')loadStaff();
 }
