@@ -3134,7 +3134,7 @@ self.addEventListener('notificationclick',function(e){
           <div class="form-field"><label>Account Name</label><input type="text" id="sd-sal-acctname"></div>
         </div>
         <div style="display:flex;gap:16px;margin-top:10px">
-          <label style="display:flex;align-items:center;gap:6px;font-size:12px"><input type="checkbox" id="sd-sal-pension" style="width:auto"> Pension (8% employee / 10% employer)</label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:12px"><input type="checkbox" id="sd-sal-pension" style="width:auto"> Pension (5% employee / 10% employer)</label>
           <label style="display:flex;align-items:center;gap:6px;font-size:12px"><input type="checkbox" id="sd-sal-nhf" style="width:auto"> NHF (2.5%)</label>
         </div>
         <button class="btn-save" onclick="saveSdSalary()" style="margin-top:12px">Save Salary Details</button>
@@ -5988,7 +5988,7 @@ function renderSalaryPreview(staff){
   el.innerHTML=`<div style="font-size:11px;text-transform:uppercase;color:var(--muted);margin-bottom:8px">Estimated Monthly Payslip</div>
     <div style="font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--ink);display:grid;grid-template-columns:1fr auto;gap:4px 16px">
       <span>Gross Pay</span><span>${fmt(p.gross_pay)}</span>
-      <span style="color:var(--muted)">Pension (employee 8%)</span><span style="color:var(--danger)">-${fmt(p.pension_employee)}</span>
+      <span style="color:var(--muted)">Pension (employee 5%)</span><span style="color:var(--danger)">-${fmt(p.pension_employee)}</span>
       <span style="color:var(--muted)">NHF (2.5%)</span><span style="color:var(--danger)">-${fmt(p.nhf)}</span>
       <span style="color:var(--muted)">PAYE Tax</span><span style="color:var(--danger)">-${fmt(p.paye_tax)}</span>
       <span style="font-weight:600;border-top:1px solid var(--border);padding-top:4px">Net Pay</span><span style="font-weight:600;border-top:1px solid var(--border);padding-top:4px;color:var(--gold)">${fmt(p.net_pay)}</span>
