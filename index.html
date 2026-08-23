@@ -2211,13 +2211,36 @@ self.addEventListener('notificationclick',function(e){
         </div>
         <div id="cv-leave-panel" class="cv-tab-content" style="display:none"><div id="cv-leave-list"></div></div>
         <div id="cv-shifts-panel" class="cv-tab-content" style="display:none">
+          <div class="card" style="padding:16px 20px;margin-bottom:16px">
+            <div style="font-size:13px;font-weight:600;color:var(--ink);margin-bottom:4px">📅 Bulk Create — Whole Month</div>
+            <div style="font-family:Arial;font-size:11.5px;color:var(--muted);margin-bottom:12px">Set the pattern once and it creates every matching shift for the month in one go.</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+              <input type="text" id="bsh-name" placeholder="Shift name (e.g. Morning Shift)" style="width:180px;padding:7px 10px;border:1px solid var(--border);border-radius:9px;font-family:Arial;font-size:12px">
+              <input type="time" id="bsh-start" style="width:130px;padding:7px 10px;border:1px solid var(--border);border-radius:9px;font-family:Arial;font-size:12px">
+              <input type="time" id="bsh-end" style="width:130px;padding:7px 10px;border:1px solid var(--border);border-radius:9px;font-family:Arial;font-size:12px">
+              <input type="number" id="bsh-slots" placeholder="Slots" value="1" style="width:70px;padding:7px 10px;border:1px solid var(--border);border-radius:9px;font-family:Arial;font-size:12px">
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
+              <select id="bsh-month" style="padding:7px 10px;border:1px solid var(--border);border-radius:9px;font-family:Arial;font-size:12px">
+                <option value="1">January</option><option value="2">February</option><option value="3">March</option><option value="4">April</option><option value="5">May</option><option value="6">June</option><option value="7">July</option><option value="8">August</option><option value="9">September</option><option value="10">October</option><option value="11">November</option><option value="12">December</option>
+              </select>
+              <input type="number" id="bsh-year" value="2026" style="width:90px;padding:7px 10px;border:1px solid var(--border);border-radius:9px;font-family:Arial;font-size:12px">
+            </div>
+            <div style="font-family:Arial;font-size:12px;color:var(--muted);margin-bottom:6px">Repeat on:</div>
+            <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:10px">
+              ${['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map((d,i)=>`<label style="display:flex;align-items:center;gap:5px;font-family:Arial;font-size:12px"><input type="checkbox" id="bsh-day-${i}" style="width:auto" ${i<5?'checked':''}> ${d}</label>`).join('')}
+            </div>
+            <input type="text" id="bsh-skip-dates" placeholder="Skip dates (comma-separated, e.g. 2026-06-15, 2026-06-25)" style="width:100%;max-width:420px;padding:7px 10px;border:1px solid var(--border);border-radius:9px;font-family:Arial;font-size:12px;margin-bottom:10px">
+            <div><button class="btn-save" onclick="bulkCreateShifts()">📅 Create Shifts For The Month</button></div>
+            <div id="bsh-feedback" style="margin-top:8px"></div>
+          </div>
           <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
             <input type="text" id="sh-name" placeholder="Shift name" style="width:140px;padding:7px 10px;border:1px solid var(--border);border-radius:9px;font-family:Arial;font-size:12px">
             <input type="date" id="sh-date" style="padding:7px 10px;border:1px solid var(--border);border-radius:9px;font-family:Arial;font-size:12px">
             <input type="time" id="sh-start" style="width:130px;padding:7px 10px;border:1px solid var(--border);border-radius:9px;font-family:Arial;font-size:12px">
             <input type="time" id="sh-end" style="width:130px;padding:7px 10px;border:1px solid var(--border);border-radius:9px;font-family:Arial;font-size:12px">
             <input type="number" id="sh-slots" placeholder="Slots" style="width:70px;padding:7px 10px;border:1px solid var(--border);border-radius:9px;font-family:Arial;font-size:12px" value="1">
-            <button class="btn-add" onclick="addShift()">+ Create Shift</button>
+            <button class="btn-add" onclick="addShift()">+ Create Single Shift</button>
           </div>
           <div id="cv-shifts-list-swaps"></div>
           <div id="cv-shifts-list"></div>
@@ -3018,7 +3041,8 @@ self.addEventListener('notificationclick',function(e){
     <div class="modal-header"><div class="modal-title">Log Complaint</div><button class="modal-close" onclick="closeModal('modal-add-complaint')">×</button></div>
     <div class="modal-body">
       <div class="form-grid">
-        <div class="form-field"><label>Client</label><select id="comp-client"><option value="">Select client…</option></select></div>
+        <div class="form-field"><label>Client</label><select id="comp-client" onchange="populateCompStaffDropdown()"><option value="">Select client…</option></select></div>
+        <div class="form-field"><label>About which staff member (optional)</label><select id="comp-staff"><option value="">Not staff-specific</option></select></div>
         <div class="form-field"><label>Date Received</label><input type="date" id="comp-date"></div>
         <div class="form-field"><label>Category</label>
           <select id="comp-category">
@@ -3159,6 +3183,17 @@ self.addEventListener('notificationclick',function(e){
       <div class="card" style="padding:18px 20px;margin-bottom:16px">
         <div style="font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:12px;font-weight:600">📝 Personal &amp; HR Details (Client Staff)</div>
         <div id="sd-hr-details"></div>
+      </div>
+
+      <!-- SAFER RECRUITMENT CHECKLIST -->
+      <div class="card" style="padding:18px 20px;margin-bottom:16px">
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:4px;font-weight:600">✅ Safer Recruitment Checklist</div>
+        <div style="font-family:Arial;font-size:11.5px;color:var(--muted);margin-bottom:12px">Go through this once when onboarding — a soft reminder shows on their card until everything required is ticked. Doesn't block clock-in.</div>
+        <div id="sd-checklist-status" style="margin-bottom:12px"></div>
+        <div id="sd-checklist-form" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:8px 16px;font-family:Arial;font-size:13px"></div>
+        <div class="form-field" style="margin-top:10px"><label>Reference Check Notes</label><textarea id="sd-chk-references-note" rows="2" placeholder="Who was contacted, what they said"></textarea></div>
+        <button class="btn-save" onclick="saveSdChecklist()" style="margin-top:12px">Save Checklist</button>
+        <div id="sd-checklist-feedback" style="margin-top:8px"></div>
       </div>
 
       <!-- SALARY & PAYROLL -->
@@ -5685,10 +5720,17 @@ function renderComplaintList(comps,compact=false){
   return comps.map(c=>renderComplaintCard(c,compact)).join('');
 }
 
+async function populateCompStaffDropdown(){
+  const clientId=document.getElementById('comp-client').value;
+  const sel=document.getElementById('comp-staff');if(!sel)return;
+  if(!clientId){sel.innerHTML='<option value="">Not staff-specific</option>';return;}
+  const {data}=await db.from('client_staff').select('id,name').eq('client_id',clientId).neq('status','Terminated').order('name',{ascending:true});
+  sel.innerHTML='<option value="">Not staff-specific</option>'+(data||[]).map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
+}
 async function saveComplaint(){
   const clientId=document.getElementById('comp-client').value;const fb=document.getElementById('complaint-feedback');
   if(!clientId){fb.innerHTML='<div class="error-msg">Select a client.</div>';return;}
-  const {error}=await db.from('complaints').insert({client_id:clientId,date:document.getElementById('comp-date').value,category:document.getElementById('comp-category').value,raised_by:document.getElementById('comp-by').value.trim(),severity:document.getElementById('comp-severity').value,status:document.getElementById('comp-status').value,detail:document.getElementById('comp-detail').value.trim(),action_taken:document.getElementById('comp-action').value.trim(),strike_number:parseInt(document.getElementById('comp-strike').value)||0,resolution_date:document.getElementById('comp-resolved').value||null});
+  const {error}=await db.from('complaints').insert({client_id:clientId,staff_id:document.getElementById('comp-staff').value||null,date:document.getElementById('comp-date').value,category:document.getElementById('comp-category').value,raised_by:document.getElementById('comp-by').value.trim(),severity:document.getElementById('comp-severity').value,status:document.getElementById('comp-status').value,detail:document.getElementById('comp-detail').value.trim(),action_taken:document.getElementById('comp-action').value.trim(),strike_number:parseInt(document.getElementById('comp-strike').value)||0,resolution_date:document.getElementById('comp-resolved').value||null});
   if(error){fb.innerHTML=`<div class="error-msg">${error.message}</div>`;return;}
   fb.innerHTML='<div class="success-msg">✓ Complaint logged.</div>';loadComplaints();setTimeout(()=>{closeModal('modal-add-complaint');fb.innerHTML='';},1500);
 }
@@ -5851,25 +5893,30 @@ function renderStaffTable(staff){
   if(!staff.length){wrap.innerHTML='<p style="font-size:13px;color:var(--muted)">No staff records.</p>';return;}
   wrap.className='staff-grid';
   const sb={Active:'badge-green',Probation:'badge-gold',Flagged:'badge-red',Terminated:'badge-gray'};
-  wrap.innerHTML=staff.map(s=>{
-    const strikes=parseInt(s.strike_count)||0;
-    const dots='<span class="strike-dot"></span>'.repeat(strikes)+'<span class="strike-empty"></span>'.repeat(Math.max(0,3-strikes));
-    const initial=(s.name||'?').charAt(0).toUpperCase();
-    return`<div class="staff-card" onclick="openStaffDetail('${s.id}')">
-      ${s.photo_url?`<img src="${s.photo_url}" class="staff-photo">`:`<div class="staff-photo ph">${initial}</div>`}
-      <div class="sc-name">${s.name}</div>
-      <div class="sc-role">${s.role||'—'}${s.employee_id?' · '+s.employee_id:''}</div>
-      <div class="sc-meta"><span class="badge ${sb[s.status]||'badge-gray'}">${s.status}</span></div>
-      <div class="sc-meta">${(s.clients&&s.clients.business_name)||'—'} · Rating <span class="sc-rating">${s.rating!=null?s.rating:'—'}</span></div>
-      <div style="margin-top:10px">${dots}</div>
-      <div style="margin-top:10px;display:flex;gap:6px;justify-content:center;flex-wrap:wrap" onclick="event.stopPropagation()">
-        <button class="btn-sm" onclick="openStrikeModal('${s.id}','${s.name.replace(/'/g,"\\'")}',${strikes})">+ Strike</button>
-        <button class="btn-sm" onclick="editRecord('client_staff','${s.id}',loadStaff)">Edit</button>
-        <button class="btn-sm" data-st-id="${s.id}" data-st-name="${(s.name||'').replace(/"/g,'&quot;')}" data-st-client="${s.client_id||''}" onclick="openEnrollModal(this.dataset.stId,this.dataset.stName,'staff',this.dataset.stClient)">🎓 Enroll in Course</button>
-        ${currentUser&&(currentUser.isOwner||currentUser.role==='admin'||currentUser.role==='owner')?`<button class="btn-danger" onclick="deleteRow('client_staff','${s.id}',loadStaff)">Del</button>`:''}
-      </div>
-    </div>`;
-  }).join('');
+  (async()=>{
+    const ids=staff.map(s=>s.id);
+    const {data:checklists}=await db.from('staff_recruitment_checklist').select('staff_id,cleared_to_start').in('staff_id',ids.length?ids:['00000000-0000-0000-0000-000000000000']);
+    const clearedMap={};(checklists||[]).forEach(c=>clearedMap[c.staff_id]=c.cleared_to_start);
+    wrap.innerHTML=staff.map(s=>{
+      const strikes=parseInt(s.strike_count)||0;
+      const dots='<span class="strike-dot"></span>'.repeat(strikes)+'<span class="strike-empty"></span>'.repeat(Math.max(0,3-strikes));
+      const initial=(s.name||'?').charAt(0).toUpperCase();
+      return`<div class="staff-card" onclick="openStaffDetail('${s.id}')">
+        ${s.photo_url?`<img src="${s.photo_url}" class="staff-photo">`:`<div class="staff-photo ph">${initial}</div>`}
+        <div class="sc-name">${s.name}</div>
+        <div class="sc-role">${s.role||'—'}${s.employee_id?' · '+s.employee_id:''}</div>
+        <div class="sc-meta"><span class="badge ${sb[s.status]||'badge-gray'}">${s.status}</span> ${checklistBadgeHtml(!!clearedMap[s.id])}</div>
+        <div class="sc-meta">${(s.clients&&s.clients.business_name)||'—'} · Rating <span class="sc-rating">${s.rating!=null?s.rating:'—'}</span></div>
+        <div style="margin-top:10px">${dots}</div>
+        <div style="margin-top:10px;display:flex;gap:6px;justify-content:center;flex-wrap:wrap" onclick="event.stopPropagation()">
+          <button class="btn-sm" onclick="openStrikeModal('${s.id}','${s.name.replace(/'/g,"\\'")}',${strikes})">+ Strike</button>
+          <button class="btn-sm" onclick="editRecord('client_staff','${s.id}',loadStaff)">Edit</button>
+          <button class="btn-sm" data-st-id="${s.id}" data-st-name="${(s.name||'').replace(/"/g,'&quot;')}" data-st-client="${s.client_id||''}" onclick="openEnrollModal(this.dataset.stId,this.dataset.stName,'staff',this.dataset.stClient)">🎓 Enroll in Course</button>
+          ${currentUser&&(currentUser.isOwner||currentUser.role==='admin'||currentUser.role==='owner')?`<button class="btn-danger" onclick="deleteRow('client_staff','${s.id}',loadStaff)">Del</button>`:''}
+        </div>
+      </div>`;
+    }).join('');
+  })();
 }
 
 function openStrikeModal(staffId, staffName, currentStrikes){
@@ -5954,7 +6001,7 @@ async function openStaffDetail(staffId){
   document.getElementById('sd-sal-pension').checked=staff.pension_opt_in!==false;
   document.getElementById('sd-sal-nhf').checked=!!staff.nhf_opt_in;
   renderSalaryPreview(staff);
-  loadSdTrainings();loadSdNotes();loadSdReports();loadSdIncidents();loadSdLeave();loadSdAttendance();loadSdHRDetails(staffId);
+  loadSdTrainings();loadSdNotes();loadSdReports();loadSdIncidents();loadSdLeave();loadSdAttendance();loadSdHRDetails(staffId);loadSdChecklist(staffId,staff.client_id);
   openModal('modal-staff-detail');
 }
 async function loadSdHRDetails(staffId){
@@ -5980,6 +6027,55 @@ async function loadSdHRDetails(staffId){
     <div style="grid-column:1/-1"><strong>Guarantor Address:</strong> ${d.guarantor_address||'—'}</div>
     <div style="grid-column:1/-1"><strong>Self-reported Bank:</strong> ${d.bank_name||'—'} · ${d.bank_account_number||'—'} · ${d.bank_account_name||'—'}</div>`:''}
   </div>`;
+}
+// ══ SAFER RECRUITMENT CHECKLIST ══
+const CHECKLIST_ITEMS=[
+  {key:'id_verified',label:'Valid ID verified (National ID / voter\'s card / passport / license)'},
+  {key:'address_verified',label:'Proof of address confirmed'},
+  {key:'guarantor_verified',label:'Guarantor on file AND contacted by phone to confirm'},
+  {key:'next_of_kin_confirmed',label:'Next of kin / emergency contact on file'},
+  {key:'references_checked',label:'At least one previous employer reference contacted'},
+  {key:'police_character_cert',label:'Police character certificate or sworn affidavit of good conduct'},
+  {key:'health_fitness_confirmed',label:'Health/fitness for role confirmed (e.g. food handling)'},
+  {key:'signed_agreement',label:'Signed agreement to duties and schedule'},
+  {key:'bank_details_verified',label:'Bank details verified for payroll'},
+  {key:'induction_completed',label:'Basic induction completed (policies, code of conduct)'}
+];
+const CHECKLIST_CHILD_ITEM={key:'child_safeguarding_confirmed',label:'⚠ Enhanced check: signed child-safeguarding declaration, no prior concerns on record'};
+let _sdChecklistInvolvesMinors=false;
+async function loadSdChecklist(staffId,clientId){
+  const formEl=document.getElementById('sd-checklist-form');if(!formEl)return;
+  const {data:client}=await db.from('clients').select('involves_minors').eq('id',clientId).maybeSingle();
+  _sdChecklistInvolvesMinors=!!(client&&(client.involves_minors===true||client.involves_minors==='true'));
+  const {data:row}=await db.from('staff_recruitment_checklist').select('*').eq('staff_id',staffId).maybeSingle();
+  const items=_sdChecklistInvolvesMinors?[...CHECKLIST_ITEMS,CHECKLIST_CHILD_ITEM]:CHECKLIST_ITEMS;
+  formEl.innerHTML=items.map(it=>`<label style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="sd-chk-${it.key}" style="width:auto" ${row&&row[it.key]?'checked':''} onchange="renderSdChecklistStatus()"> ${it.label}</label>`).join('');
+  document.getElementById('sd-chk-references-note').value=(row&&row.references_note)||'';
+  renderSdChecklistStatus();
+}
+function renderSdChecklistStatus(){
+  const items=_sdChecklistInvolvesMinors?[...CHECKLIST_ITEMS,CHECKLIST_CHILD_ITEM]:CHECKLIST_ITEMS;
+  const allChecked=items.every(it=>document.getElementById('sd-chk-'+it.key)?.checked);
+  document.getElementById('sd-checklist-status').innerHTML=allChecked
+    ?'<span class="badge badge-green">✅ Cleared to start</span>'
+    :'<span class="badge badge-red">🔒 Not cleared yet — items still outstanding</span>';
+}
+async function saveSdChecklist(){
+  const fb=document.getElementById('sd-checklist-feedback');
+  const staffId=_sdStaffId;
+  if(!staffId){fb.innerHTML='<span style="color:var(--danger);font-size:12px">No staff selected.</span>';return;}
+  const items=_sdChecklistInvolvesMinors?[...CHECKLIST_ITEMS,CHECKLIST_CHILD_ITEM]:CHECKLIST_ITEMS;
+  const payload={staff_id:staffId,verified_by:currentUser.name||'HR',updated_at:new Date().toISOString(),references_note:document.getElementById('sd-chk-references-note').value.trim()||null};
+  items.forEach(it=>{payload[it.key]=document.getElementById('sd-chk-'+it.key).checked;});
+  payload.cleared_to_start=items.every(it=>payload[it.key]);
+  const {error}=await db.from('staff_recruitment_checklist').upsert(payload,{onConflict:'staff_id'});
+  if(error){fb.innerHTML=`<span style="color:var(--danger);font-size:12px">${error.message}</span>`;return;}
+  fb.innerHTML='<span style="color:var(--success);font-size:12px">Saved.</span>';
+  if(typeof loadStaff==='function')loadStaff();
+}
+function checklistBadgeHtml(cleared){
+  if(cleared)return'';
+  return '<span class="badge badge-gold" title="Safer recruitment checklist not yet complete">🔒 Onboarding Incomplete</span>';
 }
 async function saveSdProfile(){
   const fb=document.getElementById('sd-e-feedback');
@@ -6458,10 +6554,11 @@ async function computeStaffRiskMap(staffList){
   const ninety=new Date();ninety.setDate(ninety.getDate()-90);
   const sixty=new Date();sixty.setDate(sixty.getDate()-60);
   const today=new Date().toISOString().slice(0,10);
-  const [{data:strikes},{data:trainings},{data:leaves}]=await Promise.all([
+  const [{data:strikes},{data:trainings},{data:leaves},{data:complaints}]=await Promise.all([
     db.from('staff_strikes').select('staff_id,date').in('staff_id',staffIds).gte('date',ninety.toISOString().slice(0,10)),
     db.from('staff_trainings').select('staff_id,status,due_date').in('staff_id',staffIds).neq('status','Completed'),
-    db.from('staff_leave_requests').select('staff_id,created_at').in('staff_id',staffIds).gte('created_at',sixty.toISOString())
+    db.from('staff_leave_requests').select('staff_id,created_at').in('staff_id',staffIds).gte('created_at',sixty.toISOString()),
+    db.from('complaints').select('staff_id,severity,date').in('staff_id',staffIds).gte('date',ninety.toISOString().slice(0,10))
   ]);
   staffList.forEach(s=>{
     let score=0;const reasons=[];
@@ -6475,6 +6572,12 @@ async function computeStaffRiskMap(staffList){
     if(myOverdue.length){score+=Math.min(myOverdue.length,2);reasons.push(myOverdue.length+' overdue training(s)');}
     const myLeaves=(leaves||[]).filter(x=>x.staff_id===s.id);
     if(myLeaves.length>=3){score+=1;reasons.push(myLeaves.length+' leave request(s) in the last 60 days');}
+    const myComplaints=(complaints||[]).filter(x=>x.staff_id===s.id);
+    if(myComplaints.length){
+      const highSev=myComplaints.filter(c=>c.severity==='High'||c.severity==='Critical').length;
+      score+=Math.min(myComplaints.length+highSev,3);
+      reasons.push(myComplaints.length+' customer complaint(s) in the last 90 days'+(highSev?` (${highSev} high/critical)`:''));
+    }
     let level='Low';
     if(score>=5)level='High';else if(score>=3)level='Medium';
     map[s.id]={score,level,reasons};
@@ -9220,6 +9323,37 @@ async function denySwapRequest(reqId,clientId,shiftsTargetId){
   if(!confirm('Deny this swap request?'))return;
   await db.from('shift_swap_requests').update({status:'Denied',resolved_at:new Date().toISOString(),resolved_by:currentUser.name||'HR'}).eq('id',reqId);
   loadShifts(clientId,shiftsTargetId,true);
+}
+async function bulkCreateShifts(){
+  const fb=document.getElementById('bsh-feedback');
+  if(!_shClientId){fb.innerHTML='<div class="error-msg">Open a client first.</div>';return;}
+  const name=document.getElementById('bsh-name').value.trim();
+  const start=document.getElementById('bsh-start').value;
+  const end=document.getElementById('bsh-end').value;
+  const slots=parseInt(document.getElementById('bsh-slots').value)||1;
+  if(!name||!start||!end){fb.innerHTML='<div class="error-msg">Fill in shift name, start time, and end time.</div>';return;}
+  const month=parseInt(document.getElementById('bsh-month').value);
+  const year=parseInt(document.getElementById('bsh-year').value);
+  const wantedDays=[1,2,3,4,5,6,0].filter((_,i)=>document.getElementById('bsh-day-'+i).checked); // Mon..Sun mapped to JS getDay() (0=Sun)
+  if(!wantedDays.length){fb.innerHTML='<div class="error-msg">Pick at least one day of the week.</div>';return;}
+  const skipDates=new Set(document.getElementById('bsh-skip-dates').value.split(',').map(s=>s.trim()).filter(Boolean));
+  const lastDay=new Date(year,month,0).getDate();
+  const rows=[];
+  for(let d=1;d<=lastDay;d++){
+    const dateObj=new Date(year,month-1,d);
+    const dateStr=dateObj.toISOString().slice(0,10);
+    if(wantedDays.includes(dateObj.getDay())&&!skipDates.has(dateStr)){
+      rows.push({client_id:_shClientId,shift_name:name,shift_date:dateStr,start_time:start,end_time:end,slots});
+    }
+  }
+  if(!rows.length){fb.innerHTML='<div class="error-msg">No matching dates found — check the days and skip list.</div>';return;}
+  if(!confirm(`This will create ${rows.length} shifts for ${document.getElementById('bsh-month').selectedOptions[0].text} ${year}. Continue?`))return;
+  const {error}=await db.from('shifts').insert(rows);
+  if(error){fb.innerHTML=`<div class="error-msg">${error.message}</div>`;return;}
+  fb.innerHTML=`<div class="success-msg">✓ Created ${rows.length} shifts.</div>`;
+  await logActivity('Bulk created shifts',`${rows.length} shifts — ${name}, ${document.getElementById('bsh-month').selectedOptions[0].text} ${year}`,_shClientId);
+  if(document.getElementById('cv-shifts-list'))loadShifts(_shClientId,'cv-shifts-list',true);
+  if(document.getElementById('portal-shifts-list'))loadShifts(_shClientId,'portal-shifts-list',true);
 }
 async function addShift(){
   if(!_shClientId)return;
