@@ -754,6 +754,7 @@ self.addEventListener('notificationclick',function(e){
       <button class="tab-btn" onclick="showAdminTab('actions',this)">Action Tracker</button>
       <button class="tab-btn" onclick="showAdminTab('projects',this)">📁 Projects</button>
       <button class="tab-btn" onclick="showAdminTab('staff',this)">Client Staff (Placed at Clients)</button>
+      <button class="tab-btn" id="dailyhr-tab-btn" data-dept="all" onclick="showAdminTab('dailyhr',this)">📋 Daily HR Report</button>
       <button class="tab-btn" onclick="showAdminTab('contracts',this)">Contracts</button>
       <button class="tab-btn" onclick="showAdminTab('documents',this)">Documents</button>
       <button class="tab-btn" id="compliance-tab-btn" onclick="showAdminTab('compliance',this)">🗂 Compliance</button>
@@ -1004,6 +1005,22 @@ self.addEventListener('notificationclick',function(e){
       </div>
 
       <!-- CLIENT STAFF -->
+      <div class="page" id="page-dailyhr">
+        <div class="page-title">Daily HR Report</div>
+        <div class="page-sub">One clean daily snapshot across every client — no digging through raw attendance logs</div>
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:16px;flex-wrap:wrap">
+          <input type="date" id="dhr-date" onchange="loadDailyHRReport()" style="padding:7px 12px;border:1px solid var(--border);border-radius:9px;font-family:Arial;font-size:13px">
+          <select id="dhr-client-filter" onchange="loadDailyHRReport()" style="padding:7px 12px;border:1px solid var(--border);border-radius:9px;font-family:Arial;font-size:13px"><option value="">All Clients</option></select>
+        </div>
+        <div id="dhr-summary" style="margin-bottom:16px"></div>
+        <div id="dhr-list"></div>
+        <div style="margin-top:28px;padding-top:20px;border-top:1px solid var(--border)">
+          <div class="page-title" style="font-size:20px">🎓 Training At a Glance</div>
+          <div class="page-sub">Everyone who hasn't started a single course yet</div>
+          <div id="dhr-training-gap-list"></div>
+        </div>
+      </div>
+
       <div class="page" id="page-staff">
         <div class="page-title">Client Staff Records</div>
         <div class="page-sub">Staff members employed by clients — flags, performance notes, training records</div>
@@ -2178,6 +2195,18 @@ self.addEventListener('notificationclick',function(e){
             </div>
             <div style="font-family:Arial;font-size:11px;color:var(--muted);margin-top:6px">Tip: open Google Maps, right-click the exact spot, and click the coordinates that appear (e.g. "9.05785, 7.49508") to copy them.</div>
           </div>
+          <div id="cv-workhours-box" style="background:var(--surface2);border:1px solid var(--border);border-radius:9px;padding:14px;margin-bottom:16px">
+            <div style="font-family:Arial;font-size:11px;text-transform:uppercase;color:var(--muted);margin-bottom:8px">🕒 Work Hours (used to flag late clock-ins &amp; early clock-outs)</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+              <label style="font-family:Arial;font-size:12px;color:var(--muted)">Opens:</label>
+              <input type="time" id="wh-open-cv" style="padding:6px 8px;border:1px solid var(--border);border-radius:9px;font-family:Arial;font-size:12px">
+              <label style="font-family:Arial;font-size:12px;color:var(--muted)">Closes:</label>
+              <input type="time" id="wh-close-cv" style="padding:6px 8px;border:1px solid var(--border);border-radius:9px;font-family:Arial;font-size:12px">
+              <label style="font-family:Arial;font-size:12px;color:var(--muted)">Grace (min):</label>
+              <input type="number" id="wh-grace-cv" value="10" style="width:70px;padding:6px 8px;border:1px solid var(--border);border-radius:9px;font-family:Arial;font-size:12px">
+              <button class="btn-sm" onclick="saveWorkHours('cv')">Save Work Hours</button>
+            </div>
+          </div>
           <div id="cv-attendance-list"></div>
         </div>
         <div id="cv-leave-panel" class="cv-tab-content" style="display:none"><div id="cv-leave-list"></div></div>
@@ -2646,6 +2675,18 @@ self.addEventListener('notificationclick',function(e){
               <input type="text" id="geo-lat-portal" placeholder="Latitude" style="width:110px;padding:6px 8px;border:1px solid var(--border);border-radius:9px;font-family:Arial;font-size:12px">
               <input type="text" id="geo-lng-portal" placeholder="Longitude" style="width:110px;padding:6px 8px;border:1px solid var(--border);border-radius:9px;font-family:Arial;font-size:12px">
               <button class="btn-sm" onclick="saveManualLocation('portal')">Save Coordinates</button>
+            </div>
+          </div>
+          <div id="portal-workhours-box" style="background:var(--surface2);border:1px solid var(--border);border-radius:9px;padding:14px;margin-bottom:16px">
+            <div style="font-family:Arial;font-size:11px;text-transform:uppercase;color:var(--muted);margin-bottom:8px">🕒 Work Hours (used to flag late clock-ins &amp; early clock-outs)</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+              <label style="font-family:Arial;font-size:12px;color:var(--muted)">Opens:</label>
+              <input type="time" id="wh-open-portal" style="padding:6px 8px;border:1px solid var(--border);border-radius:9px;font-family:Arial;font-size:12px">
+              <label style="font-family:Arial;font-size:12px;color:var(--muted)">Closes:</label>
+              <input type="time" id="wh-close-portal" style="padding:6px 8px;border:1px solid var(--border);border-radius:9px;font-family:Arial;font-size:12px">
+              <label style="font-family:Arial;font-size:12px;color:var(--muted)">Grace (min):</label>
+              <input type="number" id="wh-grace-portal" value="10" style="width:70px;padding:6px 8px;border:1px solid var(--border);border-radius:9px;font-family:Arial;font-size:12px">
+              <button class="btn-sm" onclick="saveWorkHours('portal')">Save Work Hours</button>
             </div>
           </div>
           <div id="portal-attendance-list"></div>
@@ -5016,21 +5057,41 @@ async function loadSpAttendance(){
   const rlist=recent||[];const rEl=document.getElementById('sp-attendance-list');
   rEl.innerHTML=rlist.length?rlist.map(r=>{
     const hrs=(r.clock_in&&r.clock_out)?((new Date(r.clock_out)-new Date(r.clock_in))/3600000).toFixed(1)+'h':'—';
-    return`<div style="display:flex;justify-content:space-between;border:1px solid var(--border);border-radius:9px;padding:8px 12px;margin-bottom:6px;font-family:Arial;font-size:12px">
-      <span>${r.work_date}</span><span>${r.clock_in?new Date(r.clock_in).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}):'—'} – ${r.clock_out?new Date(r.clock_out).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}):'—'}</span><span>${hrs}</span>
+    const flags=[r.is_late?`<span class="badge badge-red">Late ${r.late_minutes}m</span>`:'',r.is_early_leave?`<span class="badge badge-gold">Left early ${r.early_minutes}m</span>`:''].join(' ');
+    return`<div style="display:flex;justify-content:space-between;align-items:center;border:1px solid var(--border);border-radius:9px;padding:8px 12px;margin-bottom:6px;font-family:Arial;font-size:12px;flex-wrap:wrap;gap:4px">
+      <span>${r.work_date}</span><span>${r.clock_in?new Date(r.clock_in).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}):'—'} – ${r.clock_out?new Date(r.clock_out).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}):'—'}</span><span>${hrs}</span>${flags?`<span>${flags}</span>`:''}
     </div>`;
   }).join(''):'<p style="font-family:Arial;font-size:12px;color:var(--muted)">No attendance yet.</p>';
+}
+function computeLateness(openingTime,graceMinutes){
+  if(!openingTime)return{isLate:false,lateMinutes:0};
+  const now=new Date();
+  const [h,m]=openingTime.split(':').map(Number);
+  const openToday=new Date(now.getFullYear(),now.getMonth(),now.getDate(),h,m,0);
+  const graceMs=(graceMinutes||0)*60000;
+  const diffMin=Math.round((now-openToday-graceMs)/60000);
+  return diffMin>0?{isLate:true,lateMinutes:diffMin}:{isLate:false,lateMinutes:0};
+}
+function computeEarlyLeave(closingTime){
+  if(!closingTime)return{isEarly:false,earlyMinutes:0};
+  const now=new Date();
+  const [h,m]=closingTime.split(':').map(Number);
+  const closeToday=new Date(now.getFullYear(),now.getMonth(),now.getDate(),h,m,0);
+  const diffMin=Math.round((closeToday-now)/60000);
+  return diffMin>0?{isEarly:true,earlyMinutes:diffMin}:{isEarly:false,earlyMinutes:0};
 }
 async function toggleClock(){
   const today=new Date().toISOString().slice(0,10);
   const statusEl=document.getElementById('sp-clock-status');
   if(_spOpenAttendanceId){
-    await db.from('staff_attendance').update({clock_out:new Date().toISOString()}).eq('id',_spOpenAttendanceId);
+    const {data:client}=await db.from('clients').select('closing_time').eq('id',_spClientId).single();
+    const el=computeEarlyLeave(client&&client.closing_time);
+    await db.from('staff_attendance').update({clock_out:new Date().toISOString(),is_early_leave:el.isEarly,early_minutes:el.earlyMinutes}).eq('id',_spOpenAttendanceId);
     loadSpAttendance();
     return;
   }
   // Clocking IN — check geofence first
-  const {data:client}=await db.from('clients').select('work_lat,work_lng,work_radius_m').eq('id',_spClientId).single();
+  const {data:client}=await db.from('clients').select('work_lat,work_lng,work_radius_m,opening_time,late_grace_minutes').eq('id',_spClientId).single();
   if(client&&client.work_lat!=null&&client.work_lng!=null){
     if(!navigator.geolocation){statusEl.textContent='Your device does not support location — ask your consultant for help.';return;}
     statusEl.textContent='Checking your location…';
@@ -5041,14 +5102,16 @@ async function toggleClock(){
         statusEl.textContent=`You're ${Math.round(dist)}m from work — you need to be within ${radius}m to clock in.`;
         return;
       }
-      await db.from('staff_attendance').insert({staff_id:_spStaffId,client_id:_spClientId,work_date:today,clock_in:new Date().toISOString()});
+      const lt=computeLateness(client.opening_time,client.late_grace_minutes);
+      await db.from('staff_attendance').insert({staff_id:_spStaffId,client_id:_spClientId,work_date:today,clock_in:new Date().toISOString(),is_late:lt.isLate,late_minutes:lt.lateMinutes});
       loadSpAttendance();
     },(err)=>{
       statusEl.textContent='Could not confirm your location: '+err.message+'. Please allow location access and try again.';
     },{enableHighAccuracy:true,timeout:10000});
   } else {
     // No work location set yet for this client — allow clock-in without a check
-    await db.from('staff_attendance').insert({staff_id:_spStaffId,client_id:_spClientId,work_date:today,clock_in:new Date().toISOString()});
+    const lt=computeLateness(client&&client.opening_time,client&&client.late_grace_minutes);
+    await db.from('staff_attendance').insert({staff_id:_spStaffId,client_id:_spClientId,work_date:today,clock_in:new Date().toISOString(),is_late:lt.isLate,late_minutes:lt.lateMinutes});
     loadSpAttendance();
   }
 }
@@ -7076,7 +7139,7 @@ function haversineMeters(lat1,lng1,lat2,lng2){
   return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
 }
 async function loadGeofenceStatus(clientId,scope){
-  const {data:client}=await db.from('clients').select('work_lat,work_lng,work_radius_m').eq('id',clientId).single();
+  const {data:client}=await db.from('clients').select('work_lat,work_lng,work_radius_m,opening_time,closing_time,late_grace_minutes').eq('id',clientId).single();
   const statusEl=document.getElementById(scope+'-geofence-status');
   const radiusEl=document.getElementById('geo-radius-'+scope);
   const latEl=document.getElementById('geo-lat-'+scope),lngEl=document.getElementById('geo-lng-'+scope);
@@ -7089,6 +7152,21 @@ async function loadGeofenceStatus(clientId,scope){
     statusEl.textContent='Not set yet — staff can clock in from anywhere until this is set.';
   }
   if(radiusEl&&client&&client.work_radius_m)radiusEl.value=client.work_radius_m;
+  const openEl=document.getElementById('wh-open-'+scope),closeEl=document.getElementById('wh-close-'+scope),graceEl=document.getElementById('wh-grace-'+scope);
+  if(client){
+    if(openEl&&client.opening_time)openEl.value=client.opening_time.slice(0,5);
+    if(closeEl&&client.closing_time)closeEl.value=client.closing_time.slice(0,5);
+    if(graceEl&&client.late_grace_minutes!=null)graceEl.value=client.late_grace_minutes;
+  }
+}
+async function saveWorkHours(scope){
+  const clientId=scope==='cv'?_currentViewClientId:currentUser.clientId;
+  const opening_time=document.getElementById('wh-open-'+scope).value||null;
+  const closing_time=document.getElementById('wh-close-'+scope).value||null;
+  const late_grace_minutes=parseInt(document.getElementById('wh-grace-'+scope).value)||10;
+  const {error}=await db.from('clients').update({opening_time,closing_time,late_grace_minutes}).eq('id',clientId);
+  if(error){alert('Could not save work hours: '+error.message);return;}
+  alert('Work hours saved.');
 }
 async function saveManualLocation(scope){
   const clientId=scope==='cv'?_currentViewClientId:currentUser.clientId;
@@ -10983,6 +11061,65 @@ function gateAddClient(){
   openModal('modal-add-client');
 }
 
+// ══ DAILY HR REPORT (cross-client daily attendance digest) ══
+async function loadDailyHRReport(){
+  const dateEl=document.getElementById('dhr-date');
+  if(!dateEl.value)dateEl.value=new Date().toISOString().slice(0,10);
+  const date=dateEl.value;
+  const filterEl=document.getElementById('dhr-client-filter');
+  if(filterEl.options.length<=1&&allClients.length){
+    const prev=filterEl.value;
+    filterEl.innerHTML='<option value="">All Clients</option>'+allClients.map(c=>`<option value="${c.id}">${c.business_name}</option>`).join('');
+    filterEl.value=prev;
+  }
+  const clientFilter=filterEl.value;
+  let q=db.from('staff_attendance').select('*,client_staff(name),clients(business_name)').eq('work_date',date);
+  if(clientFilter)q=q.eq('client_id',clientFilter);
+  const {data:records}=await q.order('clock_in',{ascending:true});
+  const rows=records||[];
+  let staffQ=db.from('client_staff').select('id,name,client_id,clients(business_name)').eq('status','Active');
+  if(clientFilter)staffQ=staffQ.eq('client_id',clientFilter);
+  const {data:allStaff}=await staffQ;
+  const clockedIds=new Set(rows.map(r=>r.staff_id));
+  const absentees=(allStaff||[]).filter(s=>!clockedIds.has(s.id));
+  const lateCount=rows.filter(r=>r.is_late).length;
+  const earlyCount=rows.filter(r=>r.is_early_leave).length;
+  const stillOpenCount=rows.filter(r=>!r.clock_out).length;
+  document.getElementById('dhr-summary').innerHTML=`<div class="card" style="padding:14px 18px;display:flex;gap:24px;flex-wrap:wrap;font-family:Arial;font-size:13px">
+    <div><strong>${rows.length}</strong> clocked in</div>
+    <div style="color:${lateCount?'var(--danger)':'var(--muted)'}"><strong>${lateCount}</strong> late</div>
+    <div style="color:${earlyCount?'var(--danger)':'var(--muted)'}"><strong>${earlyCount}</strong> left early</div>
+    <div><strong>${stillOpenCount}</strong> still clocked in</div>
+    <div style="color:${absentees.length?'var(--danger)':'var(--muted)'}"><strong>${absentees.length}</strong> didn't clock in</div>
+  </div>`;
+  const list=document.getElementById('dhr-list');
+  list.innerHTML=(rows.length?`<table class="data-table"><thead><tr><th>Staff</th><th>Client</th><th>Clock In</th><th>Clock Out</th><th>Flags</th></tr></thead><tbody>`+
+    rows.map(r=>{
+      const flags=[r.is_late?`<span class="badge badge-red">Late ${r.late_minutes}m</span>`:'',r.is_early_leave?`<span class="badge badge-gold">Left early ${r.early_minutes}m</span>`:'',!r.clock_out?'<span class="badge badge-gray">Still on</span>':''].filter(Boolean).join(' ');
+      return `<tr><td style="font-size:13px">${(r.client_staff&&r.client_staff.name)||'—'}</td><td style="font-size:13px">${(r.clients&&r.clients.business_name)||'—'}</td><td style="font-family:'IBM Plex Mono',monospace;font-size:12px">${r.clock_in?new Date(r.clock_in).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}):'—'}</td><td style="font-family:'IBM Plex Mono',monospace;font-size:12px">${r.clock_out?new Date(r.clock_out).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}):'—'}</td><td>${flags||'—'}</td></tr>`;
+    }).join('')+`</tbody></table>`:'<p style="font-family:Arial;font-size:13px;color:var(--muted)">No clock-ins recorded for this date.</p>')
+  +(absentees.length?`<div style="margin-top:18px"><div style="font-family:Arial;font-size:13px;font-weight:600;color:var(--danger);margin-bottom:8px">⚠ Didn't clock in on this date</div>`+
+    absentees.map(s=>`<div style="font-family:Arial;font-size:12.5px;color:var(--ink2);padding:6px 0;border-bottom:1px solid var(--border)">${s.name} — ${(s.clients&&s.clients.business_name)||'—'}</div>`).join('')+`</div>`:'');
+  loadTrainingGapList(clientFilter);
+}
+async function loadTrainingGapList(clientFilter){
+  const el=document.getElementById('dhr-training-gap-list');if(!el)return;
+  let staffQ=db.from('client_staff').select('id,name,client_id,clients(business_name)').eq('status','Active');
+  if(clientFilter)staffQ=staffQ.eq('client_id',clientFilter);
+  const {data:allStaff}=await staffQ;
+  const staff=allStaff||[];
+  if(!staff.length){el.innerHTML='<p style="font-family:Arial;font-size:13px;color:var(--muted)">No active staff on file.</p>';return;}
+  const staffIds=staff.map(s=>s.id);
+  const {data:enrollments}=await db.from('course_enrollments').select('person_id,status,progress_pct').eq('person_type','staff').in('person_id',staffIds.length?staffIds:['00000000-0000-0000-0000-000000000000']);
+  const rows=enrollments||[];
+  const gap=staff.filter(s=>{
+    const mine=rows.filter(r=>r.person_id===s.id);
+    return !mine.length||mine.every(r=>r.status==='not_started'||(r.progress_pct||0)===0);
+  });
+  if(!gap.length){el.innerHTML='<p style="font-family:Arial;font-size:13px;color:var(--success)">✓ Everyone has started at least one course.</p>';return;}
+  el.innerHTML=`<div style="font-family:Arial;font-size:12.5px;color:var(--danger);margin-bottom:8px">${gap.length} of ${staff.length} haven't started any training</div>`+
+    gap.map(s=>`<div style="display:flex;justify-content:space-between;font-family:Arial;font-size:12.5px;color:var(--ink2);padding:7px 0;border-bottom:1px solid var(--border)"><span>${s.name}</span><span style="color:var(--muted)">${(s.clients&&s.clients.business_name)||'—'}</span></div>`).join('');
+}
 // ══ 3D TILT HELPER (used on dashboard tiles + client cards) ══
 function attachTiltEffect(selector,root){
   const scope=root||document;
@@ -11017,6 +11154,7 @@ function showAdminTab(tab,btn){
   if(tab==='teamratings') loadTeamRatings();
   if(tab==='staffhr') loadStaffHRFiles();
   if(tab==='teamtraining') loadTeamTraining();
+  if(tab==='dailyhr') loadDailyHRReport();
   if(tab==='payroll') loadPayrollPage();
   if(tab==='accounting') loadAccountingPageInit();
   if(tab==='income') loadCompanyIncome();
