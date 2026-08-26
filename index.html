@@ -774,6 +774,7 @@ self.addEventListener('notificationclick',function(e){
       <button class="tab-btn" id="activitylog-tab-btn" data-dept="owner" style="display:none" onclick="showAdminTab('activitylog',this)">🕵 Activity Log</button>
       <button class="tab-btn" id="teamratings-tab-btn" data-dept="owner" style="display:none" onclick="showAdminTab('teamratings',this)">🏅 Team Ratings</button>
       <button class="tab-btn" id="staffhr-tab-btn" data-dept="owner" style="display:none" onclick="showAdminTab('staffhr',this)">🗂 Team HR Files (Internal)</button>
+      <button class="tab-btn" id="manageteam-tab-btn" data-dept="owner" style="display:none" onclick="showAdminTab('manageteam',this)">👥 Manage Team</button>
       <button class="tab-btn" id="teamtraining-tab-btn" data-dept="owner" style="display:none" onclick="showAdminTab('teamtraining',this)">🎯 Team Training</button>
     </nav>
 
@@ -2566,6 +2567,25 @@ self.addEventListener('notificationclick',function(e){
         <div class="page-title">Team HR Files (Internal)</div>
         <div class="page-sub">Your own team's personal details, guarantor, and agreed duties — not client-placed staff. Visible only to you</div>
         <div id="staff-hr-list"></div>
+      </div>
+
+      <!-- MANAGE TEAM PAGE (owner only) -->
+      <div class="page" id="page-manageteam">
+        <div class="page-title">Manage Team</div>
+        <div class="page-sub">Add, edit, or deactivate internal team logins — no need to touch Supabase directly</div>
+        <div class="card" style="padding:18px 20px;margin-bottom:20px">
+          <div style="font-size:13px;font-weight:600;margin-bottom:10px">+ Add Team Member</div>
+          <div class="form-grid">
+            <div class="form-field"><label>Full Name</label><input type="text" id="mt-name"></div>
+            <div class="form-field"><label>Department / Role Label</label><input type="text" id="mt-department" placeholder="e.g. HR & Social Media Manager"></div>
+            <div class="form-field"><label>Username</label><input type="text" id="mt-username"></div>
+            <div class="form-field"><label>Access Code</label><input type="text" id="mt-password"></div>
+          </div>
+          <div style="font-family:Arial;font-size:11px;color:var(--muted);margin-top:8px">Type the department as exactly <code>finance</code> (lowercase) to unlock Accounting, Payroll, Invoices, and Expenditure for that person — anything else is just a display label and doesn't restrict what they see.</div>
+          <button class="btn-add" onclick="addTeamMember()" style="margin-top:12px">+ Add Team Member</button>
+          <div id="mt-add-feedback" style="margin-top:8px"></div>
+        </div>
+        <div id="manage-team-list"></div>
       </div>
 
       <!-- TEAM TRAINING PAGE (owner only) -->
@@ -4796,7 +4816,10 @@ async function handleLogin(){
   err.textContent='';
   if(!user||!pass){err.textContent='Please enter your username and access code.';return;}
   const {data:admins,error:ae}=await db.from('admin_users').select('*').eq('username',user).eq('password_hash',pass).single();
-  if(admins&&!ae){currentUser={role:admins.is_owner?'owner':'admin',name:admins.full_name||user,isOwner:!!admins.is_owner,department:admins.department||'operations',username:admins.username};showApp();return;}
+  if(admins&&!ae){
+    if(admins.active===false){err.textContent='This login has been deactivated.';return;}
+    currentUser={role:admins.is_owner?'owner':'admin',name:admins.full_name||user,isOwner:!!admins.is_owner,department:admins.department||'operations',username:admins.username};showApp();return;
+  }
   const {data:client,error:ce}=await db.from('clients').select('*').eq('username',user).eq('access_code',pass).single();
   if(client&&!ce){currentUser={role:'client',name:client.business_name,clientId:client.id,package:client.package};showClientPortal(client);return;}
   const {data:staff,error:se}=await db.from('client_staff').select('*,clients(business_name)').eq('username',user).eq('access_code',pass).single();
@@ -4870,6 +4893,7 @@ function showApp(){
     if(currentUser.isOwner)document.getElementById('activitylog-tab-btn').style.display='';
     if(currentUser.isOwner)document.getElementById('teamratings-tab-btn').style.display='';
     if(currentUser.isOwner)document.getElementById('staffhr-tab-btn').style.display='';
+    if(currentUser.isOwner)document.getElementById('manageteam-tab-btn').style.display='';
     if(currentUser.isOwner)document.getElementById('teamtraining-tab-btn').style.display='';
     if(currentUser.isOwner)document.getElementById('ownersection').style.display='';
     document.getElementById('onboarding-tab-btn').style.display='';
@@ -7879,6 +7903,82 @@ async function loadStaffHRFiles(){
       </div>`:'<div style="margin-top:10px;font-family:Arial;font-size:12px;color:var(--muted)">This person hasn\'t filled in their My Profile HR details yet.</div>'}
     </div>`;
   }).join('');
+}
+
+// ══ MANAGE TEAM (owner adds/edits internal admin logins — no Supabase needed) ══
+async function addTeamMember(){
+  const fb=document.getElementById('mt-add-feedback');
+  const full_name=document.getElementById('mt-name').value.trim();
+  const department=document.getElementById('mt-department').value.trim();
+  const username=document.getElementById('mt-username').value.trim();
+  const password_hash=document.getElementById('mt-password').value.trim();
+  if(!full_name||!username||!password_hash){fb.innerHTML='<div class="error-msg">Name, username, and access code are all required.</div>';return;}
+  const {data:existing}=await db.from('admin_users').select('username').eq('username',username).maybeSingle();
+  if(existing){fb.innerHTML='<div class="error-msg">That username is already taken — pick another.</div>';return;}
+  const {error}=await db.from('admin_users').insert({full_name,department:department||'operations',username,password_hash,is_owner:false,active:true});
+  if(error){fb.innerHTML=`<div class="error-msg">${error.message}</div>`;return;}
+  fb.innerHTML='<div class="success-msg">✓ Added. Share their username and access code with them.</div>';
+  document.getElementById('mt-name').value='';document.getElementById('mt-department').value='';
+  document.getElementById('mt-username').value='';document.getElementById('mt-password').value='';
+  await logActivity('Added internal team member',full_name,null);
+  loadManageTeam();
+}
+async function loadManageTeam(){
+  const el=document.getElementById('manage-team-list');if(!el)return;
+  el.innerHTML='<p style="font-family:Arial;font-size:12px;color:var(--muted)">Loading…</p>';
+  const {data}=await db.from('admin_users').select('*').eq('is_owner',false).order('full_name',{ascending:true});
+  const rows=data||[];
+  if(!rows.length){el.innerHTML='<p style="font-family:Arial;font-size:13px;color:var(--muted)">No team members yet — add the first one above.</p>';return;}
+  el.innerHTML=rows.map(a=>{
+    const active=a.active!==false;
+    return `<div class="card" style="padding:14px 18px;margin-bottom:10px${active?'':';opacity:.55'}">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+        <div>
+          <div style="font-size:14px;font-weight:600;color:var(--ink)">${a.full_name}${active?'':' (deactivated)'}</div>
+          <div style="font-size:11.5px;color:var(--muted)">${a.department||'—'} · username: ${a.username}</div>
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <button class="btn-sm" onclick="openEditTeamMember('${a.id}')">Edit</button>
+          ${active?`<button class="btn-sm" onclick="toggleTeamMemberActive('${a.id}',false)">Deactivate</button>`:`<button class="btn-sm" onclick="toggleTeamMemberActive('${a.id}',true)">Reactivate</button>`}
+          <button class="btn-danger" onclick="deleteRow('admin_users','${a.id}',loadManageTeam)">Delete</button>
+        </div>
+      </div>
+      <div id="mt-edit-${a.id}" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
+        <div class="form-grid">
+          <div class="form-field"><label>Full Name</label><input type="text" id="mt-edit-name-${a.id}" value="${(a.full_name||'').replace(/"/g,'&quot;')}"></div>
+          <div class="form-field"><label>Department / Role Label</label><input type="text" id="mt-edit-department-${a.id}" value="${(a.department||'').replace(/"/g,'&quot;')}"></div>
+          <div class="form-field"><label>Username</label><input type="text" id="mt-edit-username-${a.id}" value="${a.username}"></div>
+          <div class="form-field"><label>Reset Access Code (leave blank to keep current)</label><input type="text" id="mt-edit-password-${a.id}" placeholder="Leave blank to keep current"></div>
+        </div>
+        <button class="btn-save" onclick="saveTeamMemberEdit('${a.id}')" style="margin-top:10px">Save Changes</button>
+        <div id="mt-edit-feedback-${a.id}" style="margin-top:8px"></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+function openEditTeamMember(id){
+  const box=document.getElementById('mt-edit-'+id);
+  box.style.display=box.style.display==='none'?'block':'none';
+}
+async function saveTeamMemberEdit(id){
+  const fb=document.getElementById('mt-edit-feedback-'+id);
+  const full_name=document.getElementById('mt-edit-name-'+id).value.trim();
+  const department=document.getElementById('mt-edit-department-'+id).value.trim();
+  const username=document.getElementById('mt-edit-username-'+id).value.trim();
+  const newPass=document.getElementById('mt-edit-password-'+id).value.trim();
+  if(!full_name||!username){fb.innerHTML='<span style="color:var(--danger);font-size:12px">Name and username are required.</span>';return;}
+  const changes={full_name,department:department||'operations',username};
+  if(newPass)changes.password_hash=newPass;
+  const {error}=await db.from('admin_users').update(changes).eq('id',id);
+  if(error){fb.innerHTML=`<span style="color:var(--danger);font-size:12px">${error.message}</span>`;return;}
+  fb.innerHTML='<span style="color:var(--success);font-size:12px">Saved.</span>';
+  await logActivity('Updated internal team member',full_name,null);
+  setTimeout(loadManageTeam,800);
+}
+async function toggleTeamMemberActive(id,active){
+  await db.from('admin_users').update({active}).eq('id',id);
+  await logActivity(active?'Reactivated team member login':'Deactivated team member login','',null);
+  loadManageTeam();
 }
 
 // ══ TEAM TRAINING (internal skill-building — owner assigns, staff ticks off) ══
@@ -11483,6 +11583,7 @@ function showAdminTab(tab,btn){
   if(tab==='activitylog'&&(!currentUser||!currentUser.isOwner)){return;}
   if(tab==='teamratings'&&(!currentUser||!currentUser.isOwner)){return;}
   if(tab==='staffhr'&&(!currentUser||!currentUser.isOwner)){return;}
+  if(tab==='manageteam'&&(!currentUser||!currentUser.isOwner)){return;}
   if(tab==='teamtraining'&&(!currentUser||!currentUser.isOwner)){return;}
   document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
@@ -11491,6 +11592,7 @@ function showAdminTab(tab,btn){
   if(tab==='activitylog') loadActivityLog();
   if(tab==='teamratings') loadTeamRatings();
   if(tab==='staffhr') loadStaffHRFiles();
+  if(tab==='manageteam') loadManageTeam();
   if(tab==='teamtraining') loadTeamTraining();
   if(tab==='dailyhr') loadDailyHRReport();
   if(tab==='payroll') loadPayrollPage();
