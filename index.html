@@ -775,6 +775,7 @@ self.addEventListener('notificationclick',function(e){
       <button class="tab-btn" id="teamratings-tab-btn" data-dept="owner" style="display:none" onclick="showAdminTab('teamratings',this)">🏅 Team Ratings</button>
       <button class="tab-btn" id="staffhr-tab-btn" data-dept="owner" style="display:none" onclick="showAdminTab('staffhr',this)">🗂 Team HR Files (Internal)</button>
       <button class="tab-btn" id="manageteam-tab-btn" data-dept="owner" style="display:none" onclick="showAdminTab('manageteam',this)">👥 Manage Team</button>
+      <button class="tab-btn" id="internalpayroll-tab-btn" data-dept="owner" style="display:none" onclick="showAdminTab('internalpayroll',this)">💷 Internal Payroll</button>
       <button class="tab-btn" id="teamtraining-tab-btn" data-dept="owner" style="display:none" onclick="showAdminTab('teamtraining',this)">🎯 Team Training</button>
     </nav>
 
@@ -847,6 +848,9 @@ self.addEventListener('notificationclick',function(e){
                 <select id="hr-preferred-contact"><option value="">Select</option><option>Call</option><option>WhatsApp</option><option>Email</option></select>
               </div>
               <div class="form-field" style="grid-column:1/-1"><label>Food Allergies / Dietary Restrictions</label><input type="text" id="hr-allergies" placeholder="e.g. none, peanuts, vegetarian"></div>
+              <div class="form-field"><label>Bank Name</label><input type="text" id="hr-bank-name"></div>
+              <div class="form-field"><label>Account Number</label><input type="text" id="hr-bank-account-number"></div>
+              <div class="form-field" style="grid-column:1/-1"><label>Account Name</label><input type="text" id="hr-bank-account-name"></div>
               <div class="form-field" style="grid-column:1/-1"><label>Skills / Strengths</label><input type="text" id="hr-skills" placeholder="Things you're especially good at"></div>
               <div class="form-field" style="grid-column:1/-1"><label>Hobbies / Interests</label><input type="text" id="hr-hobbies"></div>
             </div>
@@ -2586,6 +2590,19 @@ self.addEventListener('notificationclick',function(e){
           <div id="mt-add-feedback" style="margin-top:8px"></div>
         </div>
         <div id="manage-team-list"></div>
+      </div>
+
+      <!-- INTERNAL PAYROLL PAGE (owner only) -->
+      <div class="page" id="page-internalpayroll">
+        <div class="page-title">Internal Payroll</div>
+        <div class="page-sub">Your own team's pay — no pension, no fixed salary. Amount varies month to month based on rank and performance; add a deduction and it works out net pay for you.</div>
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:16px;flex-wrap:wrap">
+          <select id="ip-month" onchange="loadInternalPayroll()" style="padding:7px 12px;border:1px solid var(--border);border-radius:9px;font-family:Arial;font-size:13px">
+            <option value="1">January</option><option value="2">February</option><option value="3">March</option><option value="4">April</option><option value="5">May</option><option value="6">June</option><option value="7">July</option><option value="8">August</option><option value="9">September</option><option value="10">October</option><option value="11">November</option><option value="12">December</option>
+          </select>
+          <input type="number" id="ip-year" value="2026" onchange="loadInternalPayroll()" style="width:90px;padding:7px 12px;border:1px solid var(--border);border-radius:9px;font-family:Arial;font-size:13px">
+        </div>
+        <div id="internal-payroll-list"></div>
       </div>
 
       <!-- TEAM TRAINING PAGE (owner only) -->
@@ -4894,6 +4911,7 @@ function showApp(){
     if(currentUser.isOwner)document.getElementById('teamratings-tab-btn').style.display='';
     if(currentUser.isOwner)document.getElementById('staffhr-tab-btn').style.display='';
     if(currentUser.isOwner)document.getElementById('manageteam-tab-btn').style.display='';
+    if(currentUser.isOwner)document.getElementById('internalpayroll-tab-btn').style.display='';
     if(currentUser.isOwner)document.getElementById('teamtraining-tab-btn').style.display='';
     if(currentUser.isOwner)document.getElementById('ownersection').style.display='';
     document.getElementById('onboarding-tab-btn').style.display='';
@@ -7816,6 +7834,9 @@ async function loadMyHRDetails(){
     set('hr-uniform-size',data.uniform_size);
     set('hr-preferred-contact',data.preferred_contact_method);
     set('hr-allergies',data.allergies);
+    set('hr-bank-name',data.bank_name);
+    set('hr-bank-account-number',data.bank_account_number);
+    set('hr-bank-account-name',data.bank_account_name);
     set('hr-skills',data.skills);
     set('hr-hobbies',data.hobbies);
     set('hr-bio',data.bio);
@@ -7847,6 +7868,9 @@ async function saveMyHRDetails(){
     uniform_size:document.getElementById('hr-uniform-size').value||null,
     preferred_contact_method:document.getElementById('hr-preferred-contact').value||null,
     allergies:document.getElementById('hr-allergies').value.trim()||null,
+    bank_name:document.getElementById('hr-bank-name').value.trim()||null,
+    bank_account_number:document.getElementById('hr-bank-account-number').value.trim()||null,
+    bank_account_name:document.getElementById('hr-bank-account-name').value.trim()||null,
     skills:document.getElementById('hr-skills').value.trim()||null,
     hobbies:document.getElementById('hr-hobbies').value.trim()||null,
     bio:document.getElementById('hr-bio').value.trim()||null,
@@ -7901,8 +7925,33 @@ async function loadStaffHRFiles(){
         <div style="grid-column:1/-1"><strong>About:</strong> ${d.bio||'—'}</div>
         <div style="grid-column:1/-1"><strong>Agreed Duties:</strong> ${d.agreed_duties||'—'}</div>
       </div>`:'<div style="margin-top:10px;font-family:Arial;font-size:12px;color:var(--muted)">This person hasn\'t filled in their My Profile HR details yet.</div>'}
+      <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">
+        <div style="font-size:12px;font-weight:600;color:var(--ink);margin-bottom:2px">💳 Bank Details ${d&&d.bank_name?'<span class="badge badge-green" style="font-size:10px;margin-left:4px">On file</span>':'<span class="badge badge-red" style="font-size:10px;margin-left:4px">Missing</span>'}</div>
+        <div style="font-family:Arial;font-size:11px;color:var(--muted);margin-bottom:8px">You can type this in directly if they filled the older form before bank details were added.</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <input type="text" id="hrf-bank-name-${a.username}" value="${(d&&d.bank_name)||''}" placeholder="Bank name" style="width:160px;padding:6px 10px;border:1px solid var(--border);border-radius:8px;font-size:12px">
+          <input type="text" id="hrf-bank-acctno-${a.username}" value="${(d&&d.bank_account_number)||''}" placeholder="Account number" style="width:160px;padding:6px 10px;border:1px solid var(--border);border-radius:8px;font-size:12px">
+          <input type="text" id="hrf-bank-acctname-${a.username}" value="${(d&&d.bank_account_name)||''}" placeholder="Account name" style="width:180px;padding:6px 10px;border:1px solid var(--border);border-radius:8px;font-size:12px">
+          <button class="btn-sm" onclick="saveStaffBankDetails('${a.username}')">Save</button>
+        </div>
+        <div id="hrf-bank-feedback-${a.username}" style="margin-top:6px"></div>
+      </div>
     </div>`;
   }).join('');
+}
+async function saveStaffBankDetails(username){
+  const fb=document.getElementById('hrf-bank-feedback-'+username);
+  const payload={
+    admin_username:username,
+    bank_name:document.getElementById('hrf-bank-name-'+username).value.trim()||null,
+    bank_account_number:document.getElementById('hrf-bank-acctno-'+username).value.trim()||null,
+    bank_account_name:document.getElementById('hrf-bank-acctname-'+username).value.trim()||null,
+    updated_at:new Date().toISOString()
+  };
+  const {error}=await db.from('staff_hr_details').upsert(payload,{onConflict:'admin_username'});
+  if(error){fb.innerHTML=`<span style="color:var(--danger);font-size:11.5px">${error.message}</span>`;return;}
+  fb.innerHTML='<span style="color:var(--success);font-size:11.5px">Saved.</span>';
+  setTimeout(loadStaffHRFiles,800);
 }
 
 // ══ MANAGE TEAM (owner adds/edits internal admin logins — no Supabase needed) ══
@@ -7979,6 +8028,117 @@ async function toggleTeamMemberActive(id,active){
   await db.from('admin_users').update({active}).eq('id',id);
   await logActivity(active?'Reactivated team member login':'Deactivated team member login','',null);
   loadManageTeam();
+}
+
+// ══ INTERNAL PAYROLL (variable monthly pay by rank/performance — no pension) ══
+async function loadInternalPayroll(){
+  const el=document.getElementById('internal-payroll-list');if(!el)return;
+  if(!document.getElementById('ip-month').value){
+    const now=new Date();document.getElementById('ip-month').value=now.getMonth()+1;
+  }
+  const month=parseInt(document.getElementById('ip-month').value);
+  const year=parseInt(document.getElementById('ip-year').value);
+  el.innerHTML='<p style="font-family:Arial;font-size:12px;color:var(--muted)">Loading…</p>';
+  const [{data:admins},{data:ratings},{data:slips}]=await Promise.all([
+    db.from('admin_users').select('username,full_name,department').eq('is_owner',false).order('full_name',{ascending:true}),
+    db.from('merit_ratings').select('*').eq('period_month',month).eq('period_year',year),
+    db.from('internal_payslips').select('*').eq('period_month',month).eq('period_year',year)
+  ]);
+  const roster=admins||[];
+  if(!roster.length){el.innerHTML='<p style="font-family:Arial;font-size:13px;color:var(--muted)">No internal team members yet.</p>';return;}
+  const rankMap={};(ratings||[]).forEach(r=>rankMap[r.admin_username]=r.rank_value);
+  const slipMap={};(slips||[]).forEach(s=>slipMap[s.admin_username]=s);
+  el.innerHTML=roster.map(a=>{
+    const slip=slipMap[a.username];
+    const rank=rankMap[a.username]||'S';
+    return `<div class="card" style="padding:16px 20px;margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:10px">
+        <div>
+          <div style="font-size:14px;font-weight:600;color:var(--ink)">${a.full_name}</div>
+          <div style="font-size:11px;color:var(--muted)">${a.department||''} · Rank this month: <strong>${rank}</strong></div>
+        </div>
+        ${slip?`<button class="btn-sm" onclick="printInternalPayslip('${a.username}','${a.full_name.replace(/'/g,"\\'")}',${month},${year})">🖨 Print Payslip</button>`:''}
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+        <div><label style="font-family:Arial;font-size:11px;color:var(--muted);display:block">Amount</label>
+        <input type="number" id="ip-amount-${a.username}" value="${slip?slip.amount:''}" placeholder="0" oninput="updateIpNet('${a.username}')" style="width:130px;padding:6px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:'IBM Plex Mono',monospace"></div>
+        <div><label style="font-family:Arial;font-size:11px;color:var(--muted);display:block">Deduction</label>
+        <input type="number" id="ip-deduction-${a.username}" value="${slip?slip.deduction||'':''}" placeholder="0" oninput="updateIpNet('${a.username}')" style="width:120px;padding:6px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:'IBM Plex Mono',monospace"></div>
+        <div style="flex:1;min-width:140px"><label style="font-family:Arial;font-size:11px;color:var(--muted);display:block">Deduction Reason</label>
+        <input type="text" id="ip-note-${a.username}" value="${(slip&&slip.deduction_note)||''}" placeholder="Optional" style="width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px"></div>
+        <div><label style="font-family:Arial;font-size:11px;color:var(--muted);display:block">Net Pay</label>
+        <div id="ip-net-${a.username}" style="font-family:'IBM Plex Mono',monospace;font-size:15px;font-weight:600;color:var(--gold);padding:6px 0">${slip?Number(slip.net_pay).toLocaleString():'0'}</div></div>
+        <button class="btn-save" onclick="saveInternalPayslip('${a.username}',${month},${year})">Save</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+function updateIpNet(username){
+  const amount=parseFloat(document.getElementById('ip-amount-'+username).value)||0;
+  const deduction=parseFloat(document.getElementById('ip-deduction-'+username).value)||0;
+  document.getElementById('ip-net-'+username).textContent=(amount-deduction).toLocaleString();
+}
+async function saveInternalPayslip(username,month,year){
+  const amount=parseFloat(document.getElementById('ip-amount-'+username).value)||0;
+  const deduction=parseFloat(document.getElementById('ip-deduction-'+username).value)||0;
+  const deduction_note=document.getElementById('ip-note-'+username).value.trim()||null;
+  const net_pay=amount-deduction;
+  const {data:rankRow}=await db.from('merit_ratings').select('rank_value').eq('admin_username',username).eq('period_month',month).eq('period_year',year).maybeSingle();
+  const {error}=await db.from('internal_payslips').upsert({
+    admin_username:username,period_month:month,period_year:year,amount,deduction,deduction_note,net_pay,
+    rank_at_time:(rankRow&&rankRow.rank_value)||'S',created_by:currentUser.name
+  },{onConflict:'admin_username,period_month,period_year'});
+  if(error){alert('Could not save: '+error.message);return;}
+  await logActivity('Ran internal payroll',`${username} — ${month}/${year}`,null);
+  loadInternalPayroll();
+}
+function printInternalPayslip(username,fullName,month,year){
+  (async()=>{
+    const {data:slip}=await db.from('internal_payslips').select('*').eq('admin_username',username).eq('period_month',month).eq('period_year',year).single();
+    if(!slip)return;
+    const {data:hr}=await db.from('staff_hr_details').select('bank_name,bank_account_number,bank_account_name').eq('admin_username',username).maybeSingle();
+    const monthNames=['','January','February','March','April','May','June','July','August','September','October','November','December'];
+    const sym='₦';
+    document.getElementById('invoice-pdf-body').innerHTML=`
+    <div style="font-family:Arial,sans-serif;padding:40px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:32px;padding-bottom:20px;border-bottom:3px solid #1B2A4A">
+        <div>
+          <div style="font-size:20px;font-weight:bold;color:#1B2A4A;letter-spacing:2px">HAIDA YAMMAR</div>
+          <div style="font-size:11px;color:#C9A24B;letter-spacing:2px;margin-bottom:8px">CONSULTING</div>
+          <div style="font-size:11px;color:#C9A24B;line-height:1.8">Haida Yammar Limited<br>RC No: 9304448<br>Abuja, Nigeria</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:26px;font-weight:bold;color:#1B2A4A">PAYSLIP</div>
+          <div style="font-size:13px;color:#28395e;margin:4px 0"><strong>${monthNames[month]} ${year}</strong></div>
+          <div style="font-size:12px;color:#C9A24B">Rank: ${slip.rank_at_time||'—'}</div>
+        </div>
+      </div>
+      <div style="margin-bottom:28px">
+        <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:#C9A24B;margin-bottom:5px">Paid To</div>
+        <div style="font-size:16px;font-weight:bold;color:#1B2A4A">${fullName}</div>
+        ${hr&&hr.bank_name?`<div style="font-size:12px;color:#28395e;margin-top:4px">${hr.bank_name} · ${hr.bank_account_number||'—'} · ${hr.bank_account_name||'—'}</div>`:'<div style="font-size:12px;color:#8B1A1A;margin-top:4px">No bank details on file</div>'}
+      </div>
+      <table style="width:100%;border-collapse:collapse;margin-bottom:24px">
+        <thead><tr style="background:#1B2A4A">
+          <th style="padding:10px 14px;text-align:left;font-size:11px;letter-spacing:1px;color:white;text-transform:uppercase">Description</th>
+          <th style="padding:10px 14px;text-align:right;font-size:11px;letter-spacing:1px;color:white;text-transform:uppercase">Amount</th>
+        </tr></thead>
+        <tbody>
+          <tr style="border-bottom:1px solid #DCD8C8"><td style="padding:14px;font-size:14px">Pay for ${monthNames[month]} ${year}</td><td style="padding:14px;font-size:14px;text-align:right">${sym}${Number(slip.amount).toLocaleString()}</td></tr>
+          ${slip.deduction?`<tr style="border-bottom:1px solid #DCD8C8"><td style="padding:14px;font-size:14px;color:#8B1A1A">Deduction${slip.deduction_note?' — '+slip.deduction_note:''}</td><td style="padding:14px;font-size:14px;text-align:right;color:#8B1A1A">-${sym}${Number(slip.deduction).toLocaleString()}</td></tr>`:''}
+        </tbody>
+      </table>
+      <div style="display:flex;justify-content:flex-end;margin-bottom:24px">
+        <div style="width:280px">
+          <div style="display:flex;justify-content:space-between;padding:10px 0;font-size:15px;font-weight:bold;color:#1B2A4A"><span>Net Pay</span><span>${sym}${Number(slip.net_pay).toLocaleString()}</span></div>
+        </div>
+      </div>
+      <div style="margin-top:32px;padding-top:16px;border-top:1px solid #DCD8C8;font-size:10px;color:#C9A24B;text-align:center">
+        Haida Yammar Limited · RC No: 9304448 · Abuja, Nigeria · Internal payslip — no pension or statutory deductions applied
+      </div>
+    </div>`;
+    openModal('modal-invoice-pdf');
+  })();
 }
 
 // ══ TEAM TRAINING (internal skill-building — owner assigns, staff ticks off) ══
@@ -11584,6 +11744,7 @@ function showAdminTab(tab,btn){
   if(tab==='teamratings'&&(!currentUser||!currentUser.isOwner)){return;}
   if(tab==='staffhr'&&(!currentUser||!currentUser.isOwner)){return;}
   if(tab==='manageteam'&&(!currentUser||!currentUser.isOwner)){return;}
+  if(tab==='internalpayroll'&&(!currentUser||!currentUser.isOwner)){return;}
   if(tab==='teamtraining'&&(!currentUser||!currentUser.isOwner)){return;}
   document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
@@ -11593,6 +11754,7 @@ function showAdminTab(tab,btn){
   if(tab==='teamratings') loadTeamRatings();
   if(tab==='staffhr') loadStaffHRFiles();
   if(tab==='manageteam') loadManageTeam();
+  if(tab==='internalpayroll') loadInternalPayroll();
   if(tab==='teamtraining') loadTeamTraining();
   if(tab==='dailyhr') loadDailyHRReport();
   if(tab==='payroll') loadPayrollPage();
