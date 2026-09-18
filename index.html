@@ -3174,7 +3174,7 @@ self.addEventListener('notificationclick',function(e){
         <div class="form-field"><label>Status</label>
           <select id="stf-status"><option>Active</option><option>Probation</option><option>Flagged</option><option>Terminated</option></select>
         </div>
-        <div class="form-field"><label>Rating (out of 100)</label><input type="number" id="stf-rating" placeholder="e.g. 85" min="0" max="100"></div>
+        <div class="form-field"><label>Tier</label><select id="stf-tier"><option value="Bronze" selected>🥉 Bronze</option><option value="Silver">🥈 Silver</option><option value="Gold">🥇 Gold</option></select></div>
         <div class="form-field"><label>Last Training Date</label><input type="date" id="stf-trained"></div>
         <div class="form-field" style="display:flex;align-items:center;gap:8px;margin-top:20px">
           <input type="checkbox" id="stf-opsmanager" style="width:auto"><label style="margin:0" for="stf-opsmanager">Operations Manager (sees all staff reports for this client)</label>
@@ -3222,7 +3222,7 @@ self.addEventListener('notificationclick',function(e){
           <div class="form-field"><label>Role</label><input type="text" id="sd-e-role"></div>
           <div class="form-field"><label>Employee ID</label><input type="text" id="sd-e-empid"></div>
           <div class="form-field"><label>Status</label><select id="sd-e-status"><option>Active</option><option>Probation</option><option>Flagged</option><option>Terminated</option></select></div>
-          <div class="form-field"><label>Rating</label><input type="number" id="sd-e-rating" min="0" max="100"></div>
+          <div class="form-field"><label>Tier</label><select id="sd-e-tier"><option value="Bronze">🥉 Bronze</option><option value="Silver">🥈 Silver</option><option value="Gold">🥇 Gold</option></select></div>
           <div class="form-field"><label>Start Date</label><input type="date" id="sd-e-start"></div>
           <div class="form-field"><label>Photo</label>
             <input type="file" id="sd-e-photo-file" accept="image/*" onchange="handlePhotoFileSelect('sd-e-photo-file','sd-e-photo',_sdStaffId)" style="margin-bottom:6px">
@@ -5210,16 +5210,19 @@ async function showStaffPortal(staff){
   // Knowledge Base (read-only, shows the latest as soon as it's updated)
   await loadKnowledgeBase(staff.client_id,'sp-kb-list',false,true);
 
-  // Leaderboard position — highest and lowest, plus own rank
-  const {data:allStaff}=await db.from('client_staff').select('*').eq('client_id',staff.client_id).neq('status','Terminated').order('rating',{ascending:false});
+  // Leaderboard — full tier standings, plus their own tier highlighted
+  const {data:allStaff}=await db.from('client_staff').select('*').eq('client_id',staff.client_id).neq('status','Terminated').order('name',{ascending:true});
   const roster=allStaff||[];
   if(roster.length>1){
-    const myRank=roster.findIndex(s=>s.id===staff.id)+1;
-    const top=roster[0],bottom=roster[roster.length-1];
     document.getElementById('sp-leaderboard-box').style.display='block';
+    const myTier=staff.tier||'Bronze';
     document.getElementById('sp-leaderboard-mini').innerHTML=
-      `Your rank: <strong>#${myRank} of ${roster.length}</strong><br>
-       Top: ${top.name} (${top.rating!=null?top.rating:'—'}) · Lowest: ${bottom.name} (${bottom.rating!=null?bottom.rating:'—'})`;
+      `<div style="margin-bottom:10px">Your tier: ${tierBadgeHtml(myTier)}</div>`+
+      ['Gold','Silver','Bronze'].map(tier=>{
+        const meta=TIER_META[tier];
+        const names=roster.filter(s=>(s.tier||'Bronze')===tier).map(s=>s.id===staff.id?`<strong>${s.name} (you)</strong>`:s.name);
+        return `<div style="margin-top:6px"><span style="color:${meta.color};font-weight:600">${meta.emoji} ${tier}:</span> ${names.length?names.join(', '):'<span style="color:var(--muted)">nobody yet</span>'}</div>`;
+      }).join('');
   }
 
   // Daily reports (own)
@@ -6194,7 +6197,7 @@ function renderStaffTable(staff){
         <div class="sc-name">${s.name}</div>
         <div class="sc-role">${s.role||'—'}${s.employee_id?' · '+s.employee_id:''}</div>
         <div class="sc-meta"><span class="badge ${sb[s.status]||'badge-gray'}">${s.status}</span> ${checklistBadgeHtml(!!clearedMap[s.id])}</div>
-        <div class="sc-meta">${(s.clients&&s.clients.business_name)||'—'} · Rating <span class="sc-rating">${s.rating!=null?s.rating:'—'}</span></div>
+        <div class="sc-meta">${(s.clients&&s.clients.business_name)||'—'} · ${tierBadgeHtml(s.tier)}</div>
         <div style="margin-top:10px">${dots}</div>
         <div style="margin-top:10px;display:flex;gap:6px;justify-content:center;flex-wrap:wrap" onclick="event.stopPropagation()">
           <button class="btn-sm" onclick="openStrikeModal('${s.id}','${s.name.replace(/'/g,"\\'")}',${strikes})">+ Strike</button>
@@ -6245,10 +6248,10 @@ async function saveStaff(){
   if(!clientId){fb.innerHTML='<div class="error-msg">Select a client.</div>';return;}
   const username=document.getElementById('stf-username').value.trim();
   const accessCode=document.getElementById('stf-access').value.trim();
-  const {error}=await db.from('client_staff').insert({client_id:clientId,name:document.getElementById('stf-name').value.trim(),role:document.getElementById('stf-role').value.trim(),start_date:document.getElementById('stf-start').value,status:document.getElementById('stf-status').value,last_training_date:document.getElementById('stf-trained').value||null,performance_notes:document.getElementById('stf-notes').value.trim(),username:username||null,access_code:accessCode||null,employee_id:document.getElementById('stf-empid').value.trim()||null,photo_url:document.getElementById('stf-photo').value.trim()||null,rating:parseFloat(document.getElementById('stf-rating').value)||0,is_ops_manager:document.getElementById('stf-opsmanager').checked});
+  const {error}=await db.from('client_staff').insert({client_id:clientId,name:document.getElementById('stf-name').value.trim(),role:document.getElementById('stf-role').value.trim(),start_date:document.getElementById('stf-start').value,status:document.getElementById('stf-status').value,last_training_date:document.getElementById('stf-trained').value||null,performance_notes:document.getElementById('stf-notes').value.trim(),username:username||null,access_code:accessCode||null,employee_id:document.getElementById('stf-empid').value.trim()||null,photo_url:document.getElementById('stf-photo').value.trim()||null,tier:document.getElementById('stf-tier').value,is_ops_manager:document.getElementById('stf-opsmanager').checked});
   if(error){fb.innerHTML=`<div class="error-msg">${error.message}</div>`;return;}
   await logActivity('Added staff member',document.getElementById('stf-name').value.trim(),clientId);
-  fb.innerHTML='<div class="success-msg">✓ Staff member saved.</div>';loadStaff();setTimeout(()=>{closeModal('modal-add-staff');fb.innerHTML='';['stf-username','stf-access','stf-empid','stf-photo','stf-rating'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});},1500);
+  fb.innerHTML='<div class="success-msg">✓ Staff member saved.</div>';loadStaff();setTimeout(()=>{closeModal('modal-add-staff');fb.innerHTML='';['stf-username','stf-access','stf-empid','stf-photo'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});},1500);
 }
 
 // ══ STAFF DETAIL MODAL (shared admin + client) ══
@@ -6272,7 +6275,7 @@ async function openStaffDetail(staffId){
   document.getElementById('sd-e-role').value=staff.role||'';
   document.getElementById('sd-e-empid').value=staff.employee_id||'';
   document.getElementById('sd-e-status').value=staff.status||'Active';
-  document.getElementById('sd-e-rating').value=staff.rating!=null?staff.rating:'';
+  document.getElementById('sd-e-tier').value=staff.tier||'Bronze';
   document.getElementById('sd-e-start').value=staff.start_date||'';
   document.getElementById('sd-e-photo').value=staff.photo_url||'';
   document.getElementById('sd-e-notes').value=staff.performance_notes||'';
@@ -6369,7 +6372,7 @@ async function saveSdProfile(){
     role:document.getElementById('sd-e-role').value.trim(),
     employee_id:document.getElementById('sd-e-empid').value.trim()||null,
     status:document.getElementById('sd-e-status').value,
-    rating:parseFloat(document.getElementById('sd-e-rating').value)||0,
+    tier:document.getElementById('sd-e-tier').value,
     start_date:document.getElementById('sd-e-start').value||null,
     photo_url:document.getElementById('sd-e-photo').value.trim()||null,
     performance_notes:document.getElementById('sd-e-notes').value.trim()
@@ -6842,10 +6845,7 @@ async function computeStaffRiskMap(staffList){
   ]);
   staffList.forEach(s=>{
     let score=0;const reasons=[];
-    if(s.rating!=null){
-      if(s.rating<50){score+=3;reasons.push('Low rating ('+s.rating+')');}
-      else if(s.rating<70){score+=1;reasons.push('Below-average rating ('+s.rating+')');}
-    }
+    if(s.tier==='Bronze'){score+=2;reasons.push('Bronze tier');}
     const myStrikes=(strikes||[]).filter(x=>x.staff_id===s.id);
     if(myStrikes.length){score+=Math.min(myStrikes.length*2,4);reasons.push(myStrikes.length+' strike(s) in the last 90 days');}
     const myOverdue=(trainings||[]).filter(x=>x.staff_id===s.id&&x.due_date&&x.due_date<today);
@@ -6893,7 +6893,7 @@ async function loadPortalStaff(clientId){
         <div class="sc-name">${s.name}</div>
         <div class="sc-role">${s.role||'—'}${s.employee_id?' · '+s.employee_id:''}</div>
         <div class="sc-meta"><span class="badge ${sb[s.status]||'badge-gray'}">${s.status}</span> ${riskBadgeHtml(riskMap[s.id])}</div>
-        <div class="sc-meta">Rating <span class="sc-rating">${s.rating!=null?s.rating:'—'}</span> · Trained ${s.last_training_date||'—'}</div>
+        <div class="sc-meta">${tierBadgeHtml(s.tier)} · Trained ${s.last_training_date||'—'}</div>
         <div style="margin-top:10px;display:flex;gap:6px;justify-content:center" onclick="event.stopPropagation()">
           <button class="btn-sm" onclick="openStaffDetail('${s.id}')">View / Note</button>
           <button class="btn-sm" onclick="editRecord('client_staff','${s.id}',()=>loadPortalStaff(currentUser.clientId))">Edit</button>
@@ -7186,7 +7186,7 @@ async function loadClientViewTab(tab,clientId){
         <div class="sc-name">${s.name}</div>
         <div class="sc-role">${s.role||'—'}${s.employee_id?' · '+s.employee_id:''}</div>
         <div class="sc-meta"><span class="badge ${sb[s.status]||'badge-gray'}">${s.status}</span> ${riskBadgeHtml(riskMap[s.id])}</div>
-        <div class="sc-meta">Rating <span class="sc-rating">${s.rating!=null?s.rating:'—'}</span> · Trained ${s.last_training_date||'—'}</div>
+        <div class="sc-meta">${tierBadgeHtml(s.tier)} · Trained ${s.last_training_date||'—'}</div>
       </div>`;
     }).join('')+`</div>`:'<p style="font-size:13px;color:var(--muted)">No staff records.</p>';
   } else if(tab==='cv-docs'){
@@ -7517,6 +7517,15 @@ async function deleteKBEntry(id,targetId){
 }
 
 // ══ GEOFENCE (work location for clock-in) ══
+const TIER_META={
+  Gold:{emoji:'🥇',color:'#8A6D1A',bg:'#F6EFE1'},
+  Silver:{emoji:'🥈',color:'#5A5A5A',bg:'#EEEEEE'},
+  Bronze:{emoji:'🥉',color:'#7A4A24',bg:'#F1E3D3'}
+};
+function tierBadgeHtml(tier){
+  const t=tier||'Bronze';const m=TIER_META[t]||TIER_META.Bronze;
+  return `<span class="badge" style="background:${m.bg};color:${m.color}">${m.emoji} ${t}</span>`;
+}
 // Local calendar date (not UTC) — Nigeria is UTC+1, so toISOString() can
 // land on the wrong day right around local midnight. Always use this for
 // "today" in attendance, not new Date().toISOString().slice(0,10).
@@ -9965,20 +9974,31 @@ async function addNotice(){
 
 // ══ LEADERBOARD (shared) ══
 async function loadLeaderboard(clientId,targetId){
-  const {data}=await db.from('client_staff').select('*').eq('client_id',clientId).neq('status','Terminated').order('rating',{ascending:false});
+  const {data}=await db.from('client_staff').select('*').eq('client_id',clientId).neq('status','Terminated').order('name',{ascending:true});
   const rows=data||[];const el=document.getElementById(targetId);if(!el)return;
   if(!rows.length){el.innerHTML='<p style="font-family:Arial;font-size:13px;color:var(--muted)">No staff to rank yet.</p>';return;}
-  const medal=i=>i===0?'🥇':i===1?'🥈':i===2?'🥉':(i+1)+'.';
-  el.innerHTML=rows.map((s,i)=>`<div style="display:flex;align-items:center;gap:12px;border:1px solid var(--border);border-radius:9px;padding:10px 14px;margin-bottom:6px;${i===0?'background:var(--gold-light)':''}">
-    <div style="font-size:16px;width:28px;text-align:center">${medal(i)}</div>
-    <div style="flex:1"><strong style="font-family:Arial;font-size:13px">${s.name}</strong><br><span style="font-family:Arial;font-size:11px;color:var(--muted)">${s.role||''}</span></div>
-    <input type="number" id="lb-rating-${s.id}" value="${s.rating!=null?s.rating:0}" style="width:60px;padding:5px 8px;border:1px solid var(--border);border-radius:9px;font-family:Arial;font-size:13px;text-align:center">
-    <button class="btn-sm" onclick="updateStaffRating('${s.id}','${targetId}','${clientId}')">Save</button>
-  </div>`).join('');
+  el.innerHTML=['Gold','Silver','Bronze'].map(tier=>{
+    const meta=TIER_META[tier];
+    const inTier=rows.filter(s=>(s.tier||'Bronze')===tier);
+    return `<div class="card" style="padding:14px 18px;margin-bottom:14px;border-left:4px solid ${meta.color}">
+      <div style="font-size:14px;font-weight:600;color:${meta.color};margin-bottom:10px">${meta.emoji} ${tier} Tier <span style="font-weight:400;color:var(--muted);font-size:12px">(${inTier.length})</span></div>
+      ${inTier.length?inTier.map(s=>`<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--border)">
+        <div><strong style="font-family:Arial;font-size:13px">${s.name}</strong> <span style="font-family:Arial;font-size:11px;color:var(--muted)">${s.role||''}</span></div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <select id="lb-tier-${s.id}" style="padding:4px 8px;border:1px solid var(--border);border-radius:8px;font-size:12px">
+            <option value="Gold" ${tier==='Gold'?'selected':''}>Gold</option>
+            <option value="Silver" ${tier==='Silver'?'selected':''}>Silver</option>
+            <option value="Bronze" ${tier==='Bronze'?'selected':''}>Bronze</option>
+          </select>
+          <button class="btn-sm" onclick="updateStaffTier('${s.id}','${targetId}','${clientId}')">Save</button>
+        </div>
+      </div>`).join(''):'<p style="font-family:Arial;font-size:12px;color:var(--muted)">Nobody here yet.</p>'}
+    </div>`;
+  }).join('');
 }
-async function updateStaffRating(staffId,targetId,clientId){
-  const val=parseFloat(document.getElementById('lb-rating-'+staffId).value)||0;
-  await db.from('client_staff').update({rating:val}).eq('id',staffId);
+async function updateStaffTier(staffId,targetId,clientId){
+  const val=document.getElementById('lb-tier-'+staffId).value;
+  await db.from('client_staff').update({tier:val}).eq('id',staffId);
   loadLeaderboard(clientId,targetId);
 }
 
