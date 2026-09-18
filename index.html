@@ -1019,6 +1019,19 @@ self.addEventListener('notificationclick',function(e){
         </div>
         <div id="dhr-summary" style="margin-bottom:16px"></div>
         <div id="dhr-list"></div>
+
+        <div style="margin-top:28px;padding-top:20px;border-top:1px solid var(--border)">
+          <div class="page-title" style="font-size:20px">📝 Daily Reports</div>
+          <div class="page-sub">What staff logged as their day's work, for the date selected above</div>
+          <div id="dhr-daily-reports-list"></div>
+        </div>
+
+        <div style="margin-top:28px;padding-top:20px;border-top:1px solid var(--border)">
+          <div class="page-title" style="font-size:20px">⚠ Incident Reports</div>
+          <div class="page-sub">Everything staff have filed that isn't marked Resolved yet — not limited to the date above</div>
+          <div id="dhr-incidents-list"></div>
+        </div>
+
         <div style="margin-top:28px;padding-top:20px;border-top:1px solid var(--border)">
           <div class="page-title" style="font-size:20px">🎓 Training At a Glance</div>
           <div class="page-sub">Everyone who hasn't started a single course yet</div>
@@ -5332,7 +5345,7 @@ async function submitIncidentReport(){
 // ══ STAFF ATTENDANCE (clock in/out) ══
 let _spOpenAttendanceId=null;
 async function loadSpAttendance(){
-  const today=new Date().toISOString().slice(0,10);
+  const today=localDateStr();
   let openToday=null;
   const {data:todayRows}=await db.from('staff_attendance').select('*').eq('staff_id',_spStaffId).eq('work_date',today).order('clock_in',{ascending:false});
   openToday=(todayRows||[]).find(r=>!r.clock_out)||null;
@@ -5375,38 +5388,54 @@ function computeEarlyLeave(closingTime){
   return diffMin>0?{isEarly:true,earlyMinutes:diffMin}:{isEarly:false,earlyMinutes:0};
 }
 async function toggleClock(){
-  const today=new Date().toISOString().slice(0,10);
+  const today=localDateStr();
   const statusEl=document.getElementById('sp-clock-status');
-  if(_spOpenAttendanceId){
-    const {data:client}=await db.from('clients').select('closing_time').eq('id',_spClientId).single();
-    const el=computeEarlyLeave(client&&client.closing_time);
-    await db.from('staff_attendance').update({clock_out:new Date().toISOString(),is_early_leave:el.isEarly,early_minutes:el.earlyMinutes}).eq('id',_spOpenAttendanceId);
-    loadSpAttendance();
-    return;
-  }
-  // Clocking IN — check geofence first
-  const {data:client}=await db.from('clients').select('work_lat,work_lng,work_radius_m,opening_time,late_grace_minutes').eq('id',_spClientId).single();
-  if(client&&client.work_lat!=null&&client.work_lng!=null){
-    if(!navigator.geolocation){statusEl.textContent='Your device does not support location — ask your consultant for help.';return;}
-    statusEl.textContent='Checking your location…';
-    navigator.geolocation.getCurrentPosition(async(pos)=>{
-      const dist=haversineMeters(pos.coords.latitude,pos.coords.longitude,client.work_lat,client.work_lng);
-      const radius=client.work_radius_m||150;
-      if(dist>radius){
-        statusEl.textContent=`You're ${Math.round(dist)}m from work — you need to be within ${radius}m to clock in.`;
-        return;
-      }
-      const lt=computeLateness(client.opening_time,client.late_grace_minutes);
+  const btn=document.getElementById('sp-clock-btn');
+  btn.disabled=true;
+  try{
+    // Always re-check the database fresh — never trust a stale in-memory flag,
+    // that's what was causing "it thinks I never signed in" when clocking out.
+    const {data:todayRows}=await db.from('staff_attendance').select('*').eq('staff_id',_spStaffId).eq('work_date',today).order('clock_in',{ascending:false});
+    const openToday=(todayRows||[]).find(r=>!r.clock_out)||null;
+    _spOpenAttendanceId=openToday?openToday.id:null;
+
+    if(_spOpenAttendanceId){
+      const {data:client}=await db.from('clients').select('closing_time').eq('id',_spClientId).single();
+      const el=computeEarlyLeave(client&&client.closing_time);
+      await db.from('staff_attendance').update({clock_out:new Date().toISOString(),is_early_leave:el.isEarly,early_minutes:el.earlyMinutes}).eq('id',_spOpenAttendanceId);
+      await loadSpAttendance();
+      return;
+    }
+    // Clocking IN — check geofence first
+    const {data:client}=await db.from('clients').select('work_lat,work_lng,work_radius_m,opening_time,late_grace_minutes').eq('id',_spClientId).single();
+    if(client&&client.work_lat!=null&&client.work_lng!=null){
+      if(!navigator.geolocation){statusEl.textContent='Your device does not support location — ask your consultant for help.';return;}
+      statusEl.textContent='Checking your location…';
+      navigator.geolocation.getCurrentPosition(async(pos)=>{
+        const dist=haversineMeters(pos.coords.latitude,pos.coords.longitude,client.work_lat,client.work_lng);
+        const radius=client.work_radius_m||150;
+        if(dist>radius){
+          statusEl.textContent=`You're ${Math.round(dist)}m from work — you need to be within ${radius}m to clock in.`;
+          btn.disabled=false;
+          return;
+        }
+        const lt=computeLateness(client.opening_time,client.late_grace_minutes);
+        await db.from('staff_attendance').insert({staff_id:_spStaffId,client_id:_spClientId,work_date:today,clock_in:new Date().toISOString(),is_late:lt.isLate,late_minutes:lt.lateMinutes});
+        await loadSpAttendance();
+        btn.disabled=false;
+      },(err)=>{
+        statusEl.textContent='Could not confirm your location: '+err.message+'. Please allow location access and try again.';
+        btn.disabled=false;
+      },{enableHighAccuracy:true,timeout:10000});
+      return; // geolocation callback re-enables the button itself
+    } else {
+      // No work location set yet for this client — allow clock-in without a check
+      const lt=computeLateness(client&&client.opening_time,client&&client.late_grace_minutes);
       await db.from('staff_attendance').insert({staff_id:_spStaffId,client_id:_spClientId,work_date:today,clock_in:new Date().toISOString(),is_late:lt.isLate,late_minutes:lt.lateMinutes});
-      loadSpAttendance();
-    },(err)=>{
-      statusEl.textContent='Could not confirm your location: '+err.message+'. Please allow location access and try again.';
-    },{enableHighAccuracy:true,timeout:10000});
-  } else {
-    // No work location set yet for this client — allow clock-in without a check
-    const lt=computeLateness(client&&client.opening_time,client&&client.late_grace_minutes);
-    await db.from('staff_attendance').insert({staff_id:_spStaffId,client_id:_spClientId,work_date:today,clock_in:new Date().toISOString(),is_late:lt.isLate,late_minutes:lt.lateMinutes});
-    loadSpAttendance();
+      await loadSpAttendance();
+    }
+  } finally {
+    btn.disabled=false;
   }
 }
 
@@ -7488,6 +7517,14 @@ async function deleteKBEntry(id,targetId){
 }
 
 // ══ GEOFENCE (work location for clock-in) ══
+// Local calendar date (not UTC) — Nigeria is UTC+1, so toISOString() can
+// land on the wrong day right around local midnight. Always use this for
+// "today" in attendance, not new Date().toISOString().slice(0,10).
+function localDateStr(d){
+  d=d||new Date();
+  const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
 function haversineMeters(lat1,lng1,lat2,lng2){
   const R=6371000,toRad=d=>d*Math.PI/180;
   const dLat=toRad(lat2-lat1),dLng=toRad(lng2-lng1);
@@ -11662,21 +11699,29 @@ function gateAddClient(){
 // ══ DAILY HR REPORT (cross-client daily attendance digest) ══
 async function loadDailyHRReport(){
   const dateEl=document.getElementById('dhr-date');
-  if(!dateEl.value)dateEl.value=new Date().toISOString().slice(0,10);
+  if(!dateEl.value)dateEl.value=localDateStr();
   const date=dateEl.value;
+  const {data:activeClients}=await db.from('clients').select('id,business_name').eq('staff_portal_active',true).order('business_name',{ascending:true});
+  const portalClients=activeClients||[];
+  const portalClientIds=portalClients.map(c=>c.id);
   const filterEl=document.getElementById('dhr-client-filter');
-  if(filterEl.options.length<=1&&allClients.length){
-    const prev=filterEl.value;
-    filterEl.innerHTML='<option value="">All Clients</option>'+allClients.map(c=>`<option value="${c.id}">${c.business_name}</option>`).join('');
-    filterEl.value=prev;
+  const prev=filterEl.value;
+  filterEl.innerHTML='<option value="">All Portal Clients</option>'+portalClients.map(c=>`<option value="${c.id}">${c.business_name}</option>`).join('');
+  filterEl.value=prev;
+  if(!portalClients.length){
+    document.getElementById('dhr-summary').innerHTML='<p style="font-family:Arial;font-size:13px;color:var(--muted)">No clients are set up to use the staff portal yet. Mark a client as portal-active from ✎ Edit Client Info.</p>';
+    document.getElementById('dhr-list').innerHTML='';
+    document.getElementById('dhr-training-gap-list').innerHTML='';
+    document.getElementById('dhr-daily-reports-list').innerHTML='';
+    document.getElementById('dhr-incidents-list').innerHTML='';
+    return;
   }
   const clientFilter=filterEl.value;
-  let q=db.from('staff_attendance').select('*,client_staff(name),clients(business_name)').eq('work_date',date);
-  if(clientFilter)q=q.eq('client_id',clientFilter);
+  const scopedClientIds=clientFilter?[clientFilter]:portalClientIds;
+  let q=db.from('staff_attendance').select('*,client_staff(name),clients(business_name)').eq('work_date',date).in('client_id',scopedClientIds);
   const {data:records}=await q.order('clock_in',{ascending:true});
   const rows=records||[];
-  let staffQ=db.from('client_staff').select('id,name,client_id,clients(business_name)').eq('status','Active');
-  if(clientFilter)staffQ=staffQ.eq('client_id',clientFilter);
+  let staffQ=db.from('client_staff').select('id,name,client_id,clients(business_name)').eq('status','Active').in('client_id',scopedClientIds);
   const {data:allStaff}=await staffQ;
   const clockedIds=new Set(rows.map(r=>r.staff_id));
   const absentees=(allStaff||[]).filter(s=>!clockedIds.has(s.id));
@@ -11698,15 +11743,49 @@ async function loadDailyHRReport(){
     }).join('')+`</tbody></table>`:'<p style="font-family:Arial;font-size:13px;color:var(--muted)">No clock-ins recorded for this date.</p>')
   +(absentees.length?`<div style="margin-top:18px"><div style="font-family:Arial;font-size:13px;font-weight:600;color:var(--danger);margin-bottom:8px">⚠ Didn't clock in on this date</div>`+
     absentees.map(s=>`<div style="font-family:Arial;font-size:12.5px;color:var(--ink2);padding:6px 0;border-bottom:1px solid var(--border)">${s.name} — ${(s.clients&&s.clients.business_name)||'—'}</div>`).join('')+`</div>`:'');
-  loadTrainingGapList(clientFilter);
+  loadTrainingGapList(scopedClientIds);
+  loadDailyReportsList(scopedClientIds,date);
+  loadDailyIncidentsList(scopedClientIds);
 }
-async function loadTrainingGapList(clientFilter){
+async function loadDailyReportsList(scopedClientIds,date){
+  const el=document.getElementById('dhr-daily-reports-list');if(!el)return;
+  const {data}=await db.from('staff_daily_reports').select('*,client_staff(name),clients(business_name)').eq('report_date',date).in('client_id',scopedClientIds).order('created_at',{ascending:false});
+  const rows=data||[];
+  el.innerHTML=rows.length?rows.map(r=>`<div class="card" style="padding:12px 16px;margin-bottom:8px">
+    <div style="font-family:Arial;font-size:12px;color:var(--muted);margin-bottom:4px"><strong style="color:var(--ink)">${(r.client_staff&&r.client_staff.name)||'—'}</strong> · ${(r.clients&&r.clients.business_name)||'—'}</div>
+    <div style="font-family:Arial;font-size:13px;color:var(--ink2)">${r.content}</div>
+  </div>`).join(''):'<p style="font-family:Arial;font-size:13px;color:var(--muted)">No daily reports logged for this date.</p>';
+}
+async function loadDailyIncidentsList(scopedClientIds){
+  const el=document.getElementById('dhr-incidents-list');if(!el)return;
+  const {data}=await db.from('staff_incidents').select('*,client_staff(name),clients(business_name)').neq('status','Resolved').in('client_id',scopedClientIds).order('incident_date',{ascending:false});
+  const rows=data||[];
+  el.innerHTML=rows.length?rows.map(r=>`<div class="card" style="padding:12px 16px;margin-bottom:8px;border:1.5px solid var(--danger)">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex-wrap:wrap">
+      <div style="font-family:Arial;font-size:12px;color:var(--muted)"><strong style="color:var(--ink)">${(r.client_staff&&r.client_staff.name)||'—'}</strong> · ${(r.clients&&r.clients.business_name)||'—'} · ${r.incident_date}</div>
+      <span class="badge badge-red">${r.status}</span>
+    </div>
+    <div style="font-family:Arial;font-size:13px;color:var(--ink2);margin-top:6px">${r.description}</div>
+    <div style="margin-top:8px;display:flex;gap:6px">
+      <button class="btn-sm" onclick="markIncidentReviewed('${r.id}')">Mark Reviewed</button>
+      <button class="btn-sm" onclick="markIncidentResolved('${r.id}')">Mark Resolved</button>
+    </div>
+  </div>`).join(''):'<p style="font-family:Arial;font-size:13px;color:var(--success)">✓ No open incidents.</p>';
+}
+async function markIncidentReviewed(id){
+  await db.from('staff_incidents').update({status:'Reviewed'}).eq('id',id);
+  loadDailyHRReport();
+}
+async function markIncidentResolved(id){
+  await db.from('staff_incidents').update({status:'Resolved'}).eq('id',id);
+  loadDailyHRReport();
+}
+async function loadTrainingGapList(scopedClientIds){
   const el=document.getElementById('dhr-training-gap-list');if(!el)return;
-  let staffQ=db.from('client_staff').select('id,name,client_id,clients(business_name)').eq('status','Active');
-  if(clientFilter)staffQ=staffQ.eq('client_id',clientFilter);
+  let staffQ=db.from('client_staff').select('id,name,client_id,clients(business_name)').eq('status','Active').in('client_id',scopedClientIds);
   const {data:allStaff}=await staffQ;
   const staff=allStaff||[];
-  if(!staff.length){el.innerHTML='<p style="font-family:Arial;font-size:13px;color:var(--muted)">No active staff on file.</p>';return;}
+  if(!staff.length){el.innerHTML='<p style="font-family:Arial;font-size:13px;color:var(--muted)">No active staff on file for portal-active clients.</p>';return;}
   const staffIds=staff.map(s=>s.id);
   const {data:enrollments}=await db.from('course_enrollments').select('person_id,status,progress_pct').eq('person_type','staff').in('person_id',staffIds.length?staffIds:['00000000-0000-0000-0000-000000000000']);
   const rows=enrollments||[];
