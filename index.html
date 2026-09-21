@@ -8,6 +8,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Jost:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
 <style>
 :root{
   --ink:#1B2A4A;--ink2:#28395e;--gold:#C9A24B;--gold-light:#F7F5F0;--gold-mid:#e8d9b5;
@@ -613,6 +614,14 @@ self.addEventListener('notificationclick',function(e){
       <div id="sp-incident-feedback" style="margin-top:8px"></div>
       <div style="margin-top:16px;font-family:Arial;font-size:11px;text-transform:uppercase;color:var(--muted)">Your Filed Incidents</div>
       <div id="sp-incidents-list" style="margin-top:8px"></div>
+    </div>
+
+    <!-- FACE REGISTRATION (for photo-match check at clock-in) -->
+    <div id="sp-face-box" style="background:white;border:1px solid var(--border);border-radius:12px;padding:24px;margin-bottom:16px">
+      <div style="font-family:Arial;font-size:11px;text-transform:uppercase;color:var(--muted);margin-bottom:6px">🙂 Face on File</div>
+      <div style="font-family:Arial;font-size:11.5px;color:var(--muted);margin-bottom:10px">One quick photo so your clock-in photos can be checked against it automatically. Nobody sees this photo except your consultant.</div>
+      <div id="sp-face-status" style="font-family:Arial;font-size:13px;margin-bottom:10px"></div>
+      <button class="btn-save" onclick="registerMyFace()">📷 Register My Face</button>
     </div>
 
     <!-- ATTENDANCE / CLOCK IN-OUT -->
@@ -5244,6 +5253,7 @@ async function showStaffPortal(staff){
   await loadSpRotaCalendar();
   await loadSpSwapRequests();
   await loadClientStaffDetails();
+  await loadMyFaceStatus();
 }
 // ══ CLIENT STAFF PERSONAL/HR DETAILS (self-filled, HR-visible) ══
 async function loadClientStaffDetails(){
@@ -5390,6 +5400,120 @@ function computeEarlyLeave(closingTime){
   const diffMin=Math.round((closeToday-now)/60000);
   return diffMin>0?{isEarly:true,earlyMinutes:diffMin}:{isEarly:false,earlyMinutes:0};
 }
+// ══ FACE MATCHING (in-browser, free — no photo ever leaves the device for this) ══
+const FACE_MODEL_URL='https://cdn.jsdelivr.net/gh/justadudewhohacks/face-api.js@master/weights';
+let _faceModelsLoading=null;
+function loadFaceModels(){
+  if(_faceModelsLoading)return _faceModelsLoading;
+  _faceModelsLoading=(async()=>{
+    if(typeof faceapi==='undefined')throw new Error('face library not loaded');
+    await Promise.all([
+      faceapi.nets.tinyFaceDetector.loadFromUri(FACE_MODEL_URL),
+      faceapi.nets.faceLandmark68Net.loadFromUri(FACE_MODEL_URL),
+      faceapi.nets.faceRecognitionNet.loadFromUri(FACE_MODEL_URL)
+    ]);
+  })();
+  return _faceModelsLoading;
+}
+async function getFaceDescriptorFromDataUrl(dataUrl){
+  try{
+    await loadFaceModels();
+    const img=await faceapi.fetchImage(dataUrl);
+    const result=await faceapi.detectSingleFace(img,new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
+    return result?Array.from(result.descriptor):null;
+  }catch(e){
+    console.error('Face detection failed',e);
+    return null;
+  }
+}
+function faceDescriptorDistance(a,b){
+  if(!a||!b||a.length!==b.length)return null;
+  let sum=0;
+  for(let i=0;i<a.length;i++)sum+=(a[i]-b[i])*(a[i]-b[i]);
+  return Math.sqrt(sum);
+}
+const FACE_MATCH_THRESHOLD=0.6; // standard face-api.js same-person cutoff
+async function loadMyFaceStatus(){
+  const el=document.getElementById('sp-face-status');if(!el)return;
+  const {data}=await db.from('client_staff').select('face_descriptor').eq('id',_spStaffId).maybeSingle();
+  if(data&&data.face_descriptor){
+    el.innerHTML='<span style="color:var(--success)">✓ Face on file — your clock-in photos are being checked automatically.</span>';
+  } else {
+    el.innerHTML='<span style="color:var(--danger)">Not registered yet — clock-in photos aren\'t being checked. Tap below.</span>';
+  }
+}
+async function registerMyFace(){
+  const el=document.getElementById('sp-face-status');
+  const photo=await captureFacePhoto('Look straight at the camera in good light for this one — it becomes your reference photo.');
+  if(!photo){el.innerHTML='<span style="color:var(--danger)">Cancelled.</span>';return;}
+  el.innerHTML='Processing…';
+  const descriptor=await getFaceDescriptorFromDataUrl(photo);
+  if(!descriptor){
+    el.innerHTML='<span style="color:var(--danger)">Couldn\'t clearly detect a face in that photo — try again with better lighting, facing the camera directly.</span>';
+    return;
+  }
+  const {error}=await db.from('client_staff').update({face_descriptor:descriptor}).eq('id',_spStaffId);
+  if(error){el.innerHTML=`<span style="color:var(--danger)">${error.message}</span>`;return;}
+  el.innerHTML='<span style="color:var(--success)">✓ Face registered. Your clock-in photos will now be checked automatically.</span>';
+}
+
+// ══ CLOCK-IN PHOTO CAPTURE (anti buddy-punching — required, clock-in only) ══
+let _cipStream=null,_cipResolve=null;
+function captureFacePhoto(promptText){
+  return new Promise((resolve)=>{
+    _cipResolve=resolve;
+    const video=document.getElementById('cip-video');
+    const statusEl=document.getElementById('cip-status');
+    const countEl=document.getElementById('cip-countdown');
+    const promptEl=document.getElementById('cip-prompt');
+    if(promptEl&&promptText)promptEl.textContent=promptText;
+    statusEl.textContent='';countEl.textContent='';
+    openModal('modal-clockin-photo');
+    if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){
+      statusEl.textContent='Your device/browser does not support camera capture. Ask your consultant for help.';
+      setTimeout(()=>{closeModal('modal-clockin-photo');resolve(null);},2500);
+      return;
+    }
+    navigator.mediaDevices.getUserMedia({video:{facingMode:'user'},audio:false}).then(stream=>{
+      _cipStream=stream;
+      video.srcObject=stream;
+      let n=2;
+      countEl.textContent=n;
+      const tick=setInterval(()=>{
+        n--;
+        if(n>0){countEl.textContent=n;return;}
+        clearInterval(tick);
+        countEl.textContent='📸';
+        const canvas=document.getElementById('cip-canvas');
+        const size=320;
+        canvas.width=size;canvas.height=size;
+        const ctx=canvas.getContext('2d');
+        // center-crop the video frame to a square, mirrored to match the preview
+        const vw=video.videoWidth,vh=video.videoHeight,side=Math.min(vw,vh);
+        ctx.translate(size,0);ctx.scale(-1,1);
+        ctx.drawImage(video,(vw-side)/2,(vh-side)/2,side,side,0,0,size,size);
+        const dataUrl=canvas.toDataURL('image/jpeg',0.6);
+        stopClockInCamera();
+        closeModal('modal-clockin-photo');
+        resolve(dataUrl);
+      },1000);
+    }).catch(err=>{
+      statusEl.textContent='Camera access is required. Please allow it and try again.';
+      setTimeout(()=>{closeModal('modal-clockin-photo');resolve(null);},2500);
+    });
+  });
+}
+function capturePhotoForClockIn(){
+  return captureFacePhoto("A quick photo is required to clock in — this protects everyone's pay records.");
+}
+function stopClockInCamera(){
+  if(_cipStream){_cipStream.getTracks().forEach(t=>t.stop());_cipStream=null;}
+}
+function cancelClockInPhoto(){
+  stopClockInCamera();
+  closeModal('modal-clockin-photo');
+  if(_cipResolve){_cipResolve(null);_cipResolve=null;}
+}
 async function toggleClock(){
   const today=localDateStr();
   const statusEl=document.getElementById('sp-clock-status');
@@ -5409,7 +5533,7 @@ async function toggleClock(){
       await loadSpAttendance();
       return;
     }
-    // Clocking IN — check geofence first
+    // Clocking IN — check geofence first, then require a photo before saving
     const {data:client}=await db.from('clients').select('work_lat,work_lng,work_radius_m,opening_time,late_grace_minutes').eq('id',_spClientId).single();
     if(client&&client.work_lat!=null&&client.work_lng!=null){
       if(!navigator.geolocation){statusEl.textContent='Your device does not support location — ask your consultant for help.';return;}
@@ -5422,24 +5546,47 @@ async function toggleClock(){
           btn.disabled=false;
           return;
         }
-        const lt=computeLateness(client.opening_time,client.late_grace_minutes);
-        await db.from('staff_attendance').insert({staff_id:_spStaffId,client_id:_spClientId,work_date:today,clock_in:new Date().toISOString(),is_late:lt.isLate,late_minutes:lt.lateMinutes});
-        await loadSpAttendance();
-        btn.disabled=false;
+        await finishClockIn(today,client,statusEl,btn);
       },(err)=>{
         statusEl.textContent='Could not confirm your location: '+err.message+'. Please allow location access and try again.';
         btn.disabled=false;
       },{enableHighAccuracy:true,timeout:10000});
-      return; // geolocation callback re-enables the button itself
+      return; // async path re-enables the button itself
     } else {
-      // No work location set yet for this client — allow clock-in without a check
-      const lt=computeLateness(client&&client.opening_time,client&&client.late_grace_minutes);
-      await db.from('staff_attendance').insert({staff_id:_spStaffId,client_id:_spClientId,work_date:today,clock_in:new Date().toISOString(),is_late:lt.isLate,late_minutes:lt.lateMinutes});
-      await loadSpAttendance();
+      // No work location set yet for this client — skip the geofence check
+      await finishClockIn(today,client,statusEl,btn);
     }
   } finally {
     btn.disabled=false;
   }
+}
+async function finishClockIn(today,client,statusEl,btn){
+  statusEl.textContent='Taking your clock-in photo…';
+  const photo=await capturePhotoForClockIn();
+  if(!photo){
+    statusEl.textContent='Clock-in cancelled — a photo is required.';
+    btn.disabled=false;
+    return;
+  }
+  statusEl.textContent='Checking your photo…';
+  const {data:me}=await db.from('client_staff').select('face_descriptor').eq('id',_spStaffId).maybeSingle();
+  let faceMatchScore=null,faceMatchFlagged=false;
+  if(me&&me.face_descriptor){
+    const thisDescriptor=await getFaceDescriptorFromDataUrl(photo);
+    if(thisDescriptor){
+      const dist=faceDescriptorDistance(thisDescriptor,me.face_descriptor);
+      if(dist!=null){
+        faceMatchScore=dist;
+        faceMatchFlagged=dist>FACE_MATCH_THRESHOLD;
+      }
+    } else {
+      faceMatchFlagged=true; // no face clearly detected in the clock-in photo — worth a look
+    }
+  }
+  const lt=computeLateness(client&&client.opening_time,client&&client.late_grace_minutes);
+  await db.from('staff_attendance').insert({staff_id:_spStaffId,client_id:_spClientId,work_date:today,clock_in:new Date().toISOString(),is_late:lt.isLate,late_minutes:lt.lateMinutes,clock_in_photo:photo,face_match_score:faceMatchScore,face_match_flagged:faceMatchFlagged});
+  await loadSpAttendance();
+  btn.disabled=false;
 }
 
 // ══ STAFF LEAVE ══
@@ -11717,6 +11864,14 @@ function gateAddClient(){
 }
 
 // ══ DAILY HR REPORT (cross-client daily attendance digest) ══
+function viewClockInPhoto(dataUrl,name){
+  const win=document.createElement('div');
+  win.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer';
+  win.innerHTML=`<img src="${dataUrl}" style="max-width:90vw;max-height:80vh;border-radius:12px;border:2px solid #C9A24B">
+    <div style="color:#fff;font-family:Arial;font-size:14px;margin-top:14px">${name} — tap anywhere to close</div>`;
+  win.onclick=()=>win.remove();
+  document.body.appendChild(win);
+}
 async function loadDailyHRReport(){
   const dateEl=document.getElementById('dhr-date');
   if(!dateEl.value)dateEl.value=localDateStr();
@@ -11748,18 +11903,21 @@ async function loadDailyHRReport(){
   const lateCount=rows.filter(r=>r.is_late).length;
   const earlyCount=rows.filter(r=>r.is_early_leave).length;
   const stillOpenCount=rows.filter(r=>!r.clock_out).length;
+  const mismatchCount=rows.filter(r=>r.face_match_flagged).length;
   document.getElementById('dhr-summary').innerHTML=`<div class="card" style="padding:14px 18px;display:flex;gap:24px;flex-wrap:wrap;font-family:Arial;font-size:13px">
     <div><strong>${rows.length}</strong> clocked in</div>
     <div style="color:${lateCount?'var(--danger)':'var(--muted)'}"><strong>${lateCount}</strong> late</div>
     <div style="color:${earlyCount?'var(--danger)':'var(--muted)'}"><strong>${earlyCount}</strong> left early</div>
     <div><strong>${stillOpenCount}</strong> still clocked in</div>
     <div style="color:${absentees.length?'var(--danger)':'var(--muted)'}"><strong>${absentees.length}</strong> didn't clock in</div>
+    <div style="color:${mismatchCount?'var(--danger)':'var(--muted)'}"><strong>${mismatchCount}</strong> photo mismatch${mismatchCount===1?'':'es'}</div>
   </div>`;
   const list=document.getElementById('dhr-list');
-  list.innerHTML=(rows.length?`<table class="data-table"><thead><tr><th>Staff</th><th>Client</th><th>Clock In</th><th>Clock Out</th><th>Flags</th></tr></thead><tbody>`+
+  list.innerHTML=(rows.length?`<table class="data-table"><thead><tr><th>Photo</th><th>Staff</th><th>Client</th><th>Clock In</th><th>Clock Out</th><th>Flags</th></tr></thead><tbody>`+
     rows.map(r=>{
       const flags=[r.is_late?`<span class="badge badge-red">Late ${r.late_minutes}m</span>`:'',r.is_early_leave?`<span class="badge badge-gold">Left early ${r.early_minutes}m</span>`:'',!r.clock_out?'<span class="badge badge-gray">Still on</span>':''].filter(Boolean).join(' ');
-      return `<tr><td style="font-size:13px">${(r.client_staff&&r.client_staff.name)||'—'}</td><td style="font-size:13px">${(r.clients&&r.clients.business_name)||'—'}</td><td style="font-family:'IBM Plex Mono',monospace;font-size:12px">${r.clock_in?new Date(r.clock_in).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}):'—'}</td><td style="font-family:'IBM Plex Mono',monospace;font-size:12px">${r.clock_out?new Date(r.clock_out).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}):'—'}</td><td>${flags||'—'}</td></tr>`;
+      const photoCell=r.clock_in_photo?`<span style="position:relative;display:inline-block"><img src="${r.clock_in_photo}" onclick="viewClockInPhoto('${r.clock_in_photo.replace(/'/g,"\\'")}','${((r.client_staff&&r.client_staff.name)||'').replace(/'/g,"\\'")}')" style="width:36px;height:36px;border-radius:50%;object-fit:cover;cursor:pointer;border:1.5px solid ${r.face_match_flagged?'var(--danger)':'var(--gold)'}">${r.face_match_flagged?'<span title="Face didn\'t clearly match — worth a look" style="position:absolute;bottom:-2px;right:-2px;background:var(--danger);color:#fff;border-radius:50%;width:14px;height:14px;font-size:9px;display:flex;align-items:center;justify-content:center">!</span>':''}</span>`:'<span style="color:var(--danger);font-size:11px">No photo</span>';
+      return `<tr><td>${photoCell}</td><td style="font-size:13px">${(r.client_staff&&r.client_staff.name)||'—'}</td><td style="font-size:13px">${(r.clients&&r.clients.business_name)||'—'}</td><td style="font-family:'IBM Plex Mono',monospace;font-size:12px">${r.clock_in?new Date(r.clock_in).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}):'—'}</td><td style="font-family:'IBM Plex Mono',monospace;font-size:12px">${r.clock_out?new Date(r.clock_out).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}):'—'}</td><td>${flags||'—'}</td></tr>`;
     }).join('')+`</tbody></table>`:'<p style="font-family:Arial;font-size:13px;color:var(--muted)">No clock-ins recorded for this date.</p>')
   +(absentees.length?`<div style="margin-top:18px"><div style="font-family:Arial;font-size:13px;font-weight:600;color:var(--danger);margin-bottom:8px">⚠ Didn't clock in on this date</div>`+
     absentees.map(s=>`<div style="font-family:Arial;font-size:12.5px;color:var(--ink2);padding:6px 0;border-bottom:1px solid var(--border)">${s.name} — ${(s.clients&&s.clients.business_name)||'—'}</div>`).join('')+`</div>`:'');
@@ -13047,6 +13205,22 @@ document.getElementById('rf-client').addEventListener('change',()=>renderTypeFie
         <button class="btn-cancel" onclick="closeModal('modal-request-swap')">Cancel</button>
       </div>
       <div id="swap-feedback" style="margin-top:8px"></div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-clockin-photo">
+  <div class="modal" style="width:360px">
+    <div class="modal-header">
+      <div class="modal-title">Confirm It's You</div>
+      <button class="modal-close" onclick="cancelClockInPhoto()">×</button>
+    </div>
+    <div class="modal-body" style="text-align:center">
+      <div id="cip-prompt" style="font-family:Arial;font-size:12px;color:var(--muted);margin-bottom:12px">A quick photo is required to clock in — this protects everyone's pay records.</div>
+      <video id="cip-video" autoplay playsinline muted style="width:100%;border-radius:12px;background:#000;transform:scaleX(-1)"></video>
+      <canvas id="cip-canvas" style="display:none"></canvas>
+      <div id="cip-countdown" style="font-family:'Cormorant Garamond',serif;font-size:28px;color:var(--gold);margin-top:10px;font-weight:600"></div>
+      <div id="cip-status" style="font-family:Arial;font-size:12px;color:var(--danger);margin-top:8px"></div>
     </div>
   </div>
 </div>
