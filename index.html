@@ -5529,7 +5529,8 @@ async function toggleClock(){
     if(_spOpenAttendanceId){
       const {data:client}=await db.from('clients').select('closing_time').eq('id',_spClientId).single();
       const el=computeEarlyLeave(client&&client.closing_time);
-      await db.from('staff_attendance').update({clock_out:new Date().toISOString(),is_early_leave:el.isEarly,early_minutes:el.earlyMinutes}).eq('id',_spOpenAttendanceId);
+      const {error:outErr}=await db.from('staff_attendance').update({clock_out:new Date().toISOString(),is_early_leave:el.isEarly,early_minutes:el.earlyMinutes}).eq('id',_spOpenAttendanceId);
+      if(outErr){statusEl.textContent='Could not save your clock-out: '+outErr.message;return;}
       await loadSpAttendance();
       return;
     }
@@ -5584,7 +5585,12 @@ async function finishClockIn(today,client,statusEl,btn){
     }
   }
   const lt=computeLateness(client&&client.opening_time,client&&client.late_grace_minutes);
-  await db.from('staff_attendance').insert({staff_id:_spStaffId,client_id:_spClientId,work_date:today,clock_in:new Date().toISOString(),is_late:lt.isLate,late_minutes:lt.lateMinutes,clock_in_photo:photo,face_match_score:faceMatchScore,face_match_flagged:faceMatchFlagged});
+  const {error:insertErr}=await db.from('staff_attendance').insert({staff_id:_spStaffId,client_id:_spClientId,work_date:today,clock_in:new Date().toISOString(),is_late:lt.isLate,late_minutes:lt.lateMinutes,clock_in_photo:photo,face_match_score:faceMatchScore,face_match_flagged:faceMatchFlagged});
+  if(insertErr){
+    statusEl.textContent='Could not save your clock-in: '+insertErr.message;
+    btn.disabled=false;
+    return;
+  }
   await loadSpAttendance();
   btn.disabled=false;
 }
