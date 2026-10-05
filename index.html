@@ -503,7 +503,7 @@ self.addEventListener('notificationclick',function(e){
     <!-- MY DETAILS NAG + FORM -->
     <div id="sp-details-nag" style="display:none;background:var(--gold-light);border:1.5px solid var(--gold);border-radius:12px;padding:16px 20px;margin-bottom:16px;cursor:pointer" onclick="document.getElementById('sp-details-form-box').scrollIntoView({behavior:'smooth'})">
       <div style="font-family:Arial;font-size:13px;font-weight:600;color:var(--ink)">📝 Complete your details</div>
-      <div style="font-family:Arial;font-size:12px;color:var(--ink2);margin-top:2px">We're missing some of your personal info — fill it in below so your file is complete.</div>
+      <div id="sp-details-nag-text" style="font-family:Arial;font-size:12px;color:var(--ink2);margin-top:2px">We're missing some of your personal info — fill it in below so your file is complete.</div>
     </div>
     <div id="sp-details-form-box" style="background:white;border:1px solid var(--border);border-radius:12px;padding:24px;margin-bottom:16px">
       <div style="font-family:Arial;font-size:11px;text-transform:uppercase;color:var(--muted);margin-bottom:4px">📝 My Details</div>
@@ -533,8 +533,48 @@ self.addEventListener('notificationclick',function(e){
         <div class="form-field"><label>Account Number</label><input type="text" id="csd-bank-account-number"></div>
         <div class="form-field" style="grid-column:1/-1"><label>Account Name</label><input type="text" id="csd-bank-account-name"></div>
 
-        <div class="form-field" style="grid-column:1/-1"><label>Food Allergies / Dietary Restrictions</label><input type="text" id="csd-allergies"></div>
+        <div class="form-field"><label>Emergency Contact Relationship</label><input type="text" id="csd-emergency-relationship" placeholder="e.g. Sister"></div>
+        <div class="form-field"><label>Next of Kin Address</label><input type="text" id="csd-nok-address"></div>
+        <div class="form-field"><label>Preferred Name</label><input type="text" id="csd-preferred-name" placeholder="What should we call you?"></div>
+        <div class="form-field"><label>Languages Spoken</label><input type="text" id="csd-languages" placeholder="e.g. English, Yoruba, Hausa"></div>
       </div>
+
+      <div style="font-family:Arial;font-size:11px;text-transform:uppercase;color:var(--muted);margin:18px 0 4px">🩺 Health &amp; Safety <span style="text-transform:none">(so we can keep you safe at work)</span></div>
+      <div class="form-grid">
+        <div class="form-field" style="grid-column:1/-1"><label>Food Allergies</label><input type="text" id="csd-allergies" placeholder="e.g. peanuts, shellfish — or 'None'"></div>
+        <div class="form-field" style="grid-column:1/-1"><label>Drug / Medicine Allergies</label><input type="text" id="csd-drug-allergies" placeholder="e.g. penicillin — or 'None'"></div>
+        <div class="form-field" style="grid-column:1/-1"><label>Other Allergies (latex, dust, cleaning chemicals, etc.)</label><input type="text" id="csd-other-allergies"></div>
+        <div class="form-field" style="grid-column:1/-1"><label>Dietary Requirements (e.g. halal, vegetarian, diabetic)</label><input type="text" id="csd-dietary"></div>
+        <div class="form-field" style="grid-column:1/-1"><label>Medical Conditions We Should Know About In An Emergency</label><input type="text" id="csd-medical-conditions" placeholder="e.g. asthma, epilepsy, diabetes — or 'None'"></div>
+        <div class="form-field" style="grid-column:1/-1"><label>Regular Medication</label><input type="text" id="csd-medications"></div>
+        <div class="form-field" style="grid-column:1/-1"><label>Anything we should adjust for you at work? (e.g. no heavy lifting, seating needs)</label><input type="text" id="csd-adjustments"></div>
+        <div class="form-field"><label>Religious / Prayer Accommodations (optional)</label><input type="text" id="csd-religious-needs"></div>
+        <div class="form-field"><label>Do you have a food-handler / health certificate?</label><select id="csd-health-cert"><option value="">Select</option><option>Yes</option><option>No</option><option>Not needed for my role</option></select></div>
+      </div>
+
+      <div style="font-family:Arial;font-size:11px;text-transform:uppercase;color:var(--muted);margin:18px 0 4px">🎓 Experience &amp; Skills</div>
+      <div class="form-grid">
+        <div class="form-field"><label>Highest Education</label><select id="csd-education"><option value="">Select</option><option>Primary</option><option>Secondary (SSCE/WAEC)</option><option>OND / NCE</option><option>HND / Bachelor's</option><option>Master's or higher</option><option>Trade / Vocational</option></select></div>
+        <div class="form-field"><label>Years of Work Experience</label><input type="number" min="0" id="csd-experience-years"></div>
+        <div class="form-field"><label>Previous Employer</label><input type="text" id="csd-prev-employer"></div>
+        <div class="form-field"><label>Previous Employer Contact (reference)</label><input type="text" id="csd-prev-employer-contact" placeholder="Name and phone"></div>
+        <div class="form-field" style="grid-column:1/-1"><label>Skills &amp; Certifications</label><input type="text" id="csd-skills" placeholder="e.g. first aid, cooking, childcare, computer skills"></div>
+      </div>
+
+      <div style="font-family:Arial;font-size:11px;text-transform:uppercase;color:var(--muted);margin:18px 0 4px">💼 Work Practicalities</div>
+      <div class="form-grid">
+        <div class="form-field"><label>How do you get to work?</label><select id="csd-transport"><option value="">Select</option><option>Walk</option><option>Bus / Public transport</option><option>Motorbike / Okada</option><option>Own car</option><option>Lift from someone</option></select></div>
+        <div class="form-field"><label>Travel Time to Work (minutes)</label><input type="number" min="0" id="csd-commute-minutes"></div>
+        <div class="form-field"><label>Uniform Size</label><select id="csd-uniform-size"><option value="">Select</option><option>XS</option><option>S</option><option>M</option><option>L</option><option>XL</option><option>XXL</option></select></div>
+        <div class="form-field"><label>Shoe Size</label><input type="text" id="csd-shoe-size"></div>
+        <div class="form-field"><label>Pension Fund Administrator (PFA)</label><input type="text" id="csd-pfa-name" placeholder="e.g. Stanbic IBTC Pension"></div>
+        <div class="form-field"><label>RSA PIN</label><input type="text" id="csd-rsa-pin"></div>
+        <div class="form-field" style="grid-column:1/-1"><label>Availability / Days You Cannot Work</label><input type="text" id="csd-availability" placeholder="e.g. Sundays for church, evening classes Tue/Thu"></div>
+        <div class="form-field" style="grid-column:1/-1"><label>Anything Else You Want Us To Know</label><textarea id="csd-other-notes" rows="3"></textarea></div>
+      </div>
+      <label style="display:flex;align-items:center;gap:8px;font-family:Arial;font-size:12px;color:var(--ink);margin-top:14px">
+        <input type="checkbox" id="csd-photo-consent" style="width:auto"> I am happy for my photo to be used in team and staff-recognition materials.
+      </label>
       <label style="display:flex;align-items:center;gap:8px;font-family:Arial;font-size:12px;color:var(--ink);margin-top:14px">
         <input type="checkbox" id="csd-agree" style="width:auto"> I confirm the details above are accurate.
       </label>
@@ -5262,6 +5302,17 @@ async function showStaffPortal(staff){
   await loadMyFaceStatus();
 }
 // ══ CLIENT STAFF PERSONAL/HR DETAILS (self-filled, HR-visible) ══
+const CSD_EXTRA=[
+  ['csd-emergency-relationship','emergency_contact_relationship'],['csd-nok-address','next_of_kin_address'],
+  ['csd-preferred-name','preferred_name'],['csd-languages','languages'],
+  ['csd-drug-allergies','drug_allergies'],['csd-other-allergies','other_allergies'],['csd-dietary','dietary_requirements'],
+  ['csd-medical-conditions','medical_conditions'],['csd-medications','medications'],['csd-adjustments','work_adjustments'],
+  ['csd-religious-needs','religious_needs'],['csd-health-cert','health_certificate'],
+  ['csd-education','education_level'],['csd-experience-years','experience_years','num'],['csd-prev-employer','previous_employer'],
+  ['csd-prev-employer-contact','previous_employer_contact'],['csd-skills','skills_certifications'],
+  ['csd-transport','transport_mode'],['csd-commute-minutes','commute_minutes','num'],['csd-uniform-size','uniform_size'],['csd-shoe-size','shoe_size'],
+  ['csd-pfa-name','pfa_name'],['csd-rsa-pin','rsa_pin'],['csd-availability','availability_notes'],['csd-other-notes','other_notes']
+];
 async function loadClientStaffDetails(){
   const {data}=await db.from('client_staff_hr_details').select('*').eq('staff_id',_spStaffId).maybeSingle();
   const nag=document.getElementById('sp-details-nag');
@@ -5275,9 +5326,20 @@ async function loadClientStaffDetails(){
     set('csd-emergency-name',data.emergency_contact_name);set('csd-emergency-phone',data.emergency_contact_phone);
     set('csd-bank-name',data.bank_name);set('csd-bank-account-number',data.bank_account_number);set('csd-bank-account-name',data.bank_account_name);
     set('csd-allergies',data.allergies);
+    CSD_EXTRA.forEach(f=>set(f[0],data[f[1]]));
+    const pc=document.getElementById('csd-photo-consent');if(pc)pc.checked=!!data.photo_consent;
     const agreeEl=document.getElementById('csd-agree');if(agreeEl)agreeEl.checked=!!data.agreed_confirmed;
   }
-  if(nag)nag.style.display=(data&&data.agreed_confirmed)?'none':'block';
+  // HR can ask this person to complete their details
+  const {data:cs}=await db.from('client_staff').select('details_requested_at,details_request_note').eq('id',_spStaffId).maybeSingle();
+  const txt=document.getElementById('sp-details-nag-text');
+  if(txt){
+    txt.textContent=(cs&&cs.details_requested_at)
+      ?('HR has asked you to complete or update your details'+(cs.details_request_note?': '+cs.details_request_note:'.'))
+      :"We're missing some of your personal info — fill it in below so your file is complete.";
+  }
+  const requested=!!(cs&&cs.details_requested_at);
+  if(nag)nag.style.display=((data&&data.agreed_confirmed)&&!requested)?'none':'block';
 }
 async function saveClientStaffDetails(){
   const fb=document.getElementById('csd-feedback');
@@ -5304,11 +5366,17 @@ async function saveClientStaffDetails(){
     bank_account_name:document.getElementById('csd-bank-account-name').value.trim()||null,
     allergies:document.getElementById('csd-allergies').value.trim()||null,
     agreed_confirmed:document.getElementById('csd-agree').checked,
+    photo_consent:document.getElementById('csd-photo-consent').checked,
     updated_at:new Date().toISOString()
   };
+  CSD_EXTRA.forEach(f=>{
+    const v=document.getElementById(f[0]).value.trim();
+    payload[f[1]]=v===''?null:(f[2]==='num'?Number(v):v);
+  });
   const {error}=await db.from('client_staff_hr_details').upsert(payload,{onConflict:'staff_id'});
   if(error){fb.innerHTML=`<span style="color:var(--danger);font-size:12px">${error.message}</span>`;return;}
   fb.innerHTML='<span style="color:var(--success);font-size:12px">Saved. Thank you.</span>';
+  if(payload.agreed_confirmed){await db.from('client_staff').update({details_requested_at:null,details_request_note:null}).eq('id',_spStaffId);}
   const nag=document.getElementById('sp-details-nag');
   if(nag)nag.style.display=payload.agreed_confirmed?'none':'block';
 }
@@ -6491,13 +6559,23 @@ async function openStaffDetail(staffId){
   loadSdTrainings();loadSdNotes();loadSdReports();loadSdIncidents();loadSdLeave();loadSdAttendance();loadSdHRDetails(staffId);loadSdChecklist(staffId,staff.client_id);
   openModal('modal-staff-detail');
 }
+async function requestStaffDetails(staffId){
+  const note=prompt('Optional note to the staff member (e.g. "please add your allergies and RSA PIN"):','');
+  if(note===null)return;
+  const {error}=await db.from('client_staff').update({details_requested_at:new Date().toISOString(),details_request_note:note.trim()||null}).eq('id',staffId);
+  if(error){alert('Could not send request: '+error.message);return;}
+  alert('Done — they will see a banner on their My Details page until they confirm.');
+}
 async function loadSdHRDetails(staffId){
   const el=document.getElementById('sd-hr-details');if(!el)return;
   el.innerHTML='<p style="font-family:Arial;font-size:12px;color:var(--muted)">Loading…</p>';
   const {data:d}=await db.from('client_staff_hr_details').select('*').eq('staff_id',staffId).maybeSingle();
   const showSensitive=!!(currentUser&&currentUser.role!=='client'); // bank/guarantor: internal team only
-  if(!d){el.innerHTML='<p style="font-family:Arial;font-size:12px;color:var(--muted)">This team member hasn\'t filled in their details yet.</p>';return;}
-  el.innerHTML=`<span class="badge ${d.agreed_confirmed?'badge-green':'badge-gold'}" style="margin-bottom:10px;display:inline-block">${d.agreed_confirmed?'Confirmed by staff':'Filled — not confirmed'}</span>
+  if(!d){el.innerHTML='<p style="font-family:Arial;font-size:12px;color:var(--muted)">This team member hasn\'t filled in their details yet.</p>'+(showSensitive?`<button class="btn-sm" style="font-size:11px" onclick="requestStaffDetails('${staffId}')">📩 Ask to complete details</button>`:'');return;}
+  const _keys=['dob','gender','phone','home_address','next_of_kin_name','emergency_contact_name','allergies','drug_allergies','medical_conditions','education_level','transport_mode','uniform_size'];
+  const _pct=Math.round(_keys.filter(k=>d[k]!==null&&d[k]!==''&&d[k]!==undefined).length/_keys.length*100);
+  const _ask=showSensitive?`<button class="btn-sm" style="margin-left:8px;font-size:11px" onclick="requestStaffDetails('${staffId}')">📩 Ask to complete details</button>`:'';
+  el.innerHTML=`<span class="badge ${d.agreed_confirmed?'badge-green':'badge-gold'}" style="margin-bottom:10px;display:inline-block">${d.agreed_confirmed?'Confirmed by staff':'Filled — not confirmed'}</span> <span class="badge badge-gold" style="margin-bottom:10px;display:inline-block">${_pct}% complete</span>${_ask}
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;font-family:Arial;font-size:12px;color:var(--ink2)">
     <div><strong>DOB:</strong> ${d.dob||'—'}</div>
     <div><strong>Gender:</strong> ${d.gender||'—'}</div>
@@ -6509,7 +6587,22 @@ async function loadSdHRDetails(staffId){
     <div style="grid-column:1/-1"><strong>Address:</strong> ${d.home_address||'—'}</div>
     <div><strong>Next of Kin:</strong> ${d.next_of_kin_name||'—'} (${d.next_of_kin_relationship||'—'}) — ${d.next_of_kin_phone||'—'}</div>
     <div><strong>Emergency Contact:</strong> ${d.emergency_contact_name||'—'} (${d.emergency_contact_phone||'—'})</div>
-    <div style="grid-column:1/-1"><strong>Allergies/Dietary:</strong> ${d.allergies||'—'}</div>
+    <div><strong>Preferred Name:</strong> ${d.preferred_name||'—'}</div>
+    <div><strong>Languages:</strong> ${d.languages||'—'}</div>
+    <div style="grid-column:1/-1;background:var(--danger-light,#fdecec);border-radius:8px;padding:8px 10px"><strong>🩺 Health &amp; Safety</strong><br>
+      Food allergies: ${d.allergies||'—'}<br>Drug allergies: ${d.drug_allergies||'—'}<br>Other allergies: ${d.other_allergies||'—'}<br>
+      Dietary: ${d.dietary_requirements||'—'}<br>Medical conditions: ${d.medical_conditions||'—'}<br>Medication: ${d.medications||'—'}<br>
+      Work adjustments: ${d.work_adjustments||'—'}<br>Religious/prayer needs: ${d.religious_needs||'—'}<br>Health/food-handler cert: ${d.health_certificate||'—'}</div>
+    <div><strong>Education:</strong> ${d.education_level||'—'}</div>
+    <div><strong>Experience:</strong> ${d.experience_years!=null?d.experience_years+' yrs':'—'}</div>
+    <div><strong>Previous Employer:</strong> ${d.previous_employer||'—'} (${d.previous_employer_contact||'—'})</div>
+    <div style="grid-column:1/-1"><strong>Skills/Certs:</strong> ${d.skills_certifications||'—'}</div>
+    <div><strong>Transport:</strong> ${d.transport_mode||'—'}${d.commute_minutes!=null?' · '+d.commute_minutes+' min':''}</div>
+    <div><strong>Uniform / Shoe:</strong> ${d.uniform_size||'—'} / ${d.shoe_size||'—'}</div>
+    <div style="grid-column:1/-1"><strong>Availability:</strong> ${d.availability_notes||'—'}</div>
+    <div style="grid-column:1/-1"><strong>Other notes:</strong> ${d.other_notes||'—'}</div>
+    <div><strong>Photo consent:</strong> ${d.photo_consent?'Yes':'No / not given'}</div>
+    ${showSensitive?`<div><strong>Pension:</strong> ${d.pfa_name||'—'} · RSA ${d.rsa_pin||'—'}</div>`:''}
     ${showSensitive?`<div><strong>Guarantor:</strong> ${d.guarantor_name||'—'} (${d.guarantor_phone||'—'})</div>
     <div style="grid-column:1/-1"><strong>Guarantor Address:</strong> ${d.guarantor_address||'—'}</div>
     <div style="grid-column:1/-1"><strong>Self-reported Bank:</strong> ${d.bank_name||'—'} · ${d.bank_account_number||'—'} · ${d.bank_account_name||'—'}</div>`:''}
