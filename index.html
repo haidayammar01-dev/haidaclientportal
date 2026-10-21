@@ -2388,6 +2388,8 @@ self.addEventListener('notificationclick',function(e){
         <div id="cv-policies-panel" class="cv-tab-content" style="display:none">
           <div class="page-sub" style="margin-bottom:14px">This client's own policies and procedures. Owner-only — no other admin or staff sees this tab. The client sees it in their portal and can approve each one.</div>
           <div style="display:flex;justify-content:flex-end;margin-bottom:14px">
+            <button class="btn-sm" style="margin-right:8px" onclick="importPolicies(_currentViewClientId,'cv')">⬇ Import from existing documents</button>
+            <button class="btn-sm" style="margin-right:8px" onclick="importPolicies(null,'cv')">⬇ Import for ALL clients</button>
             <button class="btn-add" onclick="openPolicyModal(_currentViewClientId)">+ Add Policy / Procedure</button>
           </div>
           <div id="cv-pol-list"></div>
@@ -2798,6 +2800,7 @@ self.addEventListener('notificationclick',function(e){
         <div id="portal-policies-tab" class="portal-tab-content" style="display:none">
           <div class="page-sub" style="margin-bottom:14px">Your business's policies and procedures, kept in one place. Only you and Wahida can see this. Tap "Approve" once you're happy with one.</div>
           <div style="display:flex;justify-content:flex-end;margin-bottom:14px">
+            <button class="btn-sm" style="margin-right:8px" onclick="importPolicies(currentUser.clientId,'pc')">⬇ Import from existing documents</button>
             <button class="btn-add" onclick="openPolicyModal(currentUser.clientId)">+ Add Policy / Procedure</button>
           </div>
           <div id="pc-pol-list"></div>
@@ -4196,6 +4199,30 @@ async function deleteClientCredential(id,clientId,prefix){
 // ══ CLIENT POLICIES & PROCEDURES (owner + that client only) ══
 const _polCache={};
 function _esc(t){return String(t==null?'':t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+// Copies (never moves) existing policy/SOP entries from the Knowledge Base and Documents into Policies & Procedures
+async function importPolicies(clientId,prefix){
+  const all=!clientId;
+  if(!confirm(all?'Copy policy/SOP/handbook entries from the Knowledge Base and Documents into Policies & Procedures for ALL clients? Originals stay where they are; anything already imported is skipped.':'Copy this client\'s policy/SOP/handbook entries from the Knowledge Base and Documents into Policies & Procedures? Originals stay where they are; anything already imported is skipped.'))return;
+  const kbQ=db.from('client_knowledge_base').select('*').in('category',['Policies','SOPs']);
+  const docQ=db.from('documents').select('*').in('doc_type',['SOP','Policy Document','Staff Handbook']);
+  const polQ=db.from('client_policies').select('client_id,title');
+  if(!all){kbQ.eq('client_id',clientId);docQ.eq('client_id',clientId);polQ.eq('client_id',clientId);}
+  const [{data:kb},{data:docs},{data:have}]=await Promise.all([kbQ,docQ,polQ]);
+  const seen=new Set((have||[]).map(x=>x.client_id+'|'+(x.title||'').trim().toLowerCase()));
+  const toAdd=[];
+  const push=row=>{const k=row.client_id+'|'+row.title.trim().toLowerCase();if(!row.title.trim()||seen.has(k))return;seen.add(k);toAdd.push(row);};
+  const by=currentUser?(currentUser.name||currentUser.username):'—';
+  (kb||[]).forEach(r=>push({client_id:r.client_id,title:r.title||'',category:r.category==='SOPs'?'SOP':'Policy',body:r.content||null,visible_to_staff:!!r.visible_to_staff,added_by:'Imported ('+by+')'}));
+  const typeMap={'SOP':'SOP','Policy Document':'Policy','Staff Handbook':'Handbook'};
+  (docs||[]).forEach(r=>push({client_id:r.client_id,title:r.title||'',category:typeMap[r.doc_type]||'Other',version:r.version||null,effective_date:r.date_added||null,body:r.notes||null,doc_link:r.link||null,added_by:'Imported ('+by+')'}));
+  if(!toAdd.length){alert('Nothing new to import — everything is already there (or no policy/SOP entries exist yet).');return;}
+  const {error}=await db.from('client_policies').insert(toAdd);
+  if(error){alert('Could not import: '+error.message);return;}
+  await logActivity('Imported policies & procedures',toAdd.length+' entries',all?null:clientId);
+  alert('Imported '+toAdd.length+' item(s). Set a Reading Month and "Share with staff" on the ones staff should read.');
+  if(!all)loadPolicies(clientId,prefix,true);
+  else if(_currentViewClientId)loadPolicies(_currentViewClientId,prefix,true);
+}
 function _polMonthLabel(d){const x=new Date(d+'T00:00:00');return x.toLocaleString('en-GB',{month:'long',year:'numeric'});}
 function _polMonthKey(offset){const n=new Date();const x=new Date(n.getFullYear(),n.getMonth()+offset,1);return x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-01';}
 async function loadPolicyReadProgress(clientId,rows){
