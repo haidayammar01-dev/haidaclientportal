@@ -675,7 +675,7 @@ self.addEventListener('notificationclick',function(e){
     <div style="background:white;border:1px solid var(--border);border-radius:12px;padding:24px;margin-bottom:16px">
       <div style="font-family:Arial;font-size:11px;text-transform:uppercase;color:var(--muted);margin-bottom:10px">🕒 Attendance</div>
       <div id="sp-clock-status" style="font-family:Arial;font-size:13px;color:var(--ink);margin-bottom:10px"></div>
-      <button class="btn-save" id="sp-clock-btn" onclick="toggleClock()">Clock In</button>
+      <button class="btn-save" id="sp-clock-btn" onclick="toggleClock()" disabled>Loading…</button>
       <div style="margin-top:16px;font-family:Arial;font-size:11px;text-transform:uppercase;color:var(--muted)">Recent Attendance</div>
       <div id="sp-attendance-list" style="margin-top:8px"></div>
     </div>
@@ -2294,6 +2294,15 @@ self.addEventListener('notificationclick',function(e){
         <div id="cv-leave-panel" class="cv-tab-content" style="display:none"><div id="cv-leave-list"></div></div>
         <div id="cv-shifts-panel" class="cv-tab-content" style="display:none">
           <div class="card" style="padding:16px 20px;margin-bottom:16px">
+            <div style="font-size:13px;font-weight:600;color:var(--ink);margin-bottom:4px">📥 Upload a Rota (Excel / CSV)</div>
+            <div style="font-family:Arial;font-size:11.5px;color:var(--muted);margin-bottom:10px">Drop in a spreadsheet with columns <strong>Date, Staff, Shift, Start, End</strong> (one row per person per day). It creates the shifts, assigns the people, and staff see it straight away in their shifts list and team rota calendar. You get a preview before anything is saved.</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+              <input type="file" id="rota-file-cv" accept=".xlsx,.xls,.csv" onchange="rotaFileChosen('cv')" style="font-family:Arial;font-size:12px">
+              <button class="btn-sm" onclick="downloadRotaTemplate()">⬇ Download template</button>
+            </div>
+            <div id="rota-preview-cv" style="margin-top:12px"></div>
+          </div>
+          <div class="card" style="padding:16px 20px;margin-bottom:16px">
             <div style="font-size:13px;font-weight:600;color:var(--ink);margin-bottom:4px">📅 Bulk Create — Whole Month</div>
             <div style="font-family:Arial;font-size:11.5px;color:var(--muted);margin-bottom:12px">Set the pattern once and it creates every matching shift for the month in one go.</div>
             <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
@@ -2388,6 +2397,8 @@ self.addEventListener('notificationclick',function(e){
         <div id="cv-policies-panel" class="cv-tab-content" style="display:none">
           <div class="page-sub" style="margin-bottom:14px">This client's own policies and procedures. Owner-only — no other admin or staff sees this tab. The client sees it in their portal and can approve each one.</div>
           <div style="display:flex;justify-content:flex-end;margin-bottom:14px">
+            <button class="btn-sm" style="margin-right:8px" onclick="addStarterPolicies(_currentViewClientId,'cv')">✨ Add starter templates</button>
+            <button class="btn-sm" style="margin-right:8px" onclick="autoSchedulePolicies(_currentViewClientId,'cv')">🗓 Auto-schedule monthly</button>
             <button class="btn-sm" style="margin-right:8px" onclick="importPolicies(_currentViewClientId,'cv')">⬇ Import from existing documents</button>
             <button class="btn-sm" style="margin-right:8px" onclick="importPolicies(null,'cv')">⬇ Import for ALL clients</button>
             <button class="btn-add" onclick="openPolicyModal(_currentViewClientId)">+ Add Policy / Procedure</button>
@@ -2538,6 +2549,7 @@ self.addEventListener('notificationclick',function(e){
             </div>
             <div class="form-field"><label>Year</label><input type="number" id="pr-year" value="2026" style="width:100px"></div>
             <button class="btn-save" onclick="previewPayroll()">Preview Payroll</button>
+            <button class="btn-sm" onclick="viewPastPayroll()">📂 View / Print Saved Payslips</button>
           </div>
           <div id="pr-run-feedback" style="margin-top:8px"></div>
         </div>
@@ -2800,6 +2812,8 @@ self.addEventListener('notificationclick',function(e){
         <div id="portal-policies-tab" class="portal-tab-content" style="display:none">
           <div class="page-sub" style="margin-bottom:14px">Your business's policies and procedures, kept in one place. Only you and Wahida can see this. Tap "Approve" once you're happy with one.</div>
           <div style="display:flex;justify-content:flex-end;margin-bottom:14px">
+            <button class="btn-sm" style="margin-right:8px" onclick="addStarterPolicies(currentUser.clientId,'pc')">✨ Add starter templates</button>
+            <button class="btn-sm" style="margin-right:8px" onclick="autoSchedulePolicies(currentUser.clientId,'pc')">🗓 Auto-schedule monthly</button>
             <button class="btn-sm" style="margin-right:8px" onclick="importPolicies(currentUser.clientId,'pc')">⬇ Import from existing documents</button>
             <button class="btn-add" onclick="openPolicyModal(currentUser.clientId)">+ Add Policy / Procedure</button>
           </div>
@@ -2853,6 +2867,15 @@ self.addEventListener('notificationclick',function(e){
         </div>
         <div id="portal-leave-tab" class="portal-tab-content" style="display:none"><div id="portal-leave-list"></div></div>
         <div id="portal-shifts-tab" class="portal-tab-content" style="display:none">
+          <div class="card" style="padding:16px 20px;margin-bottom:16px">
+            <div style="font-size:13px;font-weight:600;color:var(--ink);margin-bottom:4px">📥 Upload a Rota (Excel / CSV)</div>
+            <div style="font-family:Arial;font-size:11.5px;color:var(--muted);margin-bottom:10px">Drop in a spreadsheet with columns <strong>Date, Staff, Shift, Start, End</strong> (one row per person per day). It creates the shifts, assigns the people, and staff see it straight away in their shifts list and team rota calendar. You get a preview before anything is saved.</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+              <input type="file" id="rota-file-pc" accept=".xlsx,.xls,.csv" onchange="rotaFileChosen('pc')" style="font-family:Arial;font-size:12px">
+              <button class="btn-sm" onclick="downloadRotaTemplate()">⬇ Download template</button>
+            </div>
+            <div id="rota-preview-pc" style="margin-top:12px"></div>
+          </div>
           <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
             <input type="text" id="sh-name-p" placeholder="Shift name" style="width:140px;padding:7px 10px;border:1px solid var(--border);border-radius:9px;font-family:Arial;font-size:12px">
             <input type="date" id="sh-date-p" style="padding:7px 10px;border:1px solid var(--border);border-radius:9px;font-family:Arial;font-size:12px">
@@ -3162,7 +3185,7 @@ self.addEventListener('notificationclick',function(e){
 <div class="modal-overlay" id="modal-invoice-pdf">
   <div class="modal" style="width:700px;max-height:90vh">
     <div class="modal-header">
-      <div class="modal-title">Invoice Preview</div>
+      <div class="modal-title" id="invoice-pdf-title">Invoice Preview</div>
       <div style="display:flex;gap:8px">
         <button class="btn-save" onclick="window.print()">Print / Save PDF</button>
         <button class="modal-close" onclick="closeModal('modal-invoice-pdf')">×</button>
@@ -4223,6 +4246,51 @@ async function importPolicies(clientId,prefix){
   if(!all)loadPolicies(clientId,prefix,true);
   else if(_currentViewClientId)loadPolicies(_currentViewClientId,prefix,true);
 }
+async function allocatePolicy(id,clientId,prefix,val){
+  const upd=val==='private'?{visible_to_staff:false,reading_month:null}:{visible_to_staff:true,reading_month:val||null};
+  const {error}=await db.from('client_policies').update(upd).eq('id',id);
+  if(error){alert('Could not allocate: '+error.message);return;}
+  loadPolicies(clientId,prefix,true);
+}
+async function autoSchedulePolicies(clientId,prefix){
+  const {data}=await db.from('client_policies').select('id,title').eq('client_id',clientId).eq('visible_to_staff',false).is('reading_month',null).order('category').order('title');
+  const rows=data||[];
+  if(!rows.length){alert('Nothing to schedule — every policy is already allocated to a month or shared.');return;}
+  const n=parseInt(prompt(rows.length+' unscheduled policies. How many should staff read per month? (starting this month)','2'),10);
+  if(!n||n<1)return;
+  for(let i=0;i<rows.length;i++){
+    const month=_polMonthKey(Math.floor(i/n));
+    const {error}=await db.from('client_policies').update({visible_to_staff:true,reading_month:month}).eq('id',rows[i].id);
+    if(error){alert('Stopped: '+error.message);break;}
+  }
+  alert('Done — spread across '+Math.ceil(rows.length/n)+' month(s). You can change any one with its "Allocate to" dropdown.');
+  loadPolicies(clientId,prefix,true);
+}
+const POLICY_STARTERS=[
+ ['Policy','Attendance & Punctuality','Starter template — edit to fit this business.\n\n1. Clock in on arrival using the staff portal; you must be at the work location to do so.\n2. Be ready to start at your scheduled time. Arriving after the agreed start time is recorded as late.\n3. If you will be late or absent, tell your supervisor as early as possible, before your shift starts.\n4. To swap a shift, request it in the staff portal; the swap only counts once HR approves it.\n5. Repeated lateness or unexplained absence will be followed up by HR.'],
+ ['Policy','Dress Code & Personal Presentation','Starter template — edit to fit this business.\n\n1. Wear the agreed uniform or smart/clean clothing for your role.\n2. Keep hair, nails and personal hygiene neat, especially if you handle food or work with customers.\n3. Wear your name tag or ID where one is provided.\n4. Closed, non-slip shoes where the role requires them.'],
+ ['Policy','Customer Service Standards','Starter template — edit to fit this business.\n\n1. Greet every customer promptly and politely.\n2. Listen first, then help. If you do not know the answer, find someone who does rather than guessing.\n3. Stay calm with upset customers; never argue. Hand serious complaints to your supervisor.\n4. Thank the customer and make sure they leave happy.'],
+ ['Policy','Health, Safety & Hygiene','Starter template — edit to fit this business.\n\n1. Wash your hands before work, after breaks and after the toilet.\n2. Report spills, broken equipment and hazards immediately.\n3. Know where the first-aid kit and fire exits are.\n4. Tell your supervisor about any illness before starting work, especially if you handle food.\n5. Report every accident or near-miss in the incident report.'],
+ ['Policy','Cash Handling & Stock','Starter template — edit to fit this business.\n\n1. Count your till at the start and end of each shift with a supervisor.\n2. Never mix personal money with business cash.\n3. Record every sale; give receipts where required.\n4. Report stock shortages, wastage and damage the same day.'],
+ ['Policy','Complaints & Incident Reporting','Starter template — edit to fit this business.\n\n1. Any complaint, accident or serious problem must be reported the same day using the incident report in the staff portal.\n2. Write what happened, when, where and who was involved. Stick to facts.\n3. Do not discuss incidents on social media or with outsiders.'],
+ ['Policy','Confidentiality & Data Privacy','Starter template — edit to fit this business.\n\n1. Customer, staff and business information is confidential.\n2. Do not share logins or passwords, or clock in for anyone else.\n3. Do not photograph or post customers, records or the premises without permission.\n4. Report any lost phone, leaked information or suspected breach to your supervisor straight away.'],
+ ['Policy','Staff Conduct & Disciplinary Steps','Starter template — edit to fit this business.\n\n1. Treat colleagues, customers and managers with respect. Harassment and discrimination are not tolerated.\n2. Phones are for emergencies during working time unless your role needs them.\n3. Disciplinary steps: verbal warning, then written warning (strike), then further action. Serious misconduct may skip steps.\n4. Staff can explain their side and raise concerns with HR at any time.'],
+ ['Procedure','Opening Procedure','Starter template — edit to fit this business.\n\n1. Arrive and clock in.\n2. Unlock, switch on lights, equipment and power; check for any overnight problems.\n3. Do the cleanliness and safety walk-round.\n4. Set up stock/stations and count the till.\n5. Confirm the day\'s plan with the supervisor, then open.'],
+ ['Procedure','Closing Procedure','Starter template — edit to fit this business.\n\n1. Stop new orders/customers at the agreed time.\n2. Clean and reset all areas; deal with waste and food storage.\n3. Count and record the till; secure cash.\n4. Record stock and note anything needed for tomorrow.\n5. Switch off equipment and lights, lock up, then clock out.'],
+ ['Procedure','Safeguarding & Child Protection','Starter template — edit to fit this business (use where children are on site).\n\n1. Never be alone with a child behind closed doors.\n2. No private contact with children or parents outside work channels.\n3. Report any concern or disclosure to the designated safeguarding lead immediately and write down exactly what was said.\n4. Never promise to keep a child\'s disclosure secret.']
+];
+async function addStarterPolicies(clientId,prefix){
+  if(!confirm('Add ready-made starter policies and procedures (attendance, dress code, customer service, health & safety, cash handling, complaints, confidentiality, conduct, opening, closing, safeguarding)? They are added as private drafts you can edit. Ones with the same title are skipped.'))return;
+  const {data:have}=await db.from('client_policies').select('title').eq('client_id',clientId);
+  const seen=new Set((have||[]).map(x=>(x.title||'').trim().toLowerCase()));
+  const by=currentUser?(currentUser.name||currentUser.username):'—';
+  const toAdd=POLICY_STARTERS.filter(x=>!seen.has(x[1].toLowerCase())).map(x=>({client_id:clientId,category:x[0],title:x[1],body:x[2],version:'0.1 draft',visible_to_staff:false,added_by:'Starter template ('+by+')'}));
+  if(!toAdd.length){alert('All starter templates are already added.');return;}
+  const {error}=await db.from('client_policies').insert(toAdd);
+  if(error){alert('Could not add: '+error.message);return;}
+  alert('Added '+toAdd.length+' starter drafts. Edit them to fit the business, then use "Allocate to" or "Auto-schedule monthly".');
+  loadPolicies(clientId,prefix,true);
+}
 function _polMonthLabel(d){const x=new Date(d+'T00:00:00');return x.toLocaleString('en-GB',{month:'long',year:'numeric'});}
 function _polMonthKey(offset){const n=new Date();const x=new Date(n.getFullYear(),n.getMonth()+offset,1);return x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-01';}
 async function loadPolicyReadProgress(clientId,rows){
@@ -4299,8 +4367,22 @@ async function loadPolicies(clientId,prefix,canManage){
   setTimeout(()=>loadPolicyReadProgress(clientId,rows),0);
   const today=new Date().toISOString().slice(0,10);
   const isClient=!!(currentUser&&currentUser.role==='client');
+  const _cur=_polMonthKey(0),_nxt=_polMonthKey(1);
+  const _sh=rows.filter(r=>r.visible_to_staff);
+  const planStrip=`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px">
+    <span class="badge badge-green">📌 This month: ${_sh.filter(r=>r.reading_month===_cur).length}</span>
+    <span class="badge badge-gold">⏭ Next month: ${_sh.filter(r=>r.reading_month===_nxt).length}</span>
+    <span class="badge badge-gray">🗓 Later: ${_sh.filter(r=>r.reading_month&&r.reading_month>_nxt).length}</span>
+    <span class="badge badge-gray">♾ Always applies: ${_sh.filter(r=>!r.reading_month).length}</span>
+    <span class="badge badge-red">🔒 Not shared / not scheduled: ${rows.filter(r=>!r.visible_to_staff).length}</span></div>`;
+  const allocSel=r=>{
+    const cur=!r.visible_to_staff?'private':(r.reading_month||'');
+    const opts=[['private','🔒 Not shared with staff'],['','♾ Always applies (shared)']];
+    for(let i=-1;i<=6;i++){const k=_polMonthKey(i);opts.push([k,_polMonthLabel(k)+(i===0?' (this month)':i===1?' (next month)':'')]);}
+    if(cur&&!opts.some(o=>o[0]===cur))opts.push([cur,_polMonthLabel(cur)]);
+    return `<div style="margin-top:8px;display:flex;gap:6px;align-items:center;flex-wrap:wrap"><span style="font-size:11px;color:var(--muted)">Allocate to:</span><select style="padding:4px 8px;border:1px solid var(--border);border-radius:8px;font-size:12px" onchange="allocatePolicy('${r.id}','${clientId}','${prefix}',this.value)">${opts.map(o=>`<option value="${o[0]}" ${o[0]===cur?'selected':''}>${o[1]}</option>`).join('')}</select></div>`;};
   const groups={};rows.forEach(r=>{(groups[r.category||'Other']=groups[r.category||'Other']||[]).push(r);});
-  el.innerHTML=Object.keys(groups).map(cat=>`
+  el.innerHTML=(canManage?planStrip:'')+Object.keys(groups).map(cat=>`
     <div style="font-family:Arial;font-size:11px;text-transform:uppercase;color:var(--muted);margin:16px 0 8px">${_esc(cat)} (${groups[cat].length})</div>
     ${groups[cat].map(r=>{
       const due=r.review_date&&r.review_date<today;
@@ -4313,6 +4395,7 @@ async function loadPolicies(clientId,prefix,canManage){
               ${due?'<span class="badge badge-red">Review overdue</span>':''}
               ${r.visible_to_staff?`<span class="badge badge-green">👥 Shared with staff${r.reading_month?' · '+_polMonthLabel(r.reading_month):' · always applies'}</span>`:'<span class="badge badge-gray">Private</span>'}
             </div>
+            ${canManage?allocSel(r):''}
             ${r.visible_to_staff?`<div id="pol-reads-${r.id}" style="font-size:11.5px;color:var(--muted);margin-top:6px"></div>`:''}
             <div style="font-size:11px;color:var(--muted);margin-top:5px">${r.effective_date?'Effective '+r.effective_date:''}${r.effective_date&&r.review_date?' · ':''}${r.review_date?'Review by '+r.review_date:''}</div>
             ${r.body?`<details style="margin-top:8px"><summary style="cursor:pointer;font-size:12px;color:var(--gold)">Read</summary><div style="white-space:pre-wrap;font-family:Arial;font-size:12.5px;color:var(--ink2);margin-top:8px;line-height:1.55">${_esc(r.body)}</div></details>`:''}
@@ -5647,13 +5730,14 @@ async function loadSpAttendance(){
   const btn=document.getElementById('sp-clock-btn');
   if(openToday){
     _spOpenAttendanceId=openToday.id;
-    statusEl.textContent='Clocked in at '+new Date(openToday.clock_in).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
-    btn.textContent='Clock Out';
+    statusEl.innerHTML='<span style="color:var(--success);font-weight:600">✅ You are clocked in since '+new Date(openToday.clock_in).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})+'</span><br><span style="font-size:11.5px;color:var(--muted)">Only tap the button again when you are leaving.</span>';
+    btn.textContent='Clock Out';btn.style.background='var(--danger)';
   } else {
     _spOpenAttendanceId=null;
     statusEl.textContent='Not clocked in today.';
-    btn.textContent='Clock In';
+    btn.textContent='Clock In';btn.style.background='';
   }
+  if(!window._clockBusy)btn.disabled=false;
   const {data:recent}=await db.from('staff_attendance').select('*').eq('staff_id',_spStaffId).order('work_date',{ascending:false}).limit(7);
   const rlist=recent||[];const rEl=document.getElementById('sp-attendance-list');
   rEl.innerHTML=rlist.length?rlist.map(r=>{
@@ -5830,11 +5914,18 @@ function getLocationWithFallback(onStatus){
     );
   });
 }
+window._clockBusy=false;
+document.addEventListener('visibilitychange',()=>{
+  if(!document.hidden&&typeof _spStaffId!=='undefined'&&_spStaffId&&!window._clockBusy&&document.getElementById('sp-clock-btn')&&document.getElementById('sp-clock-btn').offsetParent!==null)loadSpAttendance();
+});
 async function toggleClock(){
+  if(window._clockBusy)return; // ignore double / repeat taps while a clock-in is still being processed
+  window._clockBusy=true;
   const today=localDateStr();
   const statusEl=document.getElementById('sp-clock-status');
   const btn=document.getElementById('sp-clock-btn');
-  btn.disabled=true;
+  btn.disabled=true;btn.textContent='Please wait…';
+  statusEl.innerHTML='<span style="color:var(--gold);font-weight:600">⏳ Working on it — please wait and do not tap again. This can take up to 30 seconds.</span>';
   try{
     // Always re-check the database fresh — never trust a stale in-memory flag,
     // that's what was causing "it thinks I never signed in" when clocking out.
@@ -5843,6 +5934,13 @@ async function toggleClock(){
     _spOpenAttendanceId=openToday?openToday.id:null;
 
     if(_spOpenAttendanceId){
+      const inAt=new Date(openToday.clock_in);
+      const minsAgo=Math.round((Date.now()-inAt.getTime())/60000);
+      const inTxt=inAt.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+      const ask=minsAgo<10
+        ?`You clocked in at ${inTxt} — only ${minsAgo} min ago. You are ALREADY clocked in.\n\nPress OK only if you really want to CLOCK OUT now.`
+        :`You clocked in at ${inTxt}.\n\nClock out now?`;
+      if(!confirm(ask)){await loadSpAttendance();return;}
       const {data:client}=await db.from('clients').select('closing_time').eq('id',_spClientId).single();
       const el=computeEarlyLeave(client&&client.closing_time);
       const {error:outErr}=await db.from('staff_attendance').update({clock_out:new Date().toISOString(),is_early_leave:el.isEarly,early_minutes:el.earlyMinutes}).eq('id',_spOpenAttendanceId);
@@ -5875,7 +5973,9 @@ async function toggleClock(){
       await finishClockIn(today,client,statusEl,btn);
     }
   } finally {
+    window._clockBusy=false;
     btn.disabled=false;
+    btn.textContent=_spOpenAttendanceId?'Clock Out':'Clock In';
   }
 }
 async function finishClockIn(today,client,statusEl,btn){
@@ -5904,6 +6004,9 @@ async function finishClockIn(today,client,statusEl,btn){
       return;
     }
   }
+  // Last safety check: if a clock-in already got saved (e.g. earlier tap, other tab), don't create a second one
+  const {data:dupe}=await db.from('staff_attendance').select('id').eq('staff_id',_spStaffId).eq('work_date',today).is('clock_out',null).limit(1);
+  if(dupe&&dupe.length){await loadSpAttendance();return;}
   // Photo is never saved — it only ever exists in the browser for this one check, then it's discarded.
   const lt=computeLateness(client&&client.opening_time,client&&client.late_grace_minutes);
   const {error:insertErr}=await db.from('staff_attendance').insert({staff_id:_spStaffId,client_id:_spClientId,work_date:today,clock_in:new Date().toISOString(),is_late:lt.isLate,late_minutes:lt.lateMinutes,face_match_score:faceMatchScore});
@@ -6197,7 +6300,7 @@ async function generateFullReport(){
     html+='</div>';
   });
   html+=`<div style="margin-top:32px;padding-top:16px;border-top:1px solid #DCD8C8;font-size:10px;color:#C9A24B;text-align:center">Haida Yammar Consulting · RC No: 9304448 · Confidential</div></div>`;
-  document.getElementById('invoice-pdf-body').innerHTML=html;
+  document.getElementById('invoice-pdf-body').innerHTML=html;{const _t=document.getElementById('invoice-pdf-title');if(_t)_t.textContent='Invoice Preview';}
   openModal('modal-invoice-pdf');
   document.querySelector('#modal-invoice-pdf .modal-title').textContent='Full Client Report';
 }
@@ -6368,7 +6471,7 @@ function printInvoice(inv){
   const clientName=(inv.clients&&inv.clients.business_name)||allClients.find(c=>c.id===inv.client_id)?.business_name||'Client';
   const sub=inv.amount||0;const vatR=inv.vat_rate||0;const vat=sub*(vatR/100);const total=sub+vat;const balance=total-(inv.paid||0);
   const currKey=inv.currency||'NGN';const currInfo=PAYMENT_DETAILS[currKey]||PAYMENT_DETAILS.NGN;const sym=currInfo.sym;
-  document.getElementById('invoice-pdf-body').innerHTML=`
+  {const _t=document.getElementById('invoice-pdf-title');if(_t)_t.textContent='Invoice Preview';}document.getElementById('invoice-pdf-body').innerHTML=`
   <div style="font-family:Arial,sans-serif;padding:40px">
     <div style="display:flex;justify-content:space-between;margin-bottom:32px;padding-bottom:20px;border-bottom:3px solid #1B2A4A">
       <div>
@@ -8649,7 +8752,7 @@ function printInternalPayslip(username,fullName,month,year){
     const {data:hr}=await db.from('staff_hr_details').select('bank_name,bank_account_number,bank_account_name').eq('admin_username',username).maybeSingle();
     const monthNames=['','January','February','March','April','May','June','July','August','September','October','November','December'];
     const sym='₦';
-    document.getElementById('invoice-pdf-body').innerHTML=`
+    {const _t=document.getElementById('invoice-pdf-title');if(_t)_t.textContent='Payslip Preview';}document.getElementById('invoice-pdf-body').innerHTML=`
     <div style="font-family:Arial,sans-serif;padding:40px">
       <div style="display:flex;justify-content:space-between;margin-bottom:32px;padding-bottom:20px;border-bottom:3px solid #1B2A4A">
         <div>
@@ -10079,13 +10182,13 @@ async function confirmRunPayroll(clientId){
     totalGross+=p.gross_pay;totalDeductions+=p.total_deductions;totalNet+=netWithAdjustment;
     return {payroll_run_id:run.id,staff_id:s.id,client_id:clientId,...p,net_pay:netWithAdjustment,adjustment_amount,adjustment_note:note};
   });
-  const {error:slipErr}=await db.from('payslips').insert(slips);
+  const {data:savedSlips,error:slipErr}=await db.from('payslips').insert(slips).select();
   if(slipErr){fb.innerHTML=`<div class="error-msg">${slipErr.message}</div>`;return;}
   await db.from('payroll_runs').update({total_gross:totalGross,total_deductions:totalDeductions,total_net:totalNet}).eq('id',run.id);
   await logActivity('Ran payroll',`${payable.length} staff, ${month}/${year}`,clientId);
   fb.innerHTML='<div class="success-msg">✓ Payroll run complete.</div>';
   document.getElementById('pr-preview').innerHTML='';
-  displayPayrollResults(run.id,payable,slips,clientId,month,year,totalGross);
+  displayPayrollResults(run.id,payable,savedSlips&&savedSlips.length?savedSlips:slips,clientId,month,year,totalGross);
 }
 function staffBankDetailsHtml(staff,hr){
   // Prefer admin-entered payroll bank fields; fall back to the staff's self-reported ones
@@ -10099,11 +10202,17 @@ function displayPayrollResults(runId,staffList,slips,clientId,month,year,totalGr
   const fmt=n=>_activeCurrencySymbol+Number(n||0).toLocaleString(undefined,{maximumFractionDigits:0});
   const el=document.getElementById('pr-results');
   el.innerHTML=`<div class="card" style="padding:18px 20px">
-    <div style="font-size:13px;font-weight:600;color:var(--ink);margin-bottom:10px">Payslip Results</div>
-    <table class="data-table"><thead><tr><th>Staff</th><th>Gross</th><th>Pension (5%)</th><th>Adjustment</th><th>Net Pay</th><th>Bank Details</th></tr></thead><tbody id="pr-results-tbody">
-    <tr><td colspan="6" style="text-align:center;padding:16px;color:var(--muted);font-family:Arial">Loading bank details…</td></tr>
+    <div style="font-size:13px;font-weight:600;color:var(--ink);margin-bottom:10px">Payslip Results — ${monthNamesFull[month]||month} ${year}</div>
+    <div style="display:flex;gap:22px;flex-wrap:wrap;font-family:Arial;font-size:13px;margin-bottom:12px">
+      <div>Total gross: <strong>${fmt(slips.reduce((n,x)=>n+(+x.gross_pay||0),0))}</strong></div>
+      <div style="color:var(--danger)">Total deductions (pension + extra): <strong>${fmt(slips.reduce((n,x)=>n+(+x.pension_employee||0)+Math.max(-(+x.adjustment_amount||0),0),0))}</strong></div>
+      <div>Total net payable: <strong>${fmt(slips.reduce((n,x)=>n+(+x.net_pay||0),0))}</strong></div>
+    </div>
+    <table class="data-table"><thead><tr><th>Staff</th><th>Gross</th><th>Pension (5%)</th><th>Adjustment</th><th>Net Pay</th><th>Bank Details</th><th></th></tr></thead><tbody id="pr-results-tbody">
+    <tr><td colspan="7" style="text-align:center;padding:16px;color:var(--muted);font-family:Arial">Loading bank details…</td></tr>
     </tbody></table>
     <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn-add" onclick="printClientPayslips(${JSON.stringify(slips.map(x=>x.id).filter(Boolean)).replace(/"/g,'&quot;')})">🖨 Print All Payslips</button>
       <button class="btn-save" onclick="markPayrollPaid('${runId}')">Mark as Paid</button>
       ${clientId?`<button class="btn-add" onclick="createInvoiceFromPayroll('${clientId}',${totalGross||0},${month},${year})">🧾 Create Invoice</button>`:''}
     </div>
@@ -10115,7 +10224,7 @@ function displayPayrollResults(runId,staffList,slips,clientId,month,year,totalGr
     const hrMap={};(hrRows||[]).forEach(h=>hrMap[h.staff_id]=h);
     document.getElementById('pr-results-tbody').innerHTML=slips.map(sl=>{
       const staff=staffList.find(s=>s.id===sl.staff_id);
-      return`<tr><td style="font-size:13px">${staff?staff.name:'—'}</td><td style="font-family:'IBM Plex Mono',monospace;font-size:12px">${fmt(sl.gross_pay)}</td><td style="font-family:'IBM Plex Mono',monospace;font-size:12px">${fmt(sl.pension_employee)}</td><td style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:${(sl.adjustment_amount||0)<0?'var(--danger)':'var(--success)'}">${sl.adjustment_amount?fmt(sl.adjustment_amount):'—'}${sl.adjustment_note?` <span style="color:var(--muted);font-family:Arial">(${sl.adjustment_note})</span>`:''}</td><td style="font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:600">${fmt(sl.net_pay)}</td><td style="font-family:Arial;font-size:11.5px;color:var(--ink2)">${staff?staffBankDetailsHtml(staff,hrMap[staff.id]):'—'}</td></tr>`;
+      return`<tr><td style="font-size:13px">${staff?staff.name:'—'}</td><td style="font-family:'IBM Plex Mono',monospace;font-size:12px">${fmt(sl.gross_pay)}</td><td style="font-family:'IBM Plex Mono',monospace;font-size:12px">${fmt(sl.pension_employee)}</td><td style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:${(sl.adjustment_amount||0)<0?'var(--danger)':'var(--success)'}">${sl.adjustment_amount?fmt(sl.adjustment_amount):'—'}${sl.adjustment_note?` <span style="color:var(--muted);font-family:Arial">(${sl.adjustment_note})</span>`:''}</td><td style="font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:600">${fmt(sl.net_pay)}</td><td style="font-family:Arial;font-size:11.5px;color:var(--ink2)">${staff?staffBankDetailsHtml(staff,hrMap[staff.id]):'—'}</td><td>${sl.id?`<button class="btn-sm" onclick="printClientPayslips(['${sl.id}'])">🖨 Print Slip</button>`:''}</td></tr>`;
     }).join('');
   })();
 }
@@ -10129,6 +10238,91 @@ async function createInvoiceFromPayroll(clientId,totalGross,month,year){
   document.getElementById('inv-due').value=due.toISOString().slice(0,10);
   document.getElementById('inv-date').value=new Date().toISOString().slice(0,10);
   calcVAT();
+}
+const monthNamesFull=['','January','February','March','April','May','June','July','August','September','October','November','December'];
+async function viewPastPayroll(){
+  const clientId=document.getElementById('pr-client').value;
+  const month=parseInt(document.getElementById('pr-month').value);
+  const year=parseInt(document.getElementById('pr-year').value);
+  const fb=document.getElementById('pr-run-feedback');
+  document.getElementById('pr-preview').innerHTML='';
+  if(!clientId){fb.innerHTML='<div class="error-msg">Select a client first.</div>';return;}
+  const {data:runs}=await db.from('payroll_runs').select('*').eq('client_id',clientId).eq('period_month',month).eq('period_year',year).order('run_date',{ascending:false}).limit(1);
+  if(!runs||!runs.length){fb.innerHTML='<div class="error-msg">No payroll has been run for this client in '+monthNamesFull[month]+' '+year+' yet.</div>';return;}
+  const {data:slips}=await db.from('payslips').select('*,client_staff(*)').eq('payroll_run_id',runs[0].id);
+  fb.innerHTML='';
+  const rows=slips||[];
+  displayPayrollResults(runs[0].id,rows.map(x=>x.client_staff).filter(Boolean),rows,clientId,month,year,runs[0].total_gross);
+}
+async function printClientPayslips(ids){
+  if(!ids||!ids.length){alert('No payslips to print.');return;}
+  const {data:slips}=await db.from('payslips').select('*,client_staff(*),clients(business_name)').in('id',ids);
+  const list=slips||[];if(!list.length){alert('Could not load those payslips.');return;}
+  const runIds=[...new Set(list.map(x=>x.payroll_run_id).filter(Boolean))];
+  const {data:runs}=runIds.length?await db.from('payroll_runs').select('id,period_month,period_year').in('id',runIds):{data:[]};
+  const runMap={};(runs||[]).forEach(r=>runMap[r.id]=r);
+  const staffIds=list.map(x=>x.staff_id);
+  const {data:hrRows}=await db.from('client_staff_hr_details').select('staff_id,bank_name,bank_account_number,bank_account_name').in('staff_id',staffIds);
+  const hrMap={};(hrRows||[]).forEach(h=>hrMap[h.staff_id]=h);
+  const sym=(typeof _activeCurrencySymbol!=='undefined'&&_activeCurrencySymbol)||'₦';
+  const money=n=>sym+Number(n||0).toLocaleString(undefined,{maximumFractionDigits:2});
+  const pages=list.map((sl,i)=>{
+    const st=sl.client_staff||{};const hr=hrMap[sl.staff_id]||{};
+    const run=runMap[sl.payroll_run_id]||{};
+    const period=run.period_month?(monthNamesFull[run.period_month]+' '+run.period_year):'—';
+    const bank=st.bank_name||hr.bank_name,acct=st.bank_account_number||hr.bank_account_number,acctName=st.bank_account_name||hr.bank_account_name;
+    const adj=+sl.adjustment_amount||0;
+    const earn=[['Basic salary',+sl.basic||0],['Transport allowance',+sl.transport||0],['Other allowances',+sl.other_allowances||0]].filter((r,j)=>j===0||r[1]>0);
+    if(adj>0)earn.push(['Additional payment'+(sl.adjustment_note?' — '+sl.adjustment_note:''),adj]);
+    const ded=[];
+    if((+sl.pension_employee||0)>0)ded.push(['Pension (employee 5%)',+sl.pension_employee]);
+    if(adj<0)ded.push(['Deduction'+(sl.adjustment_note?' — '+sl.adjustment_note:''),-adj]);
+    const totalEarn=earn.reduce((n,r)=>n+r[1],0),totalDed=ded.reduce((n,r)=>n+r[1],0);
+    const row=(l,v,c)=>`<tr style="border-bottom:1px solid #DCD8C8"><td style="padding:10px 14px;font-size:13px;${c?'color:'+c:''}">${_esc(l)}</td><td style="padding:10px 14px;font-size:13px;text-align:right;${c?'color:'+c:''}">${c?'-':''}${money(v)}</td></tr>`;
+    return `<div style="font-family:Arial,sans-serif;padding:36px 40px;${i<list.length-1?'page-break-after:always;':''}">
+      <div style="display:flex;justify-content:space-between;margin-bottom:26px;padding-bottom:18px;border-bottom:3px solid #1B2A4A">
+        <div>
+          <div style="font-size:20px;font-weight:bold;color:#1B2A4A;letter-spacing:2px">HAIDA YAMMAR</div>
+          <div style="font-size:11px;color:#C9A24B;letter-spacing:2px;margin-bottom:8px">CONSULTING</div>
+          <div style="font-size:11px;color:#C9A24B;line-height:1.8">Haida Yammar Limited<br>RC No: 9304448<br>Abuja, Nigeria</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:26px;font-weight:bold;color:#1B2A4A">PAYSLIP</div>
+          <div style="font-size:13px;color:#28395e;margin:4px 0"><strong>${period}</strong></div>
+        </div>
+      </div>
+      <div style="display:flex;justify-content:space-between;gap:20px;margin-bottom:22px;flex-wrap:wrap">
+        <div>
+          <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:#C9A24B;margin-bottom:5px">Employee</div>
+          <div style="font-size:16px;font-weight:bold;color:#1B2A4A">${_esc(st.name||'—')}</div>
+          <div style="font-size:12px;color:#28395e;margin-top:3px">${st.employee_id?'Employee ID: '+_esc(st.employee_id)+'<br>':''}${st.role||st.position?_esc(st.role||st.position)+'<br>':''}Workplace: ${_esc((sl.clients&&sl.clients.business_name)||'—')}</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:#C9A24B;margin-bottom:5px">Payment Details</div>
+          <div style="font-size:12px;color:#28395e;line-height:1.7">${bank||acct?`${_esc(bank||'—')}<br>${_esc(acct||'—')}<br>${_esc(acctName||'—')}`:'<span style="color:#8B1A1A">No bank details on file</span>'}</div>
+        </div>
+      </div>
+      <table style="width:100%;border-collapse:collapse;margin-bottom:6px">
+        <thead><tr style="background:#1B2A4A"><th style="padding:9px 14px;text-align:left;font-size:11px;letter-spacing:1px;color:white;text-transform:uppercase">Earnings</th><th style="padding:9px 14px;text-align:right;font-size:11px;letter-spacing:1px;color:white;text-transform:uppercase">Amount</th></tr></thead>
+        <tbody>${earn.map(r=>row(r[0],r[1])).join('')}
+        <tr style="background:#F5F1E8"><td style="padding:10px 14px;font-size:13px;font-weight:bold">Gross pay</td><td style="padding:10px 14px;font-size:13px;font-weight:bold;text-align:right">${money(totalEarn)}</td></tr></tbody>
+      </table>
+      <table style="width:100%;border-collapse:collapse;margin-bottom:18px">
+        <thead><tr style="background:#8B1A1A"><th style="padding:9px 14px;text-align:left;font-size:11px;letter-spacing:1px;color:white;text-transform:uppercase">Deductions</th><th style="padding:9px 14px;text-align:right;font-size:11px;letter-spacing:1px;color:white;text-transform:uppercase">Amount</th></tr></thead>
+        <tbody>${ded.length?ded.map(r=>row(r[0],r[1],'#8B1A1A')).join(''):'<tr><td colspan="2" style="padding:10px 14px;font-size:12px;color:#8a8574">No deductions this month</td></tr>'}
+        <tr style="background:#F5F1E8"><td style="padding:10px 14px;font-size:13px;font-weight:bold">Total deductions</td><td style="padding:10px 14px;font-size:13px;font-weight:bold;text-align:right;color:#8B1A1A">${totalDed?'-':''}${money(totalDed)}</td></tr></tbody>
+      </table>
+      <div style="display:flex;justify-content:flex-end;margin-bottom:20px">
+        <div style="width:300px;background:#1B2A4A;color:white;border-radius:8px;padding:14px 18px;display:flex;justify-content:space-between;font-size:16px;font-weight:bold"><span>NET PAY</span><span>${money(sl.net_pay)}</span></div>
+      </div>
+      <div style="margin-top:30px;padding-top:14px;border-top:1px solid #DCD8C8;font-size:10px;color:#C9A24B;text-align:center">
+        Haida Yammar Limited · RC No: 9304448 · Abuja, Nigeria · This is a computer-generated payslip and does not require a signature.
+      </div>
+    </div>`;
+  });
+  document.getElementById('invoice-pdf-body').innerHTML=pages.join('');
+  const t=document.getElementById('invoice-pdf-title');if(t)t.textContent='Payslip Preview';
+  openModal('modal-invoice-pdf');
 }
 async function markPayrollPaid(runId){
   await db.from('payroll_runs').update({status:'Paid'}).eq('id',runId);
@@ -10368,6 +10562,221 @@ async function bulkCreateShifts(){
   await logActivity('Bulk created shifts',`${rows.length} shifts — ${name}, ${document.getElementById('bsh-month').selectedOptions[0].text} ${year}`,_shClientId);
   if(document.getElementById('cv-shifts-list'))loadShifts(_shClientId,'cv-shifts-list',true);
   if(document.getElementById('portal-shifts-list'))loadShifts(_shClientId,'portal-shifts-list',true);
+}
+// ══ ROTA UPLOAD (Excel / CSV → shifts + assignments) ══
+let _rotaPlan=null;
+function _loadXlsxLib(){
+  return new Promise((res,rej)=>{
+    if(window.XLSX)return res();
+    const sc=document.createElement('script');
+    sc.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+    sc.onload=res;sc.onerror=()=>rej(new Error('Could not load the spreadsheet reader — check your internet connection.'));
+    document.head.appendChild(sc);
+  });
+}
+function _rotaDate(v){
+  if(v==null||v==='')return null;
+  const iso=d=>d.getUTCFullYear()+'-'+String(d.getUTCMonth()+1).padStart(2,'0')+'-'+String(d.getUTCDate()).padStart(2,'0');
+  if(typeof v==='number')return v>20000?iso(new Date(Math.round((v-25569)*86400000))):null;
+  if(v instanceof Date)return v.getFullYear()+'-'+String(v.getMonth()+1).padStart(2,'0')+'-'+String(v.getDate()).padStart(2,'0');
+  const t=String(v).trim();
+  let m=t.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if(m)return m[1]+'-'+m[2].padStart(2,'0')+'-'+m[3].padStart(2,'0');
+  m=t.match(/^(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2,4})$/); // day first (Nigeria/UK)
+  if(m){const y=m[3].length===2?'20'+m[3]:m[3];return y+'-'+m[2].padStart(2,'0')+'-'+m[1].padStart(2,'0');}
+  const dt=new Date(t+' UTC');if(!isNaN(dt))return iso(dt);
+  return null;
+}
+function _rotaTime(v){
+  if(v==null||v==='')return null;
+  if(typeof v==='number'){const f=v-Math.floor(v);const mins=Math.round(f*1440)%1440;return String(Math.floor(mins/60)).padStart(2,'0')+':'+String(mins%60).padStart(2,'0');}
+  if(v instanceof Date)return String(v.getHours()).padStart(2,'0')+':'+String(v.getMinutes()).padStart(2,'0');
+  const m=String(v).trim().match(/^(\d{1,2})(?::(\d{2}))?(?::\d{2})?\s*(am|pm)?$/i);
+  if(!m)return null;
+  let h=parseInt(m[1],10);const mi=parseInt(m[2]||'0',10);
+  if(m[3]){const pm=m[3].toLowerCase()==='pm';if(pm&&h<12)h+=12;if(!pm&&h===12)h=0;}
+  if(h>23||mi>59)return null;
+  return String(h).padStart(2,'0')+':'+String(mi).padStart(2,'0');
+}
+async function downloadRotaTemplate(){
+  try{await _loadXlsxLib();}catch(e){alert(e.message);return;}
+  let names=[];
+  if(_shClientId){
+    const {data}=await db.from('client_staff').select('name').eq('client_id',_shClientId).neq('status','Terminated').order('name',{ascending:true});
+    names=(data||[]).map(x=>x.name);
+  }
+  if(!names.length)names=['Ada Obi','Tunde Bello'];
+  const t=new Date();t.setDate(t.getDate()+1);const d=t.toISOString().slice(0,10);
+  const aoa=[['Date','Staff','Shift','Start','End']].concat(names.map(n=>[d,n,'Morning','08:00','14:00']));
+  const ws=XLSX.utils.aoa_to_sheet(aoa);ws['!cols']=[{wch:12},{wch:24},{wch:14},{wch:8},{wch:8}];
+  const ws2=XLSX.utils.aoa_to_sheet([['Staff names (copy exactly)']].concat(names.map(n=>[n])));ws2['!cols']=[{wch:30}];
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Rota');XLSX.utils.book_append_sheet(wb,ws2,'Staff names');
+  XLSX.writeFile(wb,'rota_template.xlsx');
+}
+// Reads "grid" rotas: staff down the side, dates across the top, ON/OFF in the cells (sheets named Week 1, Week 2…)
+function _rotaParseGrid(wb){
+  const MON={jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11};
+  const out=[];
+  wb.SheetNames.filter(n=>/week/i.test(n)).forEach(name=>{
+    const g=XLSX.utils.sheet_to_json(wb.Sheets[name],{header:1,raw:true,defval:''});
+    let year=null;
+    for(let r=0;r<Math.min(4,g.length)&&!year;r++){const m=g[r].map(String).join(' ').match(/\b(20\d\d)\b/);if(m)year=parseInt(m[1],10);}
+    if(!year)year=new Date().getFullYear();
+    const hr=g.findIndex(r=>r.filter(c=>/\d{1,2}\s+[A-Za-z]{3}/.test(String(c))).length>=3);
+    if(hr<0)return;
+    let prevMonth=-1,yr=year;
+    const cols=[];
+    g[hr].forEach((c,ci)=>{
+      const m=String(c).match(/(\d{1,2})\s+([A-Za-z]{3})/);if(!m)return;
+      const mo=MON[m[2].toLowerCase()];if(mo==null)return;
+      if(prevMonth>=0&&mo<prevMonth)yr++;prevMonth=mo;
+      cols.push({ci,date:yr+'-'+String(mo+1).padStart(2,'0')+'-'+String(parseInt(m[1],10)).padStart(2,'0')});
+    });
+    let section='Shift';
+    for(let r=hr+1;r<g.length;r++){
+      const row=g[r];const label=String(row[0]||'').trim();if(!label)continue;
+      if(/coverage check/i.test(label))break;
+      const filled=cols.filter(c=>String(row[c.ci]||'').trim()!=='').length;
+      if(!filled){ // heading row such as KITCHEN TEAM
+        section=label.replace(/\w\S*/g,w=>w.charAt(0).toUpperCase()+w.slice(1).toLowerCase());continue;}
+      const nameOnly=label.replace(/\s*\(.*?\)\s*/g,' ').trim();
+      cols.forEach(c=>{if(String(row[c.ci]||'').trim().toUpperCase()==='ON')out.push({date:c.date,section,rawName:nameOnly});});
+    }
+  });
+  return out;
+}
+let _rotaGridMode=false;
+function _rotaRenderPreview(pfx,list,unmatched,problems,staff,gridMode){
+  const out=document.getElementById('rota-preview-'+pfx);
+  const assignments=list.reduce((n,g)=>n+g.people.length,0);
+  out.innerHTML=`<div style="font-family:Arial;font-size:12.5px;color:var(--ink);margin-bottom:8px"><strong>${list.length}</strong> shifts · <strong>${assignments}</strong> staff assignments</div>
+    ${gridMode?`<div style="background:var(--surface2,#f5f1e8);border-radius:9px;padding:10px 12px;margin-bottom:10px;font-family:Arial;font-size:12px">
+      <div style="margin-bottom:6px">This file only says who is <strong>ON</strong> each day — it has no times. Set the shift times to use:</div>
+      <input type="time" id="rota-grid-start" value="${_esc(_rotaPlan.defStart)}" style="padding:5px 8px;border:1px solid var(--border);border-radius:8px">
+      to <input type="time" id="rota-grid-end" value="${_esc(_rotaPlan.defEnd)}" style="padding:5px 8px;border:1px solid var(--border);border-radius:8px">
+      <button class="btn-sm" onclick="rotaApplyGridTimes('${pfx}')">Apply times</button></div>`:''}
+    ${unmatched.size?`<div style="font-family:Arial;font-size:12px;color:var(--danger);margin-bottom:6px">⛔ These names don't match any staff at this client: <strong>${[...unmatched].map(_esc).join(', ')}</strong>. Names in the rota must match the staff list exactly — fix them in your spreadsheet and upload again.</div>`:''}
+    <div style="font-family:Arial;font-size:11.5px;color:var(--muted);margin-bottom:4px">Staff on this client (${staff.length}) — <span style="color:var(--success)">green</span> = on this rota, grey = not on it:</div>
+    <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px">${staff.map(x=>{const on=list.some(g=>g.people.some(p=>p.id===x.id));return `<span class="badge ${on?'badge-green':'badge-gray'}">${_esc(x.name)}</span>`;}).join('')}</div>
+    ${problems.length?`<div style="font-family:Arial;font-size:12px;color:var(--danger);margin-bottom:6px">⚠ Skipped ${problems.length} row(s): ${problems.slice(0,5).map(_esc).join('; ')}${problems.length>5?'…':''}</div>`:''}
+    <div style="max-height:260px;overflow:auto;border:1px solid var(--border);border-radius:9px;margin-bottom:10px">
+      <table style="width:100%;border-collapse:collapse;font-family:Arial;font-size:12px">
+        <tr style="background:var(--surface2,#f5f1e8);text-align:left"><th style="padding:6px 8px">Date</th><th style="padding:6px 8px">Shift</th><th style="padding:6px 8px">Time</th><th style="padding:6px 8px">Staff</th></tr>
+        ${list.slice(0,300).map(g=>`<tr style="border-top:1px solid var(--border)"><td style="padding:5px 8px">${g.date}</td><td style="padding:5px 8px">${_esc(g.shiftName)}</td><td style="padding:5px 8px">${g.start}–${g.end}</td><td style="padding:5px 8px">${g.people.length?g.people.map(x=>_esc(x.name)).join(', '):'<span style="color:var(--muted)">Open</span>'}</td></tr>`).join('')}
+      </table></div>
+    ${unmatched.size?'':'<button class="btn-save" onclick="confirmRotaImport()">✓ Create these shifts</button>'}
+    <button class="btn-cancel" onclick="document.getElementById('rota-preview-${pfx}').innerHTML='';document.getElementById('rota-file-${pfx}').value='';_rotaPlan=null">Cancel</button>`;
+}
+function rotaApplyGridTimes(pfx){
+  if(!_rotaPlan)return;
+  const st=document.getElementById('rota-grid-start').value,en=document.getElementById('rota-grid-end').value;
+  if(!st||!en){alert('Pick a start and end time.');return;}
+  _rotaPlan.defStart=st;_rotaPlan.defEnd=en;
+  _rotaPlan.list.forEach(g=>{g.start=st;g.end=en;});
+  _rotaRenderPreview(pfx,_rotaPlan.list,_rotaPlan.unmatched,_rotaPlan.problems,_rotaPlan.staff,true);
+}
+async function rotaFileChosen(pfx){
+  const input=document.getElementById('rota-file-'+pfx);
+  const out=document.getElementById('rota-preview-'+pfx);
+  const file=input.files&&input.files[0];if(!file)return;
+  if(!_shClientId){out.innerHTML='<div class="error-msg">Open a client first.</div>';return;}
+  out.innerHTML='<p style="font-family:Arial;font-size:12px;color:var(--muted)">Reading file…</p>';
+  try{
+    await _loadXlsxLib();
+    const wb=XLSX.read(await file.arrayBuffer(),{type:'array'});
+    const [{data:staffRows},{data:cl}]=await Promise.all([
+      db.from('client_staff').select('id,name').eq('client_id',_shClientId).neq('status','Terminated'),
+      db.from('clients').select('opening_time,closing_time').eq('id',_shClientId).maybeSingle()
+    ]);
+    const staff=staffRows||[];
+    const matchStaff=raw=>{
+      const n=raw.trim().toLowerCase();if(!n)return null;
+      let m=staff.filter(x=>x.name.trim().toLowerCase()===n);
+      if(m.length===1)return m[0];
+      m=staff.filter(x=>x.name.toLowerCase().includes(n)||n.includes(x.name.toLowerCase()));
+      if(m.length===1)return m[0];
+      m=staff.filter(x=>x.name.toLowerCase().split(/\s+/).includes(n));
+      return m.length===1?m[0]:null;
+    };
+    const groups={},problems=[],unmatched=new Set();
+    // ---- try the simple table format first (Date | Staff | Shift | Start | End)
+    const ws=wb.Sheets[wb.SheetNames[0]];
+    const tbl=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:''});
+    const aliases={date:['date','day'],staff:['staff','staff name','name','employee','who'],shift:['shift','shift name','shift type','role'],start:['start','start time','from','in','time in'],end:['end','end time','to','out','finish','time out'],slots:['slots','headcount','people needed']};
+    const hi=tbl.findIndex(r=>r.some(c=>String(c).trim().toLowerCase()==='date'));
+    let gridMode=false;
+    if(hi>=0){
+      const heads=tbl[hi].map(c=>String(c).trim().toLowerCase());
+      const col={};Object.keys(aliases).forEach(k=>{col[k]=heads.findIndex(h=>aliases[k].includes(h));});
+      if(col.date<0||col.start<0||col.end<0){out.innerHTML='<div class="error-msg">Missing a column — need at least Date, Start and End (plus Staff and Shift).</div>';return;}
+      for(let r=hi+1;r<tbl.length;r++){
+        const row=tbl[r];if(!row||row.every(c=>String(c).trim()===''))continue;
+        const date=_rotaDate(row[col.date]),start=_rotaTime(row[col.start]),end=_rotaTime(row[col.end]);
+        if(!date||!start||!end){problems.push('Row '+(r+1)+': needs a valid date, start and end');continue;}
+        const shiftName=(col.shift>=0&&String(row[col.shift]).trim())||'Shift';
+        const key=[date,shiftName.toLowerCase(),start,end].join('|');
+        const g=groups[key]=groups[key]||{date,shiftName,start,end,slots:1,people:[]};
+        const rs=col.slots>=0?parseInt(row[col.slots],10):NaN;if(rs>g.slots)g.slots=rs;
+        const names=col.staff>=0?String(row[col.staff]).split(/[,;\n]/).map(x=>x.trim()).filter(Boolean):[];
+        names.forEach(nm=>{const m=matchStaff(nm);if(!m){unmatched.add(nm);return;}if(!g.people.some(p=>p.id===m.id))g.people.push(m);});
+      }
+    }else{
+      // ---- otherwise try the wall-chart format (Week 1, Week 2 … sheets with ON / OFF)
+      const entries=_rotaParseGrid(wb);
+      if(!entries.length){out.innerHTML='<div class="error-msg">Couldn\'t recognise this file. Use the template (Date, Staff, Shift, Start, End), or a rota with Week sheets showing ON/OFF per day.</div>';return;}
+      gridMode=true;
+      const st=(cl&&cl.opening_time||'08:00').slice(0,5),en=(cl&&cl.closing_time||'17:00').slice(0,5);
+      entries.forEach(e=>{
+        const key=e.date+'|'+e.section.toLowerCase();
+        const g=groups[key]=groups[key]||{date:e.date,shiftName:e.section,start:st,end:en,slots:1,people:[]};
+        const m=matchStaff(e.rawName);
+        if(!m){unmatched.add(e.rawName);return;}
+        if(!g.people.some(p=>p.id===m.id))g.people.push(m);
+      });
+    }
+    const list=Object.values(groups).sort((a,b)=>a.date.localeCompare(b.date)||a.shiftName.localeCompare(b.shiftName));
+    list.forEach(g=>{if(g.people.length>g.slots)g.slots=g.people.length;});
+    if(!list.length){out.innerHTML='<div class="error-msg">No usable rows found.'+(problems.length?'<br>'+problems.slice(0,5).map(_esc).join('<br>'):'')+'</div>';return;}
+    _rotaPlan={clientId:_shClientId,pfx,list,unmatched,problems,staff,defStart:list[0].start,defEnd:list[0].end};
+    _rotaRenderPreview(pfx,list,unmatched,problems,staff,gridMode);
+  }catch(e){out.innerHTML='<div class="error-msg">Could not read that file: '+_esc(e.message)+'</div>';}
+}
+async function confirmRotaImport(){
+  if(!_rotaPlan)return;
+  const {clientId,pfx,list}=_rotaPlan;
+  const out=document.getElementById('rota-preview-'+pfx);
+  out.innerHTML='<p style="font-family:Arial;font-size:12px;color:var(--muted)">Creating shifts…</p>';
+  const dates=list.map(g=>g.date);
+  const {data:existing}=await db.from('shifts').select('*').eq('client_id',clientId).gte('shift_date',dates[0]).lte('shift_date',dates[dates.length-1]);
+  const norm=t=>(t||'').slice(0,5);
+  const findShift=g=>(existing||[]).find(x=>x.shift_date===g.date&&(x.shift_name||'').trim().toLowerCase()===g.shiftName.toLowerCase()&&norm(x.start_time)===g.start&&norm(x.end_time)===g.end);
+  let created=0,assigned=0;const skipped=[];
+  for(const g of list){
+    let shift=findShift(g);
+    if(!shift){
+      const {data,error}=await db.from('shifts').insert({client_id:clientId,shift_name:g.shiftName,shift_date:g.date,start_time:g.start,end_time:g.end,slots:g.slots}).select().single();
+      if(error){skipped.push(g.date+' '+g.shiftName+': '+error.message);continue;}
+      shift=data;created++;
+    }else if((shift.slots||1)<g.slots){
+      await db.from('shifts').update({slots:g.slots}).eq('id',shift.id);
+    }
+    const {data:have}=await db.from('shift_assignments').select('staff_id').eq('shift_id',shift.id);
+    const haveIds=new Set((have||[]).map(a=>a.staff_id));
+    for(const person of g.people){
+      if(haveIds.has(person.id))continue;
+      const conflict=await checkShiftConflict(person.id,g.date,g.start,g.end,shift.id);
+      if(conflict){skipped.push(person.name+' on '+g.date+' '+g.shiftName+': '+conflict);continue;}
+      const {error}=await db.from('shift_assignments').insert({shift_id:shift.id,staff_id:person.id,assigned_by:'Rota upload',status:'Assigned'});
+      if(error){skipped.push(person.name+' on '+g.date+': '+error.message);continue;}
+      assigned++;
+    }
+  }
+  await logActivity('Uploaded rota',created+' shifts, '+assigned+' assignments',clientId);
+  _rotaPlan=null;
+  document.getElementById('rota-file-'+pfx).value='';
+  out.innerHTML=`<div class="success-msg">✓ Created ${created} new shift(s) and made ${assigned} assignment(s).</div>`+(skipped.length?`<div style="font-family:Arial;font-size:12px;color:var(--danger);margin-top:6px">Not done (${skipped.length}):<br>${skipped.slice(0,15).map(_esc).join('<br>')}${skipped.length>15?'<br>…':''}</div>`:'');
+  if(document.getElementById('cv-shifts-list'))loadShifts(clientId,'cv-shifts-list',true);
+  if(document.getElementById('portal-shifts-list'))loadShifts(clientId,'portal-shifts-list',true);
 }
 async function addShift(){
   if(!_shClientId)return;
@@ -12233,8 +12642,14 @@ async function loadDailyHRReport(){
   const dateEl=document.getElementById('dhr-date');
   if(!dateEl.value)dateEl.value=localDateStr();
   const date=dateEl.value;
-  const {data:activeClients}=await db.from('clients').select('id,business_name').eq('staff_portal_active',true).order('business_name',{ascending:true});
-  const portalClients=activeClients||[];
+  // A client counts as "portal" if flagged active, OR anyone there has clocked in that day, OR any of its staff have portal logins
+  const [{data:allCl},{data:attToday},{data:credStaff}]=await Promise.all([
+    db.from('clients').select('id,business_name,staff_portal_active').order('business_name',{ascending:true}),
+    db.from('staff_attendance').select('client_id').eq('work_date',date),
+    db.from('client_staff').select('client_id').not('username','is',null).neq('username','').neq('status','Terminated')
+  ]);
+  const _hasActivity=new Set([...(attToday||[]).map(a=>a.client_id),...(credStaff||[]).map(x=>x.client_id)]);
+  const portalClients=(allCl||[]).filter(c=>c.staff_portal_active||_hasActivity.has(c.id));
   const portalClientIds=portalClients.map(c=>c.id);
   const filterEl=document.getElementById('dhr-client-filter');
   const prev=filterEl.value;
