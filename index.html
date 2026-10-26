@@ -637,6 +637,11 @@ self.addEventListener('notificationclick',function(e){
       <div id="sp-kb-list"></div>
     </div>
 
+    <!-- HANDOVER NOTES (visible to the whole team) -->
+    <div style="background:white;border:1px solid var(--border);border-radius:12px;padding:24px;margin-bottom:16px">
+      <div id="sp-handover-container"></div>
+    </div>
+
     <!-- DAILY REPORT -->
     <div style="background:white;border:1px solid var(--border);border-radius:12px;padding:24px;margin-bottom:16px">
       <div style="font-family:Arial;font-size:11px;text-transform:uppercase;color:var(--muted);margin-bottom:10px">📝 Daily Report</div>
@@ -2207,6 +2212,7 @@ self.addEventListener('notificationclick',function(e){
           <button class="inner-tab cv-tab" id="cvtab-cv-attendance" onclick="loadClientViewTab('cv-attendance')">🕒 Attendance</button>
           <button class="inner-tab cv-tab" id="cvtab-cv-leave" onclick="loadClientViewTab('cv-leave')">🌴 Leave</button>
           <button class="inner-tab cv-tab" id="cvtab-cv-shifts" onclick="loadClientViewTab('cv-shifts')">📆 Shifts</button>
+          <button class="inner-tab cv-tab" id="cvtab-cv-handover" onclick="loadClientViewTab('cv-handover')">🔁 Handover</button>
           <button class="inner-tab cv-tab" id="cvtab-cv-kb" onclick="loadClientViewTab('cv-kb')" style="color:var(--brand);font-weight:600">📚 Knowledge Base</button>
           <button class="inner-tab cv-tab" id="cvtab-cv-staffing" onclick="loadClientViewTab('cv-staffing')" style="color:var(--danger);font-weight:600">📅 Staffing</button>
           <button class="inner-tab cv-tab" id="cvtab-cv-procurement" onclick="loadClientViewTab('cv-procurement')" style="color:var(--gold);font-weight:600">🧑‍💼 Staff Requests</button>
@@ -2292,6 +2298,9 @@ self.addEventListener('notificationclick',function(e){
           <div id="cv-attendance-list"></div>
         </div>
         <div id="cv-leave-panel" class="cv-tab-content" style="display:none"><div id="cv-leave-list"></div></div>
+        <div id="cv-handover-panel" class="cv-tab-content" style="display:none">
+          <div id="cv-handover-container"></div>
+        </div>
         <div id="cv-shifts-panel" class="cv-tab-content" style="display:none">
           <div class="card" style="padding:16px 20px;margin-bottom:16px">
             <div style="font-size:13px;font-weight:600;color:var(--ink);margin-bottom:4px">📥 Upload a Rota (Excel / CSV)</div>
@@ -2794,6 +2803,7 @@ self.addEventListener('notificationclick',function(e){
           <button class="ptab" data-service="staffing" onclick="switchPortalTab('portal-attendance-tab',this);loadAttendance(currentUser.clientId,'portal-attendance-list');loadGeofenceStatus(currentUser.clientId,'portal')">🕒 Attendance</button>
           <button class="ptab" data-service="staffing" onclick="switchPortalTab('portal-leave-tab',this);loadLeaveRequests(currentUser.clientId,'portal-leave-list',true)">🌴 Leave</button>
           <button class="ptab" data-service="staffing" onclick="switchPortalTab('portal-shifts-tab',this);loadShifts(currentUser.clientId,'portal-shifts-list',true)">📆 Shifts</button>
+          <button class="ptab" data-service="staffing" onclick="switchPortalTab('portal-handover-tab',this);renderHandover('pc')">🔁 Handover</button>
           <button class="ptab" data-service="finance" onclick="switchPortalTab('portal-accounting-tab',this);loadClientAccountingView(currentUser.clientId)">📚 Accounting</button>
           <button class="ptab" onclick="switchPortalTab('portal-kb-tab',this);loadKnowledgeBase(currentUser.clientId,'portal-kb-list',true)" style="font-weight:600;color:var(--brand)">📚 Knowledge Base</button>
           <button class="ptab" data-service="staffing" onclick="switchPortalTab('portal-staffing-tab',this);loadStaffingOverview(currentUser.clientId,'portal-staffing-list')" style="font-weight:600;color:var(--danger)">📅 Staffing</button>
@@ -2866,6 +2876,7 @@ self.addEventListener('notificationclick',function(e){
           <div id="portal-attendance-list"></div>
         </div>
         <div id="portal-leave-tab" class="portal-tab-content" style="display:none"><div id="portal-leave-list"></div></div>
+        <div id="portal-handover-tab" class="portal-tab-content" style="display:none"><div id="portal-handover-container"></div></div>
         <div id="portal-shifts-tab" class="portal-tab-content" style="display:none">
           <div class="card" style="padding:16px 20px;margin-bottom:16px">
             <div style="font-size:13px;font-weight:600;color:var(--ink);margin-bottom:4px">📥 Upload a Rota (Excel / CSV)</div>
@@ -4422,6 +4433,107 @@ async function deletePolicy(id,clientId,prefix){
   await logActivity('Deleted client policy','',clientId);
   loadPolicies(clientId,prefix,true);
 }
+// ══ HANDOVER NOTES — everything you want your counterpart to know. Visible to the whole team, the client and Haida. ══
+let _spStaffNameCache=null;
+async function _hoCtx(scope){
+  if(scope==='sp'){
+    if(!_spStaffNameCache){const {data}=await db.from('client_staff').select('name').eq('id',_spStaffId).maybeSingle();_spStaffNameCache=(data&&data.name)||'Staff';}
+    return {clientId:_spClientId,staffId:_spStaffId,name:_spStaffNameCache,role:'staff',box:'sp-handover-container',canDeleteAny:false};
+  }
+  if(scope==='pc')return {clientId:currentUser.clientId,staffId:null,name:currentUser.name||'Client',role:'client',box:'portal-handover-container',canDeleteAny:true};
+  return {clientId:_currentViewClientId,staffId:null,name:(currentUser&&(currentUser.name||currentUser.username))||'Haida',role:'admin',box:'cv-handover-container',canDeleteAny:true};
+}
+async function renderHandover(scope){
+  const c=await _hoCtx(scope);
+  const box=document.getElementById(c.box);if(!box||!c.clientId)return;
+  const {data:staff}=await db.from('client_staff').select('id,name').eq('client_id',c.clientId).neq('status','Terminated').order('name',{ascending:true});
+  const forOpts='<option value="">Everyone</option>'+(staff||[]).filter(x=>x.id!==c.staffId).map(x=>`<option value="${x.id}">${_esc(x.name)}</option>`).join('');
+  box.innerHTML=`<div id="ho-title-${scope}" style="font-family:Arial;font-size:11px;text-transform:uppercase;color:var(--muted);margin-bottom:4px">🔁 Handover Notes</div>
+    <div style="font-family:Arial;font-size:11.5px;color:var(--muted);margin-bottom:12px">Leave everything your counterpart needs to know — what's done, what's pending, anything to watch. <strong>Everyone on the team, the client and Haida can read these</strong> (unlike daily reports).</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+      <input type="text" id="ho-shift-${scope}" placeholder="Shift (e.g. Morning)" style="width:160px;padding:7px 10px;border:1px solid var(--border);border-radius:9px;font-family:Arial;font-size:12px">
+      <select id="ho-for-${scope}" style="padding:7px 10px;border:1px solid var(--border);border-radius:9px;font-family:Arial;font-size:12px" title="Who is this mainly for?">${forOpts}</select>
+      <label style="display:flex;align-items:center;gap:5px;font-family:Arial;font-size:12px"><input type="checkbox" id="ho-imp-${scope}" style="width:auto"> ⚑ Important</label>
+    </div>
+    <textarea id="ho-body-${scope}" rows="4" placeholder="e.g. Fryer oil changed, chicken delivery arrives 2pm, table 5 complained about wait, till is short by ₦500 — please check…" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:9px;font-family:Arial;font-size:13px;margin-bottom:8px"></textarea>
+    <button class="btn-save" onclick="postHandover('${scope}')">Post Handover Note</button>
+    <div id="ho-feedback-${scope}" style="margin-top:8px"></div>
+    <div style="margin-top:16px;font-family:Arial;font-size:11px;text-transform:uppercase;color:var(--muted)">Recent handover notes</div>
+    <div id="ho-list-${scope}" style="margin-top:8px"></div>`;
+  loadHandoverList(scope);
+}
+async function postHandover(scope){
+  const c=await _hoCtx(scope);
+  const body=document.getElementById('ho-body-'+scope).value.trim();
+  const fb=document.getElementById('ho-feedback-'+scope);
+  if(!body){fb.innerHTML='<div class="error-msg">Write the note first.</div>';return;}
+  const {error}=await db.from('staff_handover_notes').insert({
+    client_id:c.clientId,author_staff_id:c.staffId,author_name:c.name,author_role:c.role,
+    note_date:localDateStr(),
+    shift_label:document.getElementById('ho-shift-'+scope).value.trim()||null,
+    for_staff_id:document.getElementById('ho-for-'+scope).value||null,
+    important:document.getElementById('ho-imp-'+scope).checked,body
+  });
+  if(error){fb.innerHTML='<div class="error-msg">Could not post: '+_esc(error.message)+'</div>';return;}
+  document.getElementById('ho-body-'+scope).value='';document.getElementById('ho-shift-'+scope).value='';document.getElementById('ho-imp-'+scope).checked=false;
+  fb.innerHTML='<div class="success-msg">✓ Posted — your team can see it now.</div>';
+  setTimeout(()=>{fb.innerHTML='';},2500);
+  loadHandoverList(scope);
+}
+async function loadHandoverList(scope){
+  const c=await _hoCtx(scope);
+  const el=document.getElementById('ho-list-'+scope);if(!el)return;
+  const since=new Date();since.setDate(since.getDate()-30);
+  const {data:notes,error}=await db.from('staff_handover_notes').select('*').eq('client_id',c.clientId).gte('created_at',since.toISOString()).order('created_at',{ascending:false}).limit(60);
+  if(error){el.innerHTML='<p style="font-size:12px;color:var(--danger)">'+_esc(error.message)+'</p>';return;}
+  const rows=notes||[];
+  if(!rows.length){el.innerHTML='<p style="font-family:Arial;font-size:12px;color:var(--muted)">No handover notes yet.</p>';return;}
+  const ids=rows.map(r=>r.id);
+  const [{data:reads},{data:staff}]=await Promise.all([
+    db.from('staff_handover_reads').select('note_id,staff_id,read_at').in('note_id',ids),
+    db.from('client_staff').select('id,name').eq('client_id',c.clientId)
+  ]);
+  const nameOf={};(staff||[]).forEach(x=>nameOf[x.id]=x.name);
+  let unread=0;
+  el.innerHTML=rows.map(r=>{
+    const rs=(reads||[]).filter(x=>x.note_id===r.id);
+    const mine=c.staffId&&rs.some(x=>x.staff_id===c.staffId);
+    const isMine=c.staffId&&r.author_staff_id===c.staffId;
+    const isNew=scope==='sp'&&!mine&&!isMine;
+    if(isNew)unread++;
+    const forTxt=r.for_staff_id?`<span class="badge badge-gray">→ for ${_esc(nameOf[r.for_staff_id]||'a colleague')}</span>`:'';
+    const youFor=scope==='sp'&&r.for_staff_id===c.staffId;
+    const when=new Date(r.created_at).toLocaleString([], {weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+    const canDel=c.canDeleteAny||isMine;
+    return `<div style="border:1px solid ${r.important?'var(--gold)':'var(--border)'};${r.important?'background:var(--gold-light);':''}border-radius:9px;padding:10px 14px;margin-bottom:8px">
+      <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:4px">
+        <div style="font-family:Arial;font-size:12px;color:var(--ink)"><strong>${_esc(r.author_name||'—')}</strong>${r.author_role==='admin'?' <span class="badge badge-gold">Haida</span>':r.author_role==='client'?' <span class="badge badge-green">Client</span>':''}${r.shift_label?` · ${_esc(r.shift_label)}`:''} <span style="color:var(--muted)">· ${when}</span></div>
+        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">${r.important?'<span class="badge badge-red">⚑ Important</span>':''}${forTxt}${youFor?'<span class="badge badge-gold">For you</span>':''}${isNew?'<span class="badge badge-red">NEW</span>':''}</div>
+      </div>
+      <div style="white-space:pre-wrap;font-family:Arial;font-size:13px;color:var(--ink2);line-height:1.5">${_esc(r.body)}</div>
+      <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px">
+        <div style="font-family:Arial;font-size:11px;color:var(--muted)">${rs.length?'👁 Seen by '+rs.map(x=>_esc(nameOf[x.staff_id]||'—')).join(', '):'Not seen by anyone yet'}</div>
+        <div style="display:flex;gap:6px">
+          ${scope==='sp'&&!mine&&!isMine?`<button class="btn-save" style="padding:4px 12px;font-size:11px" onclick="ackHandover('${r.id}')">✓ Got it</button>`:''}
+          ${canDel?`<button class="btn-danger" style="padding:4px 10px;font-size:11px" onclick="deleteHandover('${r.id}','${scope}')">Delete</button>`:''}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+  const t=document.getElementById('ho-title-'+scope);
+  if(t&&scope==='sp')t.innerHTML='🔁 Handover Notes'+(unread?` <span class="badge badge-red" style="text-transform:none">${unread} new</span>`:'');
+}
+async function ackHandover(noteId){
+  const {error}=await db.from('staff_handover_reads').upsert({note_id:noteId,staff_id:_spStaffId,read_at:new Date().toISOString()},{onConflict:'note_id,staff_id'});
+  if(error){alert('Could not save: '+error.message);return;}
+  loadHandoverList('sp');
+}
+async function deleteHandover(id,scope){
+  if(!confirm('Delete this handover note?'))return;
+  const {error}=await db.from('staff_handover_notes').delete().eq('id',id);
+  if(error){alert('Could not delete: '+error.message);return;}
+  loadHandoverList(scope);
+}
 // ══ STAFF READING LIST ══
 async function loadSpReadingList(){
   const el=document.getElementById('sp-reading-list');if(!el)return;
@@ -5571,6 +5683,7 @@ async function showStaffPortal(staff){
 
   // Daily reports (own)
   await loadSpReports();
+  renderHandover('sp');
   // Team reports (only if this staff member is an Operations Manager)
   const teamBox=document.getElementById('sp-team-reports-box');
   if(staff.is_ops_manager){
@@ -7830,6 +7943,8 @@ async function loadClientViewTab(tab,clientId){
   } else if(tab==='cv-credentials'){
     if(!currentUser||!currentUser.isOwner)return;
     await loadClientCredentials(cid,'cv',true);
+  } else if(tab==='cv-handover'){
+    await renderHandover('cv');
   } else if(tab==='cv-policies'){
     if(!currentUser||!currentUser.isOwner)return;
     await loadPolicies(cid,'cv',true);
@@ -8236,8 +8351,8 @@ function calculateNigeriaPayroll(staff){
   const other=parseFloat(staff.other_allowances)||0;
   const grossMonthly=basic+transport+other;
   const pensionable=basic+transport; // pension basis
-  const pensionEmployeeMonthly=staff.pension_opt_in?pensionable*0.05:0;
-  const pensionEmployerMonthly=staff.pension_opt_in?pensionable*0.10:0; // employer cost, informational — not deducted from staff pay
+  const pensionEmployeeMonthly=staff.pension_opt_in!==false?pensionable*0.05:0;
+  const pensionEmployerMonthly=staff.pension_opt_in!==false?pensionable*0.10:0; // employer cost, informational — not deducted from staff pay
   const totalDeductions=pensionEmployeeMonthly;
   const netPay=grossMonthly-totalDeductions;
   return {
@@ -10129,66 +10244,121 @@ async function loadPayrollPage(){
   sel.innerHTML='<option value="">Select client…</option>'+(clients||[]).map(c=>`<option value="${c.id}">${c.business_name}</option>`).join('');
   document.getElementById('pr-results').innerHTML='';
   document.getElementById('pr-remittance-report').innerHTML='';
+  const _n=new Date();document.getElementById('pr-month').value=_n.getMonth()+1;document.getElementById('pr-year').value=_n.getFullYear();
 }
 async function previewPayroll(){
   const clientId=document.getElementById('pr-client').value;
   const fb=document.getElementById('pr-run-feedback');
   document.getElementById('pr-results').innerHTML='';
   if(!clientId){fb.innerHTML='<div class="error-msg">Select a client first.</div>';return;}
-  const {data:staffList}=await db.from('client_staff').select('*').eq('client_id',clientId).eq('status','Active');
-  const payable=(staffList||[]).filter(s=>(parseFloat(s.basic_salary)||0)>0);
-  if(!payable.length){fb.innerHTML='<div class="error-msg">No active staff with a salary set up for this client yet. Set salaries from each staff member\'s profile first.</div>';return;}
+  // Everyone who works there (Active, Probation, Flagged) — only Terminated staff are left out
+  const {data:staffList}=await db.from('client_staff').select('*').eq('client_id',clientId).neq('status','Terminated').order('name',{ascending:true});
+  const all=staffList||[];
+  if(!all.length){fb.innerHTML='<div class="error-msg">This client has no staff yet.</div>';return;}
+  const ids=all.map(x=>x.id);
+  const {data:hrRows}=await db.from('client_staff_hr_details').select('staff_id,bank_name,bank_account_number,bank_account_name').in('staff_id',ids);
+  const hrMap={};(hrRows||[]).forEach(h=>hrMap[h.staff_id]=h);
   fb.innerHTML='';
-  const fmt=n=>_activeCurrencySymbol+Number(n||0).toLocaleString(undefined,{maximumFractionDigits:0});
+  const inp='padding:5px 7px;border:1px solid var(--border);border-radius:7px;font-size:12px;font-family:\'IBM Plex Mono\',monospace';
+  const noSalary=all.filter(x=>!(parseFloat(x.basic_salary)>0)).length;
   const el=document.getElementById('pr-preview');
   el.innerHTML=`<div class="card" style="padding:18px 20px;margin-bottom:16px">
-    <div style="font-size:13px;font-weight:600;color:var(--ink);margin-bottom:4px">Review before running</div>
-    <div style="font-family:Arial;font-size:11.5px;color:var(--muted);margin-bottom:14px">Basic salary is editable here in case it's different this month. Add any one-off extra payment or deduction too — bonuses, fines, advance repayments. Leave blank if none.</div>
-    <table class="data-table"><thead><tr><th>Staff</th><th>Basic Salary</th><th>Extra Payment</th><th>Extra Deduction</th><th>Note</th></tr></thead><tbody>
-    ${payable.map(s=>{
+    <div style="font-size:13px;font-weight:600;color:var(--ink);margin-bottom:4px">Payroll for ${all.length} staff — review, then run</div>
+    <div style="font-family:Arial;font-size:11.5px;color:var(--muted);margin-bottom:10px">Salary, allowances and bank details come straight from each staff profile — nothing to copy. Add a <strong>bonus</strong> or a <strong>deduction</strong> for this month (with the reason) where needed; leave blank if none. Pension (5%) is applied unless unticked.${noSalary?` <span style="color:var(--danger)">${noSalary} staff have no salary yet — type it in the red boxes (tick "save to profile" so it's remembered).</span>`:''}</div>
+    <div style="overflow-x:auto"><table class="data-table"><thead><tr><th>Staff</th><th>Basic</th><th>Transport</th><th>Other</th><th>Pension</th><th>Bonus</th><th>Bonus reason</th><th>Deduction</th><th>Deduction reason</th><th>Net</th><th>Bank details</th></tr></thead><tbody>
+    ${all.map(x=>{
+      const missing=!(parseFloat(x.basic_salary)>0);
       return `<tr>
-        <td style="font-size:13px">${s.name}</td>
-        <td><input type="number" id="pr-basic-${s.id}" value="${s.basic_salary||0}" style="width:110px;padding:5px 8px;border:1px solid var(--border);border-radius:7px;font-size:12px;font-family:'IBM Plex Mono',monospace"></td>
-        <td><input type="number" id="pr-extra-pay-${s.id}" placeholder="0" style="width:100px;padding:5px 8px;border:1px solid var(--border);border-radius:7px;font-size:12px"></td>
-        <td><input type="number" id="pr-extra-ded-${s.id}" placeholder="0" style="width:100px;padding:5px 8px;border:1px solid var(--border);border-radius:7px;font-size:12px"></td>
-        <td><input type="text" id="pr-extra-note-${s.id}" placeholder="reason" style="width:140px;padding:5px 8px;border:1px solid var(--border);border-radius:7px;font-size:12px"></td>
-      </tr>`;
-    }).join('')}
-    </tbody></table>
-    <button class="btn-save" onclick="confirmRunPayroll('${clientId}')" style="margin-top:14px">Confirm &amp; Run Payroll</button>
+        <td style="font-size:13px;white-space:nowrap">${_esc(x.name)}<div style="font-size:10.5px;color:var(--muted)">${_esc(x.status||'')}</div></td>
+        <td><input type="number" id="pr-basic-${x.id}" value="${x.basic_salary||''}" placeholder="0" oninput="updatePrNet('${x.id}')" style="width:100px;${inp};${missing?'border-color:var(--danger)':''}"></td>
+        <td><input type="number" id="pr-transport-${x.id}" value="${x.transport_allowance||''}" placeholder="0" oninput="updatePrNet('${x.id}')" style="width:85px;${inp}"></td>
+        <td><input type="number" id="pr-other-${x.id}" value="${x.other_allowances||''}" placeholder="0" oninput="updatePrNet('${x.id}')" style="width:85px;${inp}"></td>
+        <td style="text-align:center"><input type="checkbox" id="pr-pension-${x.id}" ${x.pension_opt_in!==false?'checked':''} onchange="updatePrNet('${x.id}')" style="width:auto"></td>
+        <td><input type="number" id="pr-bonus-${x.id}" placeholder="0" oninput="updatePrNet('${x.id}')" style="width:85px;${inp}"></td>
+        <td><input type="text" id="pr-bonus-note-${x.id}" placeholder="reason" style="width:120px;padding:5px 7px;border:1px solid var(--border);border-radius:7px;font-size:12px"></td>
+        <td><input type="number" id="pr-ded-${x.id}" placeholder="0" oninput="updatePrNet('${x.id}')" style="width:85px;${inp}"></td>
+        <td><input type="text" id="pr-ded-note-${x.id}" placeholder="reason" style="width:120px;padding:5px 7px;border:1px solid var(--border);border-radius:7px;font-size:12px"></td>
+        <td id="pr-net-${x.id}" style="font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:600;white-space:nowrap">—</td>
+        <td style="font-family:Arial;font-size:11.5px;color:var(--ink2);min-width:200px">${staffBankDetailsHtml(x,hrMap[x.id])}</td>
+      </tr>`;}).join('')}
+    </tbody></table></div>
+    <div id="pr-totals" style="margin-top:12px;font-family:Arial;font-size:13px;display:flex;gap:22px;flex-wrap:wrap"></div>
+    <label style="display:flex;align-items:center;gap:8px;font-family:Arial;font-size:12px;color:var(--ink);margin-top:12px"><input type="checkbox" id="pr-save-profile" style="width:auto" checked> Save any salary / allowance / pension changes back to the staff profiles</label>
+    <button class="btn-save" onclick="confirmRunPayroll('${clientId}')" style="margin-top:12px">Confirm &amp; Run Payroll + Create Payslips</button>
   </div>`;
-  el.dataset.payableIds=JSON.stringify(payable.map(s=>s.id));
+  el.dataset.payableIds=JSON.stringify(ids);
+  all.forEach(x=>updatePrNet(x.id));
+}
+function updatePrNet(id){
+  const n=k=>parseFloat(document.getElementById(k+id)?.value)||0;
+  const basic=n('pr-basic-'),tr=n('pr-transport-'),ot=n('pr-other-');
+  const pen=document.getElementById('pr-pension-'+id)?.checked?(basic+tr)*0.05:0;
+  const net=basic+tr+ot-pen+n('pr-bonus-')-n('pr-ded-');
+  const cell=document.getElementById('pr-net-'+id);if(cell)cell.textContent=(_activeCurrencySymbol||'₦')+Math.round(net).toLocaleString();
+  // running totals
+  const ids=JSON.parse(document.getElementById('pr-preview').dataset.payableIds||'[]');
+  let tn=0,tg=0;
+  ids.forEach(i=>{
+    const g=k=>parseFloat(document.getElementById(k+i)?.value)||0;
+    const b=g('pr-basic-'),t=g('pr-transport-'),o=g('pr-other-');
+    const pn=document.getElementById('pr-pension-'+i)?.checked?(b+t)*0.05:0;
+    tg+=b+t+o;tn+=b+t+o-pn+g('pr-bonus-')-g('pr-ded-');
+  });
+  const tot=document.getElementById('pr-totals');
+  if(tot)tot.innerHTML=`<div>Total gross: <strong>${(_activeCurrencySymbol||'₦')}${Math.round(tg).toLocaleString()}</strong></div><div>Total net to pay: <strong>${(_activeCurrencySymbol||'₦')}${Math.round(tn).toLocaleString()}</strong></div>`;
 }
 async function confirmRunPayroll(clientId){
   const month=parseInt(document.getElementById('pr-month').value);
   const year=parseInt(document.getElementById('pr-year').value);
   const fb=document.getElementById('pr-run-feedback');
-  const {data:staffList}=await db.from('client_staff').select('*').eq('client_id',clientId).eq('status','Active');
+  const {data:staffList}=await db.from('client_staff').select('*').eq('client_id',clientId).neq('status','Terminated');
   const payableIds=JSON.parse(document.getElementById('pr-preview').dataset.payableIds||'[]');
-  const payable=(staffList||[]).filter(s=>payableIds.includes(s.id));
-  if(!payable.length){fb.innerHTML='<div class="error-msg">Nothing to run — preview again.</div>';return;}
+  const num=(k,id)=>parseFloat(document.getElementById(k+id)?.value)||0;
+  const people=(staffList||[]).filter(x=>payableIds.includes(x.id));
+  const payable=people.filter(x=>num('pr-basic-',x.id)>0);
+  const skipped=people.filter(x=>!(num('pr-basic-',x.id)>0)).map(x=>x.name);
+  if(!payable.length){fb.innerHTML='<div class="error-msg">Nobody has a basic salary entered — fill in the salaries first.</div>';return;}
+  if(skipped.length&&!confirm('These staff have no basic salary entered and will be LEFT OUT of this payroll:\n\n'+skipped.join(', ')+'\n\nContinue?'))return;
+  // Re-running a month replaces the earlier (unpaid) run so there are never two sets of payslips
+  const {data:prev}=await db.from('payroll_runs').select('id,status').eq('client_id',clientId).eq('period_month',month).eq('period_year',year);
+  if((prev||[]).some(r=>r.status==='Paid')){fb.innerHTML='<div class="error-msg">Payroll for this month is already marked Paid — it can\'t be re-run.</div>';return;}
+  if((prev||[]).length){
+    if(!confirm('Payroll for '+monthNamesFull[month]+' '+year+' was already run for this client. Replace it with this one?'))return;
+    for(const r of prev){await db.from('payslips').delete().eq('payroll_run_id',r.id);await db.from('payroll_runs').delete().eq('id',r.id);}
+  }
+  if(document.getElementById('pr-save-profile')?.checked){
+    for(const x of payable){
+      await db.from('client_staff').update({basic_salary:num('pr-basic-',x.id),transport_allowance:num('pr-transport-',x.id),other_allowances:num('pr-other-',x.id),pension_opt_in:!!document.getElementById('pr-pension-'+x.id)?.checked}).eq('id',x.id);
+    }
+  }
   const {data:run,error:runErr}=await db.from('payroll_runs').insert({client_id:clientId,period_month:month,period_year:year,status:'Draft',created_by:currentUser.name}).select().single();
   if(runErr){fb.innerHTML=`<div class="error-msg">${runErr.message}</div>`;return;}
   let totalGross=0,totalDeductions=0,totalNet=0;
-  const slips=payable.map(s=>{
-    const basicThisMonth=parseFloat(document.getElementById('pr-basic-'+s.id)?.value);
-    const staffForCalc={...s,basic_salary:isNaN(basicThisMonth)?s.basic_salary:basicThisMonth};
-    const p=calculateNigeriaPayroll(staffForCalc);
-    const extraPay=parseFloat(document.getElementById('pr-extra-pay-'+s.id)?.value)||0;
-    const extraDed=parseFloat(document.getElementById('pr-extra-ded-'+s.id)?.value)||0;
-    const note=document.getElementById('pr-extra-note-'+s.id)?.value.trim()||null;
-    const adjustment_amount=extraPay-extraDed;
-    const netWithAdjustment=p.net_pay+adjustment_amount;
-    totalGross+=p.gross_pay;totalDeductions+=p.total_deductions;totalNet+=netWithAdjustment;
-    return {payroll_run_id:run.id,staff_id:s.id,client_id:clientId,...p,net_pay:netWithAdjustment,adjustment_amount,adjustment_note:note};
+  const slips=payable.map(x=>{
+    const staffForCalc={...x,basic_salary:num('pr-basic-',x.id),transport_allowance:num('pr-transport-',x.id),other_allowances:num('pr-other-',x.id),pension_opt_in:!!document.getElementById('pr-pension-'+x.id)?.checked};
+    const pc=calculateNigeriaPayroll(staffForCalc);
+    const bonus=num('pr-bonus-',x.id),ded=num('pr-ded-',x.id);
+    const bonusNote=document.getElementById('pr-bonus-note-'+x.id)?.value.trim()||null;
+    const dedNote=document.getElementById('pr-ded-note-'+x.id)?.value.trim()||null;
+    const adjustment_amount=bonus-ded;
+    const adjustment_note=[bonus?('Bonus'+(bonusNote?': '+bonusNote:'')):'',ded?('Deduction'+(dedNote?': '+dedNote:'')):''].filter(Boolean).join(' | ')||null;
+    const net=pc.net_pay+adjustment_amount;
+    totalGross+=pc.gross_pay;totalDeductions+=pc.total_deductions+ded;totalNet+=net;
+    return {payroll_run_id:run.id,staff_id:x.id,client_id:clientId,...pc,net_pay:net,adjustment_amount,adjustment_note,
+            bonus_amount:bonus||null,bonus_reason:bonusNote,deduction_amount:ded||null,deduction_reason:dedNote};
   });
-  const {data:savedSlips,error:slipErr}=await db.from('payslips').insert(slips).select();
-  if(slipErr){fb.innerHTML=`<div class="error-msg">${slipErr.message}</div>`;return;}
+  let ins=await db.from('payslips').insert(slips).select();
+  if(ins.error&&/bonus_amount|bonus_reason|deduction_amount|deduction_reason/.test(ins.error.message)){
+    // the extra columns haven't been added yet — save without them (the combined adjustment still prints)
+    const lean=slips.map(({bonus_amount,bonus_reason,deduction_amount,deduction_reason,...rest})=>rest);
+    ins=await db.from('payslips').insert(lean).select();
+  }
+  if(ins.error){fb.innerHTML=`<div class="error-msg">${ins.error.message}</div>`;return;}
   await db.from('payroll_runs').update({total_gross:totalGross,total_deductions:totalDeductions,total_net:totalNet}).eq('id',run.id);
   await logActivity('Ran payroll',`${payable.length} staff, ${month}/${year}`,clientId);
-  fb.innerHTML='<div class="success-msg">✓ Payroll run complete.</div>';
+  fb.innerHTML='<div class="success-msg">✓ Payroll run complete — payslips are ready to print below.</div>';
   document.getElementById('pr-preview').innerHTML='';
-  displayPayrollResults(run.id,payable,savedSlips&&savedSlips.length?savedSlips:slips,clientId,month,year,totalGross);
+  displayPayrollResults(run.id,payable,ins.data&&ins.data.length?ins.data:slips,clientId,month,year,totalGross);
 }
 function staffBankDetailsHtml(staff,hr){
   // Prefer admin-entered payroll bank fields; fall back to the staff's self-reported ones
@@ -10272,11 +10442,17 @@ async function printClientPayslips(ids){
     const period=run.period_month?(monthNamesFull[run.period_month]+' '+run.period_year):'—';
     const bank=st.bank_name||hr.bank_name,acct=st.bank_account_number||hr.bank_account_number,acctName=st.bank_account_name||hr.bank_account_name;
     const adj=+sl.adjustment_amount||0;
+    const hasSplit=sl.bonus_amount!=null||sl.deduction_amount!=null;
     const earn=[['Basic salary',+sl.basic||0],['Transport allowance',+sl.transport||0],['Other allowances',+sl.other_allowances||0]].filter((r,j)=>j===0||r[1]>0);
-    if(adj>0)earn.push(['Additional payment'+(sl.adjustment_note?' — '+sl.adjustment_note:''),adj]);
     const ded=[];
     if((+sl.pension_employee||0)>0)ded.push(['Pension (employee 5%)',+sl.pension_employee]);
-    if(adj<0)ded.push(['Deduction'+(sl.adjustment_note?' — '+sl.adjustment_note:''),-adj]);
+    if(hasSplit){
+      if((+sl.bonus_amount||0)>0)earn.push(['Bonus'+(sl.bonus_reason?' — '+sl.bonus_reason:''),+sl.bonus_amount]);
+      if((+sl.deduction_amount||0)>0)ded.push(['Deduction'+(sl.deduction_reason?' — '+sl.deduction_reason:''),+sl.deduction_amount]);
+    }else{
+      if(adj>0)earn.push(['Additional payment'+(sl.adjustment_note?' — '+sl.adjustment_note:''),adj]);
+      if(adj<0)ded.push(['Deduction'+(sl.adjustment_note?' — '+sl.adjustment_note:''),-adj]);
+    }
     const totalEarn=earn.reduce((n,r)=>n+r[1],0),totalDed=ded.reduce((n,r)=>n+r[1],0);
     const row=(l,v,c)=>`<tr style="border-bottom:1px solid #DCD8C8"><td style="padding:10px 14px;font-size:13px;${c?'color:'+c:''}">${_esc(l)}</td><td style="padding:10px 14px;font-size:13px;text-align:right;${c?'color:'+c:''}">${c?'-':''}${money(v)}</td></tr>`;
     return `<div style="font-family:Arial,sans-serif;padding:36px 40px;${i<list.length-1?'page-break-after:always;':''}">
