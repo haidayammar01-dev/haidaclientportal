@@ -2405,14 +2405,14 @@ self.addEventListener('notificationclick',function(e){
           <div id="cv-enquiries-list"></div>
         </div>
         <div id="cv-credentials-panel" class="cv-tab-content" style="display:none">
-          <div class="page-sub" style="margin-bottom:14px">Logins and access this client has shared with us. Owner-only — no other admin or staff sees this tab.</div>
+          <div class="page-sub" style="margin-bottom:14px">Logins and access this client has shared with us. Only the owner and the Operations team can open this tab — no other admin or staff sees it.</div>
           <div style="display:flex;justify-content:flex-end;margin-bottom:14px">
             <button class="btn-add" onclick="openAddCredentialModal(_currentViewClientId)">+ Add Access</button>
           </div>
           <div id="cv-cred-list"></div>
         </div>
         <div id="cv-policies-panel" class="cv-tab-content" style="display:none">
-          <div class="page-sub" style="margin-bottom:14px">This client's own policies and procedures. Owner-only — no other admin or staff sees this tab. The client sees it in their portal and can approve each one.</div>
+          <div class="page-sub" style="margin-bottom:14px">This client's own policies and procedures. Only the owner and the Operations team can open this tab — no other admin or staff sees it. The client sees it in their portal and can approve each one.</div>
           <div style="display:flex;justify-content:flex-end;margin-bottom:14px">
             <button class="btn-sm" style="margin-right:8px" onclick="addStarterPolicies(_currentViewClientId,'cv')">✨ Add starter templates</button>
             <button class="btn-sm" style="margin-right:8px" onclick="autoSchedulePolicies(_currentViewClientId,'cv')">🗓 Auto-schedule monthly</button>
@@ -7997,6 +7997,12 @@ async function deleteReportById(id){
 // ── FIX 2: View Client → opens dedicated report page for that client ──
 let _currentViewClientId=null;
 
+// Owner and the Operations team can manage a client's policies & procedures
+function canManagePolicies(){
+  if(!currentUser)return false;
+  if(currentUser.isOwner)return true;
+  return currentUser.role==='admin'&&/operation/i.test(currentUser.department||'');
+}
 async function viewClient(clientId){
   _currentViewClientId=clientId;
   const client=allClients.find(c=>c.id===clientId)||archivedClients.find(c=>c.id===clientId);if(!client)return;
@@ -8006,7 +8012,7 @@ async function viewClient(clientId){
   const credTabBtn=document.getElementById('cvtab-cv-credentials');
   if(credTabBtn)credTabBtn.style.display=(currentUser&&currentUser.isOwner)?'':'none';
   const polTabBtn=document.getElementById('cvtab-cv-policies');
-  if(polTabBtn)polTabBtn.style.display=(currentUser&&currentUser.isOwner)?'':'none';
+  if(polTabBtn)polTabBtn.style.display=canManagePolicies()?'':'none';
 
   document.getElementById('client-view-name').textContent=client.business_name;
   document.getElementById('client-view-niche').textContent=nicheLabels[client.niche]||client.niche||'—';
@@ -8136,7 +8142,7 @@ async function loadClientViewTab(tab,clientId){
   } else if(tab==='cv-handover'){
     await renderHandover('cv');
   } else if(tab==='cv-policies'){
-    if(!currentUser||!currentUser.isOwner)return;
+    if(!canManagePolicies())return;
     await loadPolicies(cid,'cv',true);
   } else if(tab==='cv-strategy'){
     await loadStrategy(cid,'cv-strategy-content',true);
