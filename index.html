@@ -950,14 +950,18 @@ self.addEventListener('notificationclick',function(e){
       </div>
       <div class="page" id="page-clients">
         <div class="page-title">Clients</div>
-        <div class="page-sub">Manage all active and onboarding clients</div>
+        <div class="page-sub">Manage your clients, what each one uses, and who is hiring</div>
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px">
           <div style="display:flex;gap:6px">
             <button class="btn-sm" id="clients-view-table-btn" onclick="setClientsView('table')">☰ Table</button>
             <button class="btn-sm" id="clients-view-cards-btn" onclick="setClientsView('cards')">◈ Cards</button>
           </div>
-          <button class="btn-add" onclick="gateAddClient()">+ Add Client</button>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn-sm" id="clients-archived-btn" onclick="toggleArchivedClients()">🗄 Archived clients</button>
+            <button class="btn-add" onclick="gateAddClient()">+ Add Client</button>
+          </div>
         </div>
+        <div id="clients-archived-note" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:10px 14px;margin-bottom:14px;font-size:12.5px;color:var(--muted)">Showing archived clients — they no longer appear on your dashboard, reports or dropdowns, and their logins are switched off. Their history is kept. Use <strong>Restore</strong> to bring one back.</div>
         <div class="card" id="clients-table-wrap" style="padding:0;overflow:hidden">
           <table class="data-table">
             <thead><tr>
@@ -2187,13 +2191,16 @@ self.addEventListener('notificationclick',function(e){
               <span id="client-view-package"></span>
               <span>·</span>
               <span id="client-view-status"></span>
+              <span id="client-view-recruiting"></span>
             </div>
+            <div id="client-view-services" style="margin-top:6px"></div>
           </div>
           <div style="margin-left:auto;display:flex;gap:8px">
             <button class="btn-add" onclick="goAddReport(_currentViewClientId)">+ Add Report</button>
             <button class="btn-sm" onclick="editRecord('clients',_currentViewClientId,()=>viewClient(_currentViewClientId))">✎ Edit Client Info</button>
             <button class="btn-sm" onclick="openManageServices(_currentViewClientId)">🧩 Manage Services</button>
             <button class="btn-sm" id="cv-reset-btn" onclick="resetClientAccess(_currentViewClientId,'')">🔑 Reset Access</button>
+            <button class="btn-sm" id="cv-archive-btn"></button>
           </div>
         </div>
         <div id="cv-low-stock-banner" style="display:none;background:var(--danger-light);border:1.5px solid var(--danger);border-radius:9px;padding:10px 16px;margin-bottom:16px;font-family:Arial;font-size:13px;color:var(--danger);cursor:pointer" onclick="loadClientViewTab('cv-inventory')"></div>
@@ -2361,6 +2368,7 @@ self.addEventListener('notificationclick',function(e){
         <div id="cv-staffing-panel" class="cv-tab-content" style="display:none"><div id="cv-staffing-list"></div></div>
         <div id="cv-procurement-panel" class="cv-tab-content" style="display:none"><div id="cv-procurement-list"></div></div>
         <div id="cv-candidates-panel" class="cv-tab-content" style="display:none">
+          <div id="cv-recruit-toggle"></div>
           <div class="card" style="padding:18px 20px;margin-bottom:16px">
             <div style="font-size:13px;font-weight:600;color:var(--ink);margin-bottom:12px">Add Candidate</div>
             <div class="form-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px">
@@ -3464,11 +3472,15 @@ self.addEventListener('notificationclick',function(e){
   <div class="modal" style="max-width:420px">
     <div class="modal-header"><div class="modal-title">Manage Services</div><button class="modal-close" onclick="closeModal('modal-manage-services')">×</button></div>
     <div class="modal-body">
-      <div style="font-size:13px;color:var(--muted);margin-bottom:14px">Choose which parts of the portal this client can see. Unchecking a service hides those tabs entirely from their view.</div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:14px">Tick only what we do for this client. Anything unticked is hidden from their portal, from this client page, and from your dashboard and daily briefing.</div>
       <div style="display:flex;flex-direction:column;gap:12px">
         <label style="display:flex;align-items:center;gap:10px"><input type="checkbox" id="svc-staffing" style="width:auto"> <div><strong>Staffing & HR</strong><div style="font-size:11px;color:var(--muted)">Our Staff, Attendance, Leave, Shifts, Leaderboard, Events, Notice Board, Requests & Candidates</div></div></label>
         <label style="display:flex;align-items:center;gap:10px"><input type="checkbox" id="svc-operations" style="width:auto"> <div><strong>Operations</strong><div style="font-size:11px;color:var(--muted)">Reports, Documents, Action Items, Inventory, Quality Control</div></div></label>
-        <label style="display:flex;align-items:center;gap:10px"><input type="checkbox" id="svc-finance" style="width:auto"> <div><strong>Finance & Payroll</strong><div style="font-size:11px;color:var(--muted)">Reserved for upcoming invoicing/payroll features</div></div></label>
+        <label style="display:flex;align-items:center;gap:10px"><input type="checkbox" id="svc-finance" style="width:auto"> <div><strong>Finance & Payroll</strong><div style="font-size:11px;color:var(--muted)">Accounting, bills and payroll for this client</div></div></label>
+        <label style="display:flex;align-items:center;gap:10px"><input type="checkbox" id="svc-social" style="width:auto"> <div><strong>Social media</strong><div style="font-size:11px;color:var(--muted)">We only run their social media — no HR, payroll or staff to track</div></div></label>
+        <div style="border-top:1px solid var(--border);padding-top:12px">
+          <label style="display:flex;align-items:center;gap:10px"><input type="checkbox" id="svc-recruiting" style="width:auto"> <div><strong>Actively recruiting</strong><div style="font-size:11px;color:var(--muted)">Tick while they are hiring. Untick when they're done — their candidates then leave your dashboard.</div></div></label>
+        </div>
       </div>
       <button class="btn-save" onclick="saveClientServices()" style="margin-top:18px">Save Services</button>
       <div id="svc-feedback" style="margin-top:8px"></div>
@@ -5307,10 +5319,12 @@ async function handleLogin(){
     currentUser={role:admins.is_owner?'owner':'admin',name:admins.full_name||user,isOwner:!!admins.is_owner,department:admins.department||'operations',username:admins.username};showApp();return;
   }
   const {data:client,error:ce}=await db.from('clients').select('*').eq('username',user).eq('access_code',pass).single();
-  if(client&&!ce){currentUser={role:'client',name:client.business_name,clientId:client.id,package:client.package};showClientPortal(client);return;}
-  const {data:staff,error:se}=await db.from('client_staff').select('*,clients(business_name)').eq('username',user).eq('access_code',pass).single();
+  if(client&&!ce){
+    if(client.status==='Inactive'){err.textContent='This account is no longer active. Please contact Haida Yammar.';return;}
+    currentUser={role:'client',name:client.business_name,clientId:client.id,package:client.package};showClientPortal(client);return;}
+  const {data:staff,error:se}=await db.from('client_staff').select('*,clients(business_name,status)').eq('username',user).eq('access_code',pass).single();
   if(staff&&!se){
-    if(staff.status==='Terminated'){err.textContent='This login is no longer active.';return;}
+    if(staff.status==='Terminated'||(staff.clients&&staff.clients.status==='Inactive')){err.textContent='This login is no longer active.';return;}
     currentUser={role:'staff',name:staff.name,staffId:staff.id};showStaffPortal(staff);return;
   }
   const {data:tc,error:tce}=await db.from('training_companies').select('*').eq('username',user).eq('access_code',pass).single();
@@ -5340,13 +5354,13 @@ function applyDepartmentVisibility(){
 
 // ══ CLIENT SERVICE PACKAGES ══
 async function openManageServices(clientId){
-  const {data:client}=await db.from('clients').select('services').eq('id',clientId).single();
-  let services=client?client.services:null;
-  if(typeof services==='string'){try{services=JSON.parse(services);}catch(e){services=[];}}
-  if(!Array.isArray(services))services=['staffing','operations','finance'];
+  const {data:client}=await db.from('clients').select('*').eq('id',clientId).single();
+  const services=clientServices(client);
   document.getElementById('svc-staffing').checked=services.includes('staffing');
   document.getElementById('svc-operations').checked=services.includes('operations');
   document.getElementById('svc-finance').checked=services.includes('finance');
+  document.getElementById('svc-social').checked=services.includes('social');
+  document.getElementById('svc-recruiting').checked=!!(client&&client.recruiting===true);
   document.getElementById('svc-feedback').innerHTML='';
   openModal('modal-manage-services');
 }
@@ -5355,12 +5369,19 @@ async function saveClientServices(){
   if(document.getElementById('svc-staffing').checked)services.push('staffing');
   if(document.getElementById('svc-operations').checked)services.push('operations');
   if(document.getElementById('svc-finance').checked)services.push('finance');
+  if(document.getElementById('svc-social').checked)services.push('social');
+  const recruiting=document.getElementById('svc-recruiting').checked&&services.includes('staffing');
   const fb=document.getElementById('svc-feedback');
   const {error}=await db.from('clients').update({services}).eq('id',_currentViewClientId);
   if(error){fb.innerHTML=`<div class="error-msg">${error.message}</div>`;return;}
-  fb.innerHTML='<div class="success-msg">✓ Services updated.</div>';
+  const {error:re}=await db.from('clients').update({recruiting}).eq('id',_currentViewClientId);
+  if(re){fb.innerHTML=`<div class="error-msg">Services saved, but "Actively recruiting" needs the client_services_and_recruiting.sql file run in Supabase first.</div>`;}
+  else fb.innerHTML='<div class="success-msg">✓ Saved.</div>';
   await logActivity('Updated client services',services.join(', '),_currentViewClientId);
-  setTimeout(()=>{closeModal('modal-manage-services');fb.innerHTML='';},1200);
+  await loadClients();
+  viewClient(_currentViewClientId);
+  loadDashboard();
+  if(!re)setTimeout(()=>{closeModal('modal-manage-services');fb.innerHTML='';},900);
 }
 
 function showApp(){
@@ -6332,27 +6353,94 @@ async function claimShift(shiftId){
 }
 
 // ══ CLIENTS ══
+// ── Client helpers: what each client actually uses ──
+function clientServices(c){
+  let sv=c&&c.services;
+  if(typeof sv==='string'){try{sv=JSON.parse(sv);}catch(e){sv=null;}}
+  return Array.isArray(sv)?sv:['staffing','operations','finance']; // not set yet = everything, as before
+}
+function clientHas(c,svc){return clientServices(c).includes(svc);}
+const SVC_LABELS={staffing:'HR & Staffing',operations:'Operations',finance:'Finance',social:'Social media'};
+function svcChips(c){
+  const sv=clientServices(c);
+  if(!sv.length)return '<span style="font-size:11px;color:var(--muted)">No services set</span>';
+  return sv.map(x=>`<span style="display:inline-block;font-size:10.5px;padding:2px 8px;margin:1px 3px 1px 0;border-radius:20px;background:var(--surface);border:1px solid var(--border);color:var(--ink2)">${SVC_LABELS[x]||x}</span>`).join('');
+}
+function recruitBadge(c){
+  if(!clientHas(c,'staffing'))return '';
+  return c.recruiting===true?'<span class="badge badge-green" title="Actively recruiting">● Recruiting</span>':'<span class="badge badge-gray" title="Not recruiting right now">Not recruiting</span>';
+}
+let archivedClients=[],_showArchived=false;
 async function loadClients(){
   if(!currentUser||currentUser.role==='client') return; // clients never load full client list
-  const {data}=await db.from('clients').select('*,reports(count)').neq('status','Inactive').order('created_at',{ascending:false});
-  allClients=data||[];renderClientsTable();if(_clientsView==='cards')renderClientsCards();populateAllDropdowns();
+  const {data}=await db.from('clients').select('*,reports(count)').order('created_at',{ascending:false});
+  const all=data||[];
+  allClients=all.filter(c=>c.status!=='Inactive');
+  archivedClients=all.filter(c=>c.status==='Inactive');
+  renderClientsTable();if(_clientsView==='cards')renderClientsCards();populateAllDropdowns();
+  const b=document.getElementById('clients-archived-btn');
+  if(b)b.textContent=_showArchived?'← Back to active clients':`🗄 Archived clients${archivedClients.length?' ('+archivedClients.length+')':''}`;
+}
+function toggleArchivedClients(){
+  _showArchived=!_showArchived;
+  const n=document.getElementById('clients-archived-note');if(n)n.style.display=_showArchived?'block':'none';
+  const b=document.getElementById('clients-archived-btn');
+  if(b)b.textContent=_showArchived?'← Back to active clients':`🗄 Archived clients${archivedClients.length?' ('+archivedClients.length+')':''}`;
+  renderClientsTable();renderClientsCards();
+}
+async function archiveClient(id,name){
+  if(!confirm(`Archive ${name}?\n\nThey will disappear from your dashboard, reports, dropdowns and the daily briefing, and their logins will stop working. Nothing is deleted — you can restore them any time from "Archived clients".`))return;
+  const {error}=await db.from('clients').update({status:'Inactive'}).eq('id',id);
+  if(error){alert('Could not archive: '+error.message);return;}
+  await logActivity('Archived client',name,id);
+  await loadClients();loadDashboard();
+  if(document.getElementById('page-client-view').classList.contains('active'))showAdminTabByName('clients');
+}
+async function restoreClient(id,name){
+  const {error}=await db.from('clients').update({status:'Active'}).eq('id',id);
+  if(error){alert('Could not restore: '+error.message);return;}
+  await logActivity('Restored client',name||'',id);
+  await loadClients();loadDashboard();
+}
+async function setRecruiting(clientId,on){
+  if(!on&&!confirm('Mark this client as done hiring? Their candidates will stop showing on your dashboard (nothing is deleted).'))return;
+  const {error}=await db.from('clients').update({recruiting:!!on}).eq('id',clientId);
+  if(error){alert('Could not save — have you run the client_services_and_recruiting.sql file in Supabase yet?\n\n'+error.message);return;}
+  const c=allClients.find(x=>x.id===clientId);if(c)c.recruiting=!!on;
+  await logActivity(on?'Started recruiting':'Finished recruiting','',clientId);
+  renderRecruitToggle(clientId);
+  loadDashboard();renderClientsTable();if(_clientsView==='cards')renderClientsCards();
+}
+function renderRecruitToggle(clientId){
+  const el=document.getElementById('cv-recruit-toggle');if(!el)return;
+  const c=allClients.find(x=>x.id===clientId)||archivedClients.find(x=>x.id===clientId);if(!c)return;
+  const on=c.recruiting===true;
+  el.innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:14px 18px;margin-bottom:16px;border-radius:12px;border:1.5px solid ${on?'var(--success)':'var(--border)'};background:${on?'#EAF6EE':'var(--surface)'}">
+    <div><div style="font-size:14px;font-weight:600;color:var(--ink)">${on?'● This client is actively recruiting':'Not recruiting right now'}</div>
+    <div style="font-size:12px;color:var(--muted);margin-top:2px">${on?'New candidates show on your dashboard to review.':'Candidates here are kept, but they stay off your dashboard until you start recruiting again.'}</div></div>
+    <button class="${on?'btn-sm':'btn-add'}" onclick="setRecruiting('${clientId}',${!on})">${on?'✓ Done hiring':'▶ Start recruiting'}</button>
+  </div>`;
 }
 
 function renderClientsTable(){
   const tbody=document.getElementById('clients-tbody');
-  if(!allClients.length){tbody.innerHTML='<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--muted);font-family:Arial">No clients yet.</td></tr>';return;}
-  const sb={Active:'badge-green',Onboarding:'badge-gold',Paused:'badge-gray'};
-  tbody.innerHTML=allClients.map(c=>`<tr>
-    <td><strong style="font-size:14px">${c.business_name}</strong><br><span style="font-family:Arial;font-size:11px;color:var(--muted)">${c.contact_person||''}</span></td>
+  const list=_showArchived?archivedClients:allClients;
+  if(!list.length){tbody.innerHTML=`<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--muted);font-family:Arial">${_showArchived?'No archived clients.':'No clients yet.'}</td></tr>`;return;}
+  const sb={Active:'badge-green',Onboarding:'badge-gold',Paused:'badge-gray',Inactive:'badge-gray'};
+  tbody.innerHTML=list.map(c=>`<tr>
+    <td><strong style="font-size:14px">${c.business_name}</strong><br><span style="font-family:Arial;font-size:11px;color:var(--muted)">${c.contact_person||''}</span><div style="margin-top:4px">${svcChips(c)}</div></td>
     <td><span style="font-family:Arial;font-size:12px;color:var(--muted)">${nicheLabels[c.niche]||'—'}</span></td>
     <td style="font-family:Arial;font-size:12px">${c.package}</td>
-    <td><span class="badge ${sb[c.status]||'badge-gray'}">${c.status}</span></td>
+    <td><span class="badge ${sb[c.status]||'badge-gray'}">${c.status==='Inactive'?'Archived':c.status}</span> ${_showArchived?'':recruitBadge(c)}</td>
     <td style="font-family:Arial;font-size:13px;text-align:center">${(c.reports&&c.reports[0]&&c.reports[0].count)||0}</td>
-    <td>${(c.work_lat!=null&&c.work_lng!=null)?`<span class="badge badge-green" title="Radius: ${c.work_radius_m||150}m">📍 Set</span>`:'<span class="badge badge-gray">⚠ Not Set</span>'}</td>
+    <td>${!clientHas(c,'staffing')?'<span style="font-size:11px;color:var(--muted)">n/a</span>':(c.work_lat!=null&&c.work_lng!=null)?`<span class="badge badge-green" title="Radius: ${c.work_radius_m||150}m">📍 Set</span>`:'<span class="badge badge-gray">⚠ Not Set</span>'}</td>
     <td style="white-space:nowrap">
-      <button class="btn-sm" onclick="goAddReport('${c.id}')">+ Report</button>
+      ${_showArchived?`<button class="btn-sm" onclick="viewClient('${c.id}')">View</button>
+      <button class="btn-add" onclick="restoreClient('${c.id}','${c.business_name.replace(/'/g,"\\'")}')">Restore</button>
+      <button class="btn-danger" onclick="deleteClient('${c.id}','${c.business_name.replace(/'/g,"\\'")}')">Delete forever</button>`
+      :`<button class="btn-sm" onclick="goAddReport('${c.id}')">+ Report</button>
       <button class="btn-sm" onclick="viewClient('${c.id}')">View</button>
-      <button class="btn-danger" onclick="deleteClient('${c.id}','${c.business_name}')">Remove</button>
+      <button class="btn-sm" onclick="archiveClient('${c.id}','${c.business_name.replace(/'/g,"\\'")}')">Archive</button>`}
     </td>
   </tr>`).join('');
 }
@@ -6368,24 +6456,26 @@ function setClientsView(view){
 }
 function renderClientsCards(){
   const wrap=document.getElementById('clients-cards-wrap');if(!wrap)return;
-  if(!allClients.length){wrap.innerHTML='<p style="font-family:Arial;font-size:13px;color:var(--muted)">No clients yet.</p>';return;}
-  const sb={Active:'badge-green',Onboarding:'badge-gold',Paused:'badge-gray'};
-  wrap.innerHTML=allClients.map(c=>`
+  const list=_showArchived?archivedClients:allClients;
+  if(!list.length){wrap.innerHTML=`<p style="font-family:Arial;font-size:13px;color:var(--muted)">${_showArchived?'No archived clients.':'No clients yet.'}</p>`;return;}
+  const sb={Active:'badge-green',Onboarding:'badge-gold',Paused:'badge-gray',Inactive:'badge-gray'};
+  wrap.innerHTML=list.map(c=>`
     <div class="card client-3d-card" style="padding:18px;cursor:pointer" onclick="viewClient('${c.id}')">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
         <div>
           <div style="font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:600;color:var(--ink)">${c.business_name}</div>
           <div style="font-family:Arial;font-size:11px;color:var(--muted);margin-top:2px">${nicheLabels[c.niche]||'—'}</div>
         </div>
-        <span class="badge ${sb[c.status]||'badge-gray'}">${c.status}</span>
+        <span class="badge ${sb[c.status]||'badge-gray'}">${c.status==='Inactive'?'Archived':c.status}</span>
       </div>
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;font-family:Arial;font-size:12px;color:var(--muted)">
-        <span>${c.package}</span>
+      <div style="margin-top:10px">${svcChips(c)}</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;font-family:Arial;font-size:12px;color:var(--muted)">
+        <span>${_showArchived?'':recruitBadge(c)}</span>
         <span>${(c.reports&&c.reports[0]&&c.reports[0].count)||0} reports</span>
       </div>
       <div style="margin-top:10px;display:flex;gap:6px" onclick="event.stopPropagation()">
-        <button class="btn-sm" onclick="goAddReport('${c.id}')">+ Report</button>
-        <button class="btn-danger" style="padding:4px 10px;font-size:11px" onclick="deleteClient('${c.id}','${c.business_name}')">Remove</button>
+        ${_showArchived?`<button class="btn-add" onclick="restoreClient('${c.id}')">Restore</button>`:`<button class="btn-sm" onclick="goAddReport('${c.id}')">+ Report</button>
+        <button class="btn-sm" onclick="archiveClient('${c.id}','${c.business_name.replace(/'/g,"\\'")}')">Archive</button>`}
       </div>
     </div>`).join('');
   attachTiltEffect('.client-3d-card',wrap);
@@ -7909,7 +7999,7 @@ let _currentViewClientId=null;
 
 async function viewClient(clientId){
   _currentViewClientId=clientId;
-  const client=allClients.find(c=>c.id===clientId);if(!client)return;
+  const client=allClients.find(c=>c.id===clientId)||archivedClients.find(c=>c.id===clientId);if(!client)return;
 
   // Switch to a full client view — hide all other pages, show client-view page
   showPage('page-client-view');
@@ -7921,12 +8011,33 @@ async function viewClient(clientId){
   document.getElementById('client-view-name').textContent=client.business_name;
   document.getElementById('client-view-niche').textContent=nicheLabels[client.niche]||client.niche||'—';
   document.getElementById('client-view-package').textContent=client.package;
-  document.getElementById('client-view-status').textContent=client.status;
+  document.getElementById('client-view-status').textContent=client.status==='Inactive'?'Archived':client.status;
+  document.getElementById('client-view-recruiting').innerHTML=client.status==='Inactive'?'':recruitBadge(client);
+  document.getElementById('client-view-services').innerHTML=svcChips(client);
+  const arch=document.getElementById('cv-archive-btn');
+  if(arch){
+    const nm=(client.business_name||'').replace(/'/g,"\\'");
+    if(client.status==='Inactive'){arch.textContent='♻ Restore client';arch.onclick=()=>restoreClient(clientId,nm).then(()=>showAdminTabByName('clients'));}
+    else{arch.textContent='🗄 Archive client';arch.onclick=()=>archiveClient(clientId,nm);}
+  }
+  applyClientViewServices(client);
 
   // Load all reports for this client — persisted in DB, always up to date
   loadClientViewReports(clientId);
   loadClientViewTab('cv-reports',clientId);
   checkClientLowStockBanner(clientId);
+}
+// Hide the admin tabs that don't apply to what we do for this client
+const CV_TAB_SERVICE={
+  'cv-staff':'staffing','cv-leaderboard':'staffing','cv-attendance':'staffing','cv-leave':'staffing','cv-shifts':'staffing','cv-handover':'staffing',
+  'cv-notices':'staffing','cv-staffing':'staffing','cv-procurement':'staffing','cv-candidates':'staffing',
+  'cv-inventory':'operations','cv-qc':'operations','cv-compliance':'operations'
+};
+function applyClientViewServices(client){
+  Object.keys(CV_TAB_SERVICE).forEach(tab=>{
+    const b=document.getElementById('cvtab-'+tab);
+    if(b)b.style.display=clientHas(client,CV_TAB_SERVICE[tab])?'':'none';
+  });
 }
 async function checkClientLowStockBanner(clientId){
   const banner=document.getElementById('cv-low-stock-banner');if(!banner)return;
@@ -8013,6 +8124,7 @@ async function loadClientViewTab(tab,clientId){
   } else if(tab==='cv-procurement'){
     await loadProcurementRequests(cid,'cv-procurement-list',true);
   } else if(tab==='cv-candidates'){
+    renderRecruitToggle(cid);
     await loadCandidates(cid,'cv-candidates-list',true);
   } else if(tab==='cv-messages'){
     await loadClientMessages(cid,'cv');
@@ -8478,6 +8590,11 @@ async function sendClientMessage(scope){
   await logActivity('Sent message','',_msgClientId);
   loadClientMessages(_msgClientId,scope);
 }
+function openClientCandidates(clientId){
+  if(!allClients.find(c=>c.id===clientId))return;
+  viewClient(clientId);
+  setTimeout(()=>loadClientViewTab('cv-candidates',clientId),150);
+}
 async function loadDashboard(){
   const el=document.getElementById('dashboard-content');
   if(!el)return;
@@ -8491,21 +8608,46 @@ async function loadDashboard(){
 
   const [
     {data:trainings},{data:leave},{data:bills},
-    {data:contracts},{data:candidates},{data:activeClients},{data:payrollRuns}
+    {data:contracts},{data:candidates},{data:activeClients},{data:payrollRuns},{data:staffRows}
   ]=await Promise.all([
     db.from('staff_trainings').select('*,client_staff(name,client_id,clients(business_name))').neq('status','Completed'),
     db.from('staff_leave_requests').select('*,client_staff(name),clients(business_name)').eq('status','Pending'),
     db.from('ap_bills').select('*,clients(business_name,currency)').eq('status','Unpaid'),
     db.from('contracts').select('*,clients(business_name)').lte('end_date',in30Str).gte('end_date',today),
     db.from('staff_candidates').select('*,clients(business_name)').eq('status','Under Review'),
-    db.from('clients').select('id,business_name').neq('status','Inactive'),
-    db.from('payroll_runs').select('client_id').eq('period_month',thisMonth).eq('period_year',thisYear)
+    db.from('clients').select('*').neq('status','Inactive'),
+    db.from('payroll_runs').select('client_id').eq('period_month',thisMonth).eq('period_year',thisYear),
+    db.from('client_staff').select('client_id').neq('status','Terminated')
   ]);
 
-  const overdueTrainings=(trainings||[]).filter(t=>t.due_date&&t.due_date<today);
-  const overdueBills=(bills||[]).filter(b=>b.due_date&&b.due_date<today);
+  // Only show what applies: active clients, and only the areas we actually do for each one
+  const cMap={};(activeClients||[]).forEach(c=>cMap[c.id]=c);
+  const okFor=(cid,svc)=>!!cMap[cid]&&clientHas(cMap[cid],svc);
+  const clientsWithStaff=new Set((staffRows||[]).map(r=>r.client_id));
+  const overdueTrainings=(trainings||[]).filter(t=>t.due_date&&t.due_date<today&&t.client_staff&&okFor(t.client_staff.client_id,'staffing'));
+  const overdueBills=(bills||[]).filter(b=>b.due_date&&b.due_date<today&&(!b.client_id||okFor(b.client_id,'finance')));
+  const leaveShown=(leave||[]).filter(l=>okFor(l.client_id,'staffing'));
+  const contractsShown=(contracts||[]).filter(c=>!c.client_id||!!cMap[c.client_id]);
+  const candidatesShown=(candidates||[]).filter(c=>okFor(c.client_id,'staffing')&&cMap[c.client_id].recruiting===true);
   const paidClientIds=new Set((payrollRuns||[]).map(r=>r.client_id));
-  const clientsMissingPayroll=(activeClients||[]).filter(c=>!paidClientIds.has(c.id));
+  const clientsMissingPayroll=(activeClients||[]).filter(c=>clientHas(c,'staffing')&&clientsWithStaff.has(c.id)&&!paidClientIds.has(c.id));
+  const staffingClients=(activeClients||[]).filter(c=>clientHas(c,'staffing'));
+  const hiring=staffingClients.filter(c=>c.recruiting===true);
+  const notHiring=staffingClients.filter(c=>c.recruiting!==true);
+  const recruitCard=!staffingClients.length?'':`
+    <div class="card" style="padding:0;overflow:hidden;margin-bottom:16px">
+      <div style="padding:14px 20px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+        <div style="font-size:14px;font-weight:600;color:var(--ink)">🧑‍🎓 Recruitment</div>
+        <span style="font-size:12px;color:var(--muted)">${hiring.length} hiring · ${notHiring.length} not hiring</span>
+      </div>
+      ${hiring.length?hiring.map(c=>{const n=candidatesShown.filter(x=>x.client_id===c.id).length;return `
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 20px;border-bottom:1px solid var(--border)">
+          <div><span class="badge badge-green">● Recruiting</span> <strong style="font-size:13px;margin-left:6px">${c.business_name}</strong>
+            <div style="font-size:12px;color:var(--muted);margin-top:3px">${n?`${n} candidate${n===1?'':'s'} to review`:'No candidates waiting'}</div></div>
+          <div style="display:flex;gap:6px"><button class="btn-sm" onclick="openClientCandidates('${c.id}')">Open candidates</button><button class="btn-sm" onclick="setRecruiting('${c.id}',false)">✓ Done hiring</button></div>
+        </div>`;}).join(''):'<div style="padding:14px 20px;font-size:12.5px;color:var(--muted);border-bottom:1px solid var(--border)">Nobody is recruiting right now.</div>'}
+      ${notHiring.length?`<div style="padding:12px 20px;display:flex;gap:8px;flex-wrap:wrap;align-items:center"><span style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)">Not hiring</span>${notHiring.map(c=>`<button class="btn-sm" title="Start recruiting for ${c.business_name}" onclick="setRecruiting('${c.id}',true)">${c.business_name} · start recruiting</button>`).join('')}</div>`:''}
+    </div>`;
 
   const checklist=(title,icon,items,urgent)=>{
     if(!items.length)return '';
@@ -8552,25 +8694,27 @@ async function loadDashboard(){
 
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:26px;perspective:800px">
       ${kpi('⚠️',overdueTrainings.length,'Overdue Trainings','danger')}
-      ${kpi('🌴',(leave||[]).length,'Pending Leave','gold')}
+      ${kpi('🌴',leaveShown.length,'Pending Leave','gold')}
       ${kpi('💸',overdueBills.length,'Overdue Bills','danger')}
-      ${kpi('📄',(contracts||[]).length,'Contracts Expiring Soon','gold')}
-      ${kpi('🧑‍🎓',(candidates||[]).length,'Candidates To Review','gold')}
+      ${kpi('📄',contractsShown.length,'Contracts Expiring Soon','gold')}
+      ${kpi('🧑‍🎓',candidatesShown.length,'Candidates To Review','gold')}
     </div>
 
     ${checklist('Overdue Trainings','⚠️',overdueTrainings.map(t=>`<strong style="font-size:13px;color:var(--ink)">${(t.client_staff&&t.client_staff.name)||'—'}</strong> · <span style="font-size:12px;color:var(--muted)">${(t.client_staff&&t.client_staff.clients&&t.client_staff.clients.business_name)||'—'}</span><br><span style="font-size:12px;color:var(--danger)">${t.training_name} — was due ${t.due_date}</span>`),true)}
 
     ${checklist('Overdue Bills','💸',overdueBills.map(b=>`<strong style="font-size:13px;color:var(--ink)">${b.vendor_name}</strong> · <span style="font-size:12px;color:var(--muted)">${(b.clients&&b.clients.business_name)||'—'}</span><br><span style="font-size:12px;color:var(--danger)">${CURRENCY_SYMBOLS[(b.clients&&b.clients.currency)||'NGN']||'₦'}${Number(b.amount||0).toLocaleString()} — due ${b.due_date}</span>`),true)}
 
-    ${checklist('Pending Leave Requests','🌴',(leave||[]).map(l=>`<strong style="font-size:13px;color:var(--ink)">${(l.client_staff&&l.client_staff.name)||'—'}</strong> · <span style="font-size:12px;color:var(--muted)">${(l.clients&&l.clients.business_name)||'—'}</span><br><span style="font-size:12px;color:var(--muted)">${l.start_date} → ${l.end_date}</span>`),false)}
+    ${checklist('Pending Leave Requests','🌴',leaveShown.map(l=>`<strong style="font-size:13px;color:var(--ink)">${(l.client_staff&&l.client_staff.name)||'—'}</strong> · <span style="font-size:12px;color:var(--muted)">${(l.clients&&l.clients.business_name)||'—'}</span><br><span style="font-size:12px;color:var(--muted)">${l.start_date} → ${l.end_date}</span>`),false)}
 
-    ${checklist('Contracts Expiring Within 30 Days','📄',(contracts||[]).map(c=>`<strong style="font-size:13px;color:var(--ink)">${(c.clients&&c.clients.business_name)||'—'}</strong><br><span style="font-size:12px;color:var(--muted)">${c.contract_type||'Contract'} — expires ${c.end_date}</span>`),false)}
+    ${checklist('Contracts Expiring Within 30 Days','📄',contractsShown.map(c=>`<strong style="font-size:13px;color:var(--ink)">${(c.clients&&c.clients.business_name)||'—'}</strong><br><span style="font-size:12px;color:var(--muted)">${c.contract_type||'Contract'} — expires ${c.end_date}</span>`),false)}
 
-    ${checklist('Candidates To Review','🧑‍🎓',(candidates||[]).map(c=>`<strong style="font-size:13px;color:var(--ink)">${c.full_name}</strong> · <span style="font-size:12px;color:var(--muted)">${(c.clients&&c.clients.business_name)||'—'}</span>`),false)}
+    ${recruitCard}
+
+    ${checklist('Candidates To Review','🧑‍🎓',candidatesShown.map(c=>`<strong style="font-size:13px;color:var(--ink)">${c.full_name}</strong> · <span style="font-size:12px;color:var(--muted)">${(c.clients&&c.clients.business_name)||'—'}</span>`),false)}
 
     ${checklist('Payroll Not Yet Run This Month','💰',clientsMissingPayroll.map(c=>`<strong style="font-size:13px;color:var(--ink)">${c.business_name}</strong>`),false)}
 
-    ${totalUrgent2===0&&!(leave||[]).length&&!(contracts||[]).length&&!(candidates||[]).length&&!clientsMissingPayroll.length?`<div class="card" style="padding:40px;text-align:center"><div style="font-size:32px;margin-bottom:8px">✨</div><div style="font-family:'Cormorant Garamond',serif;font-size:20px;color:var(--ink)">Nothing outstanding right now</div><div style="font-size:12px;color:var(--muted);margin-top:4px">Everything's on track across every client.</div></div>`:''}
+    ${totalUrgent2===0&&!leaveShown.length&&!contractsShown.length&&!candidatesShown.length&&!clientsMissingPayroll.length?`<div class="card" style="padding:40px;text-align:center"><div style="font-size:32px;margin-bottom:8px">✨</div><div style="font-family:'Cormorant Garamond',serif;font-size:20px;color:var(--ink)">Nothing outstanding right now</div><div style="font-size:12px;color:var(--muted);margin-top:4px">Everything's on track across every client.</div></div>`:''}
   `;
   attachTiltEffect('.kpi-tile',el);
   const totalUrgent=overdueTrainings.length+overdueBills.length;
@@ -12898,7 +13042,7 @@ async function loadDailyHRReport(){
   const date=dateEl.value;
   // A client counts as "portal" if flagged active, OR anyone there has clocked in that day, OR any of its staff have portal logins
   const [{data:allCl},{data:attToday},{data:credStaff}]=await Promise.all([
-    db.from('clients').select('id,business_name,staff_portal_active').order('business_name',{ascending:true}),
+    db.from('clients').select('id,business_name,staff_portal_active').neq('status','Inactive').order('business_name',{ascending:true}),
     db.from('staff_attendance').select('client_id').eq('work_date',date),
     db.from('client_staff').select('client_id').not('username','is',null).neq('username','').neq('status','Terminated')
   ]);
