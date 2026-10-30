@@ -357,6 +357,16 @@ body *{font-family:'Jost',Arial,sans-serif !important}
 .pending-row{background:#F4EFD8!important}
 .approval-card{border:1.5px solid #DCD8C8;border-left:4px solid #8a7a1f;border-radius:9px;padding:16px 18px;margin-bottom:12px;background:white}
 @media print{#modal-invoice-pdf .modal{box-shadow:none;border:none;max-width:100%;width:100%}.modal-overlay{background:white;position:relative}.modal-header{display:none!important}}
+
+.au-row{border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:6px;background:white}
+.au-row.failed{border-color:var(--danger);background:var(--danger-light)}
+.au-text{font-family:Arial;font-size:13.5px;color:var(--ink);line-height:1.45;margin-bottom:8px}
+.au-btns{display:flex;gap:8px}
+.au-btn{flex:1;padding:10px 0;border:1.5px solid var(--border);border-radius:9px;background:white;font-family:Arial;font-size:13px;font-weight:600;cursor:pointer;color:var(--ink2)}
+.au-btn.pass.on{background:var(--success);border-color:var(--success);color:#fff}
+.au-btn.fail.on{background:var(--danger);border-color:var(--danger);color:#fff}
+.au-btn.na.on{background:var(--muted);border-color:var(--muted);color:#fff}
+.au-note{width:100%;margin-top:8px;padding:9px 11px;border:1.5px solid var(--danger);border-radius:9px;font-family:Arial;font-size:13px}
 </style>
 
 <script>
@@ -505,6 +515,12 @@ self.addEventListener('notificationclick',function(e){
       <div style="font-family:Arial;font-size:11px;text-transform:uppercase;color:var(--muted);margin-bottom:4px">📖 Reading List — Policies &amp; Procedures</div>
       <div style="font-family:Arial;font-size:11.5px;color:var(--muted);margin-bottom:12px">Read each one and tap "Mark as read" so your manager knows you've understood it.</div>
       <div id="sp-reading-list"></div>
+    </div>
+
+    <!-- CHECKLISTS (staff-run audits) -->
+    <div id="sp-audits-box" style="display:none;background:white;border:1px solid var(--border);border-radius:12px;padding:20px 24px;margin-bottom:16px">
+      <div style="font-family:Arial;font-size:11px;text-transform:uppercase;color:var(--muted);margin-bottom:4px">✅ My Checklists</div>
+      <div id="sp-audits-list"></div>
     </div>
 
     <!-- MY DETAILS NAG + FORM -->
@@ -992,6 +1008,7 @@ self.addEventListener('notificationclick',function(e){
             <button class="inner-tab" onclick="switchReportType('kpi',this)">KPI Review</button>
             <button class="inner-tab" style="background:var(--gold-light);color:var(--warn);font-weight:600" onclick="generateFullReport()">📄 Full Report</button>
           </div>
+          <div id="audit-checklist-panel" style="display:none"></div>
           <div id="report-form">
             <div class="form-grid">
               <div class="form-field"><label>Client</label><select id="rf-client"><option value="">Select client…</option></select></div>
@@ -2211,6 +2228,7 @@ self.addEventListener('notificationclick',function(e){
           <button class="inner-tab cv-tab" id="cvtab-cv-staff" onclick="loadClientViewTab('cv-staff')">Staff</button>
           <button class="inner-tab cv-tab" id="cvtab-cv-docs" onclick="loadClientViewTab('cv-docs')">Documents</button>
           <button class="inner-tab cv-tab" id="cvtab-cv-kpis" onclick="loadClientViewTab('cv-kpis')" style="color:var(--gold);font-weight:600">📊 KPIs</button>
+          <button class="inner-tab cv-tab" id="cvtab-cv-audits" onclick="loadClientViewTab('cv-audits')" style="color:var(--ink2);font-weight:600">✅ Audits</button>
           <button class="inner-tab cv-tab" id="cvtab-cv-compliance" onclick="loadClientViewTab('cv-compliance')" style="color:var(--ink2);font-weight:600">🗂 Compliance</button>
           <button class="inner-tab cv-tab" id="cvtab-cv-inventory" onclick="loadClientViewTab('cv-inventory')">📦 Inventory</button>
           <button class="inner-tab cv-tab" id="cvtab-cv-qc" onclick="loadClientViewTab('cv-qc')">✔ Quality Control</button>
@@ -2305,6 +2323,7 @@ self.addEventListener('notificationclick',function(e){
           <div id="cv-attendance-list"></div>
         </div>
         <div id="cv-leave-panel" class="cv-tab-content" style="display:none"><div id="cv-leave-list"></div></div>
+        <div id="cv-audits-panel" class="cv-tab-content" style="display:none"><div id="cv-audits-content"></div></div>
         <div id="cv-handover-panel" class="cv-tab-content" style="display:none">
           <div id="cv-handover-container"></div>
         </div>
@@ -2812,6 +2831,7 @@ self.addEventListener('notificationclick',function(e){
           <button class="ptab" data-service="staffing" onclick="switchPortalTab('portal-leave-tab',this);loadLeaveRequests(currentUser.clientId,'portal-leave-list',true)">🌴 Leave</button>
           <button class="ptab" data-service="staffing" onclick="switchPortalTab('portal-shifts-tab',this);loadShifts(currentUser.clientId,'portal-shifts-list',true)">📆 Shifts</button>
           <button class="ptab" data-service="staffing" onclick="switchPortalTab('portal-handover-tab',this);renderHandover('pc')">🔁 Handover</button>
+          <button class="ptab" data-service="operations" onclick="switchPortalTab('portal-audits-tab',this);renderAuditHub('pc',currentUser.clientId,'portal-audits-content')">✅ Audits</button>
           <button class="ptab" data-service="finance" onclick="switchPortalTab('portal-accounting-tab',this);loadClientAccountingView(currentUser.clientId)">📚 Accounting</button>
           <button class="ptab" onclick="switchPortalTab('portal-kb-tab',this);loadKnowledgeBase(currentUser.clientId,'portal-kb-list',true)" style="font-weight:600;color:var(--brand)">📚 Knowledge Base</button>
           <button class="ptab" data-service="staffing" onclick="switchPortalTab('portal-staffing-tab',this);loadStaffingOverview(currentUser.clientId,'portal-staffing-list')" style="font-weight:600;color:var(--danger)">📅 Staffing</button>
@@ -2885,6 +2905,7 @@ self.addEventListener('notificationclick',function(e){
         </div>
         <div id="portal-leave-tab" class="portal-tab-content" style="display:none"><div id="portal-leave-list"></div></div>
         <div id="portal-handover-tab" class="portal-tab-content" style="display:none"><div id="portal-handover-container"></div></div>
+        <div id="portal-audits-tab" class="portal-tab-content" style="display:none"><div id="portal-audits-content"></div></div>
         <div id="portal-shifts-tab" class="portal-tab-content" style="display:none">
           <div class="card" style="padding:16px 20px;margin-bottom:16px">
             <div style="font-size:13px;font-weight:600;color:var(--ink);margin-bottom:4px">📥 Upload a Rota (Excel / CSV)</div>
@@ -3468,6 +3489,40 @@ self.addEventListener('notificationclick',function(e){
 </div>
 
 <!-- Manage Services Modal -->
+<!-- Audit checklist: run -->
+<div class="modal-overlay" id="modal-audit-run">
+  <div class="modal" style="max-width:640px">
+    <div class="modal-header"><div><div class="modal-title" id="au-run-title">Checklist</div><div style="font-size:12px;color:var(--muted)" id="au-run-sub"></div></div><button class="modal-close" onclick="closeModal('modal-audit-run')">×</button></div>
+    <div class="modal-body" style="max-height:72vh;overflow-y:auto">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;position:sticky;top:-1px;background:white;padding:6px 0 10px;z-index:2">
+        <div id="au-run-progress" style="font-size:13px"></div>
+        <button class="btn-sm" onclick="auAllPass()">Mark everything left as Pass</button>
+      </div>
+      <div id="au-run-items"></div>
+      <div class="form-field" style="margin-top:16px"><label>Anything else to add? (optional)</label><textarea id="au-run-notes" rows="3"></textarea></div>
+      <button class="btn-save" onclick="auSubmit()" style="margin-top:12px">Submit checklist</button>
+      <div id="au-run-feedback"></div>
+    </div>
+  </div>
+</div>
+<!-- Audit checklist: create / edit -->
+<div class="modal-overlay" id="modal-audit-edit">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-header"><div class="modal-title" id="au-ed-title">Checklist</div><button class="modal-close" onclick="closeModal('modal-audit-edit')">×</button></div>
+    <div class="modal-body">
+      <input type="hidden" id="au-ed-id">
+      <div class="form-field"><label>Name</label><input type="text" id="au-ed-name" placeholder="e.g. Kitchen Hygiene Audit"></div>
+      <div class="form-grid" style="margin-top:10px">
+        <div class="form-field"><label>How often</label><select id="au-ed-freq"><option>Daily</option><option>Weekly</option><option>Monthly</option><option>As needed</option></select></div>
+        <div class="form-field"><label>Who does it</label><select id="au-ed-who"><option value="Staff">Staff (in their portal)</option><option value="Operations">Operations</option><option value="Both">Either</option></select></div>
+      </div>
+      <div class="form-field" style="margin-top:10px"><label>Lines to check — one per line. Start a line with ## to make a section heading.</label><textarea id="au-ed-items" rows="12" style="font-family:Arial;font-size:13px"></textarea></div>
+      <div style="display:flex;gap:8px;margin-top:12px"><button class="btn-save" onclick="auSaveEditor()">Save checklist</button><button class="btn-danger" id="au-ed-del" onclick="auDeleteChecklist()" style="display:none">Delete</button></div>
+      <div id="au-ed-feedback"></div>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="modal-manage-services">
   <div class="modal" style="max-width:420px">
     <div class="modal-header"><div class="modal-title">Manage Services</div><button class="modal-close" onclick="closeModal('modal-manage-services')">×</button></div>
@@ -5722,6 +5777,7 @@ async function showStaffPortal(staff){
   await loadSpRotaCalendar();
   await loadSpSwapRequests();
   await loadSpReadingList();
+  renderAuditHub('sp',_spClientId,'sp-audits-list');
   await loadClientStaffDetails();
   await loadMyFaceStatus();
 }
@@ -6491,6 +6547,7 @@ function populateAllDropdowns(){
   // Action Tracker: explicit "Internal / Company" category instead of a blank placeholder
   const actEl=document.getElementById('act-client');
   if(actEl)actEl.innerHTML=opts.replace('<option value="">Select client…</option>','<option value="">Internal / Company</option>');
+  if(typeof auToggleAddReport==='function'&&reportType==='audit')auToggleAddReport();
 }
 
 async function saveClient(){
@@ -6533,14 +6590,14 @@ function goAddReport(clientId){
   showAdminTabByName('reports');
   setTimeout(()=>{
     document.getElementById('rf-client').value=clientId;
-    renderTypeFields();
+    renderTypeFields();auToggleAddReport();
     // After save, return to client view
     _currentViewClientId=clientId;
   },150);
 }
 
 // ══ REPORT TYPES ══
-function switchReportType(type,btn){reportType=type;document.querySelectorAll('.inner-tab').forEach(b=>b.classList.remove('active'));btn.classList.add('active');renderTypeFields();}
+function switchReportType(type,btn){reportType=type;document.querySelectorAll('#page-reports .inner-tab').forEach(b=>b.classList.remove('active'));btn.classList.add('active');renderTypeFields();auToggleAddReport();}
 
 function getClientNiche(){const id=document.getElementById('rf-client').value;const c=allClients.find(x=>x.id===id);return c&&c.niche?c.niche:'general';}
 
@@ -8037,7 +8094,7 @@ async function viewClient(clientId){
 const CV_TAB_SERVICE={
   'cv-staff':'staffing','cv-leaderboard':'staffing','cv-attendance':'staffing','cv-leave':'staffing','cv-shifts':'staffing','cv-handover':'staffing',
   'cv-notices':'staffing','cv-staffing':'staffing','cv-procurement':'staffing','cv-candidates':'staffing',
-  'cv-inventory':'operations','cv-qc':'operations','cv-compliance':'operations'
+  'cv-inventory':'operations','cv-qc':'operations','cv-compliance':'operations','cv-audits':'operations'
 };
 function applyClientViewServices(client){
   Object.keys(CV_TAB_SERVICE).forEach(tab=>{
@@ -8139,6 +8196,8 @@ async function loadClientViewTab(tab,clientId){
   } else if(tab==='cv-credentials'){
     if(!currentUser||!currentUser.isOwner)return;
     await loadClientCredentials(cid,'cv',true);
+  } else if(tab==='cv-audits'){
+    await renderAuditHub('cv',cid,'cv-audits-content');
   } else if(tab==='cv-handover'){
     await renderHandover('cv');
   } else if(tab==='cv-policies'){
@@ -8614,7 +8673,7 @@ async function loadDashboard(){
 
   const [
     {data:trainings},{data:leave},{data:bills},
-    {data:contracts},{data:candidates},{data:activeClients},{data:payrollRuns},{data:staffRows}
+    {data:contracts},{data:candidates},{data:activeClients},{data:payrollRuns},{data:staffRows},{data:auChks},{data:auSubs}
   ]=await Promise.all([
     db.from('staff_trainings').select('*,client_staff(name,client_id,clients(business_name))').neq('status','Completed'),
     db.from('staff_leave_requests').select('*,client_staff(name),clients(business_name)').eq('status','Pending'),
@@ -8623,7 +8682,9 @@ async function loadDashboard(){
     db.from('staff_candidates').select('*,clients(business_name)').eq('status','Under Review'),
     db.from('clients').select('*').neq('status','Inactive'),
     db.from('payroll_runs').select('client_id').eq('period_month',thisMonth).eq('period_year',thisYear),
-    db.from('client_staff').select('client_id').neq('status','Terminated')
+    db.from('client_staff').select('client_id').neq('status','Terminated'),
+    db.from('audit_checklists').select('id,client_id,name,frequency,who,active'),
+    db.from('audit_submissions').select('checklist_id,client_id,audit_date,status,fail_count,checklist_name').gte('audit_date',new Date(Date.now()-120*86400000).toISOString().slice(0,10))
   ]);
 
   // Only show what applies: active clients, and only the areas we actually do for each one
@@ -8635,6 +8696,10 @@ async function loadDashboard(){
   const leaveShown=(leave||[]).filter(l=>okFor(l.client_id,'staffing'));
   const contractsShown=(contracts||[]).filter(c=>!c.client_id||!!cMap[c.client_id]);
   const candidatesShown=(candidates||[]).filter(c=>okFor(c.client_id,'staffing')&&cMap[c.client_id].recruiting===true);
+  // Audits: overdue checklists + audits with failed items still waiting
+  const auLast={};(auSubs||[]).forEach(x=>{if(x.checklist_id&&(!auLast[x.checklist_id]||x.audit_date>auLast[x.checklist_id]))auLast[x.checklist_id]=x.audit_date;});
+  const auOverdue=(auChks||[]).filter(c=>c.active!==false&&c.frequency!=='As needed'&&okFor(c.client_id,'operations')).map(c=>({c,st:auStatus(c,auLast[c.id])})).filter(x=>x.st.tone==='danger');
+  const auFails=(auSubs||[]).filter(x=>x.status==='Open'&&(x.fail_count||0)>0&&okFor(x.client_id,'operations'));
   const paidClientIds=new Set((payrollRuns||[]).map(r=>r.client_id));
   const clientsMissingPayroll=(activeClients||[]).filter(c=>clientHas(c,'staffing')&&clientsWithStaff.has(c.id)&&!paidClientIds.has(c.id));
   const staffingClients=(activeClients||[]).filter(c=>clientHas(c,'staffing'));
@@ -8676,7 +8741,7 @@ async function loadDashboard(){
 
   const hour=new Date().getHours();
   const greeting=hour<12?'Good morning':hour<17?'Good afternoon':'Good evening';
-  const totalUrgent2=overdueTrainings.length+overdueBills.length;
+  const totalUrgent2=overdueTrainings.length+overdueBills.length+auOverdue.length;
   const kpi=(icon,val,label,tone)=>`
     <div class="card kpi-tile" style="padding:0;overflow:hidden;text-align:left">
       <div style="height:4px;background:var(--${tone})"></div>
@@ -8703,6 +8768,7 @@ async function loadDashboard(){
       ${kpi('🌴',leaveShown.length,'Pending Leave','gold')}
       ${kpi('💸',overdueBills.length,'Overdue Bills','danger')}
       ${kpi('📄',contractsShown.length,'Contracts Expiring Soon','gold')}
+      ${kpi('✅',auOverdue.length,'Audits Overdue','danger')}
       ${kpi('🧑‍🎓',candidatesShown.length,'Candidates To Review','gold')}
     </div>
 
@@ -8714,16 +8780,20 @@ async function loadDashboard(){
 
     ${checklist('Contracts Expiring Within 30 Days','📄',contractsShown.map(c=>`<strong style="font-size:13px;color:var(--ink)">${(c.clients&&c.clients.business_name)||'—'}</strong><br><span style="font-size:12px;color:var(--muted)">${c.contract_type||'Contract'} — expires ${c.end_date}</span>`),false)}
 
+    ${checklist('Audits Overdue','✅',auOverdue.map(x=>`<strong style="font-size:13px;color:var(--ink)">${(cMap[x.c.client_id]||{}).business_name||'—'}</strong> · <span style="font-size:12px;color:var(--muted)">${x.c.name} (${x.c.who==='Both'?'Staff or Operations':x.c.who})</span><br><span style="font-size:12px;color:var(--danger)">${x.st.text}</span>`),true)}
+
+    ${checklist('Audits With Failed Items To Follow Up','✗',auFails.map(x=>`<strong style="font-size:13px;color:var(--ink)">${(cMap[x.client_id]||{}).business_name||'—'}</strong> · <span style="font-size:12px;color:var(--muted)">${x.checklist_name||'Audit'} — ${x.audit_date}</span><br><span style="font-size:12px;color:var(--danger)">${x.fail_count} failed item${x.fail_count===1?'':'s'}</span>`),false)}
+
     ${recruitCard}
 
     ${checklist('Candidates To Review','🧑‍🎓',candidatesShown.map(c=>`<strong style="font-size:13px;color:var(--ink)">${c.full_name}</strong> · <span style="font-size:12px;color:var(--muted)">${(c.clients&&c.clients.business_name)||'—'}</span>`),false)}
 
     ${checklist('Payroll Not Yet Run This Month','💰',clientsMissingPayroll.map(c=>`<strong style="font-size:13px;color:var(--ink)">${c.business_name}</strong>`),false)}
 
-    ${totalUrgent2===0&&!leaveShown.length&&!contractsShown.length&&!candidatesShown.length&&!clientsMissingPayroll.length?`<div class="card" style="padding:40px;text-align:center"><div style="font-size:32px;margin-bottom:8px">✨</div><div style="font-family:'Cormorant Garamond',serif;font-size:20px;color:var(--ink)">Nothing outstanding right now</div><div style="font-size:12px;color:var(--muted);margin-top:4px">Everything's on track across every client.</div></div>`:''}
+    ${totalUrgent2===0&&!auFails.length&&!leaveShown.length&&!contractsShown.length&&!candidatesShown.length&&!clientsMissingPayroll.length?`<div class="card" style="padding:40px;text-align:center"><div style="font-size:32px;margin-bottom:8px">✨</div><div style="font-family:'Cormorant Garamond',serif;font-size:20px;color:var(--ink)">Nothing outstanding right now</div><div style="font-size:12px;color:var(--muted);margin-top:4px">Everything's on track across every client.</div></div>`:''}
   `;
   attachTiltEffect('.kpi-tile',el);
-  const totalUrgent=overdueTrainings.length+overdueBills.length;
+  const totalUrgent=overdueTrainings.length+overdueBills.length+auOverdue.length;
   const badge=document.getElementById('dashboard-badge');
   if(badge){
     if(totalUrgent>0){badge.textContent=totalUrgent;badge.style.display='inline';}
@@ -10841,35 +10911,460 @@ async function decideLeave(id,status,targetId,clientId){
 
 // ══ SHIFTS (shared) ══
 let _shClientId=null;
+let _shData=null,_shCal={clientId:null,month:new Date(),view:'calendar',sel:null};
+function shShiftCard(s){
+  const {clientId,targetId,canManage,assigns,staffOptions}=_shData;
+  const taken=assigns.filter(a=>a.shift_id===s.id);
+  const full=taken.length>=(s.slots||1);
+  const namesHtml=taken.length?taken.map(a=>`<span style="display:inline-flex;align-items:center;gap:4px;background:white;border:1px solid var(--border);border-radius:10px;padding:2px 8px 2px 10px;margin:2px 4px 2px 0;font-family:Arial;font-size:11px">${(a.client_staff&&a.client_staff.name)||'—'}${canManage?` <button onclick="unassignShift('${a.id}','${targetId}','${clientId}')" style="border:none;background:none;color:var(--danger);cursor:pointer;font-size:12px;padding:0 2px">×</button>`:''}</span>`).join(''):'<span style="font-family:Arial;font-size:12px;color:var(--muted)">Unassigned</span>';
+  return`<div style="border:1px solid var(--border);border-radius:9px;padding:12px 16px;margin-bottom:8px;background:white">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px">
+      <div><strong style="font-family:Arial;font-size:13px">${s.shift_name||'Shift'}</strong> · ${s.shift_date||''}<br>
+      <span style="font-family:Arial;font-size:12px;color:var(--muted)">${s.start_time||''}–${s.end_time||''} · ${taken.length}/${s.slots||1} filled</span></div>
+      <div style="display:flex;align-items:center;gap:8px"><span class="badge ${full?'badge-red':'badge-green'}">${full?'Full':'Open'}</span>${canManage?`<button class="btn-danger" onclick="deleteShift('${s.id}','${targetId}','${clientId}')">Del Shift</button>`:''}</div>
+    </div>
+    <div style="margin-top:8px">${namesHtml}</div>
+    ${canManage?`<div style="margin-top:8px;display:flex;gap:6px;align-items:center">
+      <select id="assign-select-${s.id}" style="padding:5px 8px;border:1px solid var(--border);border-radius:9px;font-family:Arial;font-size:12px"><option value="">Assign staff…</option>${staffOptions}</select>
+      <button class="btn-sm" onclick="assignStaffToShift('${s.id}','${targetId}','${clientId}')">Assign</button>
+    </div>`:''}
+  </div>`;
+}
+function shSetView(v){_shCal.view=v;renderShifts();}
+function shMove(d){_shCal.month=new Date(_shCal.month.getFullYear(),_shCal.month.getMonth()+d,1);_shCal.sel=null;renderShifts();}
+function shToday(){_shCal.month=new Date();_shCal.sel=localDateStr();renderShifts();}
+function shSelectDay(d){_shCal.sel=(_shCal.sel===d)?null:d;renderShifts();}
+function renderShifts(){
+  if(!_shData)return;
+  const {targetId,shifts,assigns}=_shData;
+  const el=document.getElementById(targetId);if(!el)return;
+  if(!shifts.length){el.innerHTML='<p style="font-family:Arial;font-size:13px;color:var(--muted)">No shifts created yet.</p>';return;}
+  const tabBtn=(v,l)=>`<button class="btn-sm" onclick="shSetView('${v}')" style="${_shCal.view===v?'font-weight:700;background:var(--gold-light);border-color:var(--gold)':''}">${l}</button>`;
+  const y=_shCal.month.getFullYear(),m=_shCal.month.getMonth();
+  const bar=`<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+    <div style="display:flex;gap:6px">${tabBtn('calendar','📅 Calendar')}${tabBtn('list','☰ List')}</div>
+    ${_shCal.view==='calendar'?`<div style="display:flex;align-items:center;gap:6px"><button class="btn-sm" onclick="shMove(-1)">‹</button><strong style="font-family:Arial;font-size:14px;min-width:130px;text-align:center">${new Date(y,m,1).toLocaleString('default',{month:'long',year:'numeric'})}</strong><button class="btn-sm" onclick="shMove(1)">›</button><button class="btn-sm" onclick="shToday()">Today</button></div>`:''}
+  </div>`;
+  if(_shCal.view==='list'){el.innerHTML=bar+shifts.map(shShiftCard).join('');return;}
+  const byDate={};shifts.forEach(s=>{(byDate[s.shift_date]=byDate[s.shift_date]||[]).push(s);});
+  const first=new Date(y,m,1),days=new Date(y,m+1,0).getDate(),lead=(first.getDay()+6)%7,today=localDateStr();
+  let grid=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(d=>`<div style="font-family:Arial;font-size:10.5px;font-weight:600;color:var(--muted);text-align:center;padding:4px 0">${d}</div>`).join('');
+  for(let i=0;i<lead;i++)grid+='<div></div>';
+  for(let d=1;d<=days;d++){
+    const ds=`${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const list=(byDate[ds]||[]).slice().sort((a,b)=>String(a.start_time||'').localeCompare(String(b.start_time||'')));
+    const chips=list.slice(0,3).map(s=>{
+      const names=assigns.filter(a=>a.shift_id===s.id).map(a=>((a.client_staff&&a.client_staff.name)||'—').split(' ')[0]);
+      const full=names.length>=(s.slots||1);
+      return `<div title="${(s.shift_name||'Shift')} ${s.start_time||''}-${s.end_time||''}: ${names.join(', ')||'Unassigned'}" style="font-family:Arial;font-size:9.5px;line-height:1.25;margin-top:2px;padding:2px 4px;border-radius:4px;background:${full?'#DDEFE3':'#F6EAC8'};color:#28395e;overflow:hidden;white-space:nowrap;text-overflow:ellipsis"><strong>${String(s.start_time||'').slice(0,5)}</strong> ${names.join(', ')||'Open'}</div>`;
+    }).join('');
+    const more=list.length>3?`<div style="font-family:Arial;font-size:9.5px;color:var(--muted);margin-top:2px">+${list.length-3} more</div>`:'';
+    const sel=_shCal.sel===ds;
+    grid+=`<div onclick="shSelectDay('${ds}')" style="cursor:pointer;min-height:72px;border:${sel?'2px solid var(--gold)':'1px solid var(--border)'};border-radius:7px;padding:4px;background:${ds===today?'var(--gold-light)':'white'};min-width:0"><div style="font-family:Arial;font-size:11px;color:${ds===today?'var(--ink)':'var(--muted)'};font-weight:${ds===today?'700':'400'}">${d}</div>${chips}${more}</div>`;
+  }
+  let detail='<div style="font-family:Arial;font-size:12px;color:var(--muted);margin-top:12px">Tap a day to see its shifts and make changes. <span style="display:inline-block;width:10px;height:10px;background:#DDEFE3;border-radius:2px;vertical-align:middle"></span> fully staffed · <span style="display:inline-block;width:10px;height:10px;background:#F6EAC8;border-radius:2px;vertical-align:middle"></span> still needs staff</div>';
+  if(_shCal.sel){
+    const list=byDate[_shCal.sel]||[];
+    detail=`<div style="margin-top:14px"><div style="font-family:Arial;font-size:13px;font-weight:600;margin-bottom:8px">${new Date(_shCal.sel+'T12:00:00').toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'})}</div>${list.length?list.map(shShiftCard).join(''):'<p style="font-family:Arial;font-size:12.5px;color:var(--muted)">No shifts this day.</p>'}</div>`;
+  }
+  el.innerHTML=bar+`<div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px">${grid}</div>`+detail;
+}
 async function loadShifts(clientId,targetId,canManage){
   _shClientId=clientId;
   loadSwapRequestsForClient(clientId,targetId+'-swaps');
   const {data:shiftRows}=await db.from('shifts').select('*').eq('client_id',clientId).order('shift_date',{ascending:true});
-  const shiftsList=shiftRows||[];
-  const {data:assignRows}=await db.from('shift_assignments').select('*,client_staff(name)').in('shift_id',shiftsList.map(s=>s.id).length?shiftsList.map(s=>s.id):['00000000-0000-0000-0000-000000000000']);
-  const assigns=assignRows||[];
+  const shifts=shiftRows||[];
+  const ids=shifts.map(s=>s.id);
+  const {data:assignRows}=await db.from('shift_assignments').select('*,client_staff(name)').in('shift_id',ids.length?ids:['00000000-0000-0000-0000-000000000000']);
   const {data:staffRows}=await db.from('client_staff').select('id,name').eq('client_id',clientId).neq('status','Terminated').order('name',{ascending:true});
   const staffOptions=(staffRows||[]).map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
-  const el=document.getElementById(targetId);if(!el)return;
-  if(!shiftsList.length){el.innerHTML='<p style="font-family:Arial;font-size:13px;color:var(--muted)">No shifts created yet.</p>';return;}
-  el.innerHTML=shiftsList.map(s=>{
-    const taken=assigns.filter(a=>a.shift_id===s.id);
-    const full=taken.length>=(s.slots||1);
-    const namesHtml=taken.length?taken.map(a=>`<span style="display:inline-flex;align-items:center;gap:4px;background:white;border:1px solid var(--border);border-radius:10px;padding:2px 8px 2px 10px;margin:2px 4px 2px 0;font-family:Arial;font-size:11px">${(a.client_staff&&a.client_staff.name)||'—'}${canManage?` <button onclick="unassignShift('${a.id}','${targetId}','${clientId}')" style="border:none;background:none;color:var(--danger);cursor:pointer;font-size:12px;padding:0 2px">×</button>`:''}</span>`).join(''):'<span style="font-family:Arial;font-size:12px;color:var(--muted)">Unassigned</span>';
-    return`<div style="border:1px solid var(--border);border-radius:9px;padding:12px 16px;margin-bottom:8px">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px">
-        <div><strong style="font-family:Arial;font-size:13px">${s.shift_name||'Shift'}</strong> · ${s.shift_date||''}<br>
-        <span style="font-family:Arial;font-size:12px;color:var(--muted)">${s.start_time||''}–${s.end_time||''} · ${taken.length}/${s.slots||1} filled</span></div>
-        <div style="display:flex;align-items:center;gap:8px"><span class="badge ${full?'badge-red':'badge-green'}">${full?'Full':'Open'}</span>${canManage?`<button class="btn-danger" onclick="deleteShift('${s.id}','${targetId}','${clientId}')">Del Shift</button>`:''}</div>
-      </div>
-      <div style="margin-top:8px">${namesHtml}</div>
-      ${canManage?`<div style="margin-top:8px;display:flex;gap:6px;align-items:center">
-        <select id="assign-select-${s.id}" style="padding:5px 8px;border:1px solid var(--border);border-radius:9px;font-family:Arial;font-size:12px"><option value="">Assign staff…</option>${staffOptions}</select>
-        <button class="btn-sm" onclick="assignStaffToShift('${s.id}','${targetId}','${clientId}')">Assign</button>
-      </div>`:''}
-    </div>`;
-  }).join('');
+  if(_shCal.clientId!==clientId){
+    _shCal.clientId=clientId;_shCal.sel=null;
+    const today=localDateStr();const next=shifts.find(s=>s.shift_date>=today);
+    _shCal.month=next?new Date(next.shift_date+'T12:00:00'):new Date();
+  }
+  _shData={clientId,targetId,canManage,shifts,assigns:assignRows||[],staffOptions};
+  renderShifts();
 }
+
+// ══ AUDIT CHECKLISTS — Pass / Fail / N/A, done by staff (daily checks) or Operations (deeper audits) ══
+const AUDIT_LIBRARY=[
+{key:'open',name:'Daily Opening Check',frequency:'Daily',who:'Staff',items:`## Premises & hygiene
+Entrance, floors and tables are clean and tidy
+Toilets are clean and stocked (soap, tissue, hand towels)
+Handwashing station has soap, running water and paper towels
+Bins are emptied and lined
+## Food safety
+Fridge and freezer temperatures checked and logged
+Hot-holding equipment is working and at the right temperature
+All stored food is covered, labelled and in date
+Raw and cooked food are stored separately
+No expired or damaged stock is in use
+Allergen information is up to date and visible
+## Staff
+Staff arrived on time, in full uniform, hair covered, no jewellery
+Nobody is working while unwell
+## Equipment & safety
+All equipment is working (cooker, grill, coffee machine, POS, lights, AC)
+Fire exits are clear and the extinguisher is in place
+First-aid kit is stocked
+## Stock & cash
+Key ingredients and supplies are enough for the day
+Cash float is counted and matches the record`},
+{key:'close',name:'Daily Closing Check',frequency:'Daily',who:'Staff',items:`## Food & stock
+All food is covered, labelled, dated and stored
+Fridges and freezers are closed and at the right temperature
+Waste and leftovers are disposed of properly
+## Cleaning
+Kitchen surfaces, floors and equipment are cleaned and sanitised
+Dining area, tables and toilets are cleaned
+Bins are emptied and taken out
+## Cash & records
+Till is cashed up and matches sales
+Cash is banked or locked away
+Daily report and handover note are written
+## Security & safety
+All equipment, gas and non-essential power are switched off
+Windows, doors and back entrance are locked
+Alarm / CCTV is on`},
+{key:'kitchen',name:'Kitchen Hygiene & Food Safety Audit',frequency:'Weekly',who:'Operations',items:`## Personal hygiene
+Staff wash hands correctly and at the right times
+Clean uniform, hair covered, nails short, no jewellery
+Illness reporting is followed
+## Storage & temperature
+Fridge, freezer and hot-holding temperature logs are complete this week
+Food is labelled with prep and use-by dates (FIFO followed)
+Raw meat and fish stored below ready-to-eat food
+Dry store is clean, off the floor and pest-free
+## Preparation
+Separate boards and knives for raw and cooked food
+Probe thermometer is used and cooking temperatures are recorded
+Allergen controls are followed and the allergen matrix is current
+## Cleaning
+Cleaning schedule is completed and signed
+Sanitiser is at the right strength and test strips are used
+Extraction, drains and grease traps are clean
+## Pest control & waste
+No signs of pests; pest-control visits are recorded
+Waste is separated and bins are covered`},
+{key:'foh',name:'Front of House & Customer Service Audit',frequency:'Weekly',who:'Operations',items:`## Appearance
+Entrance, signage and menu boards are clean and correct
+Tables, chairs, floors and windows are clean
+Toilets are clean and stocked
+## Service standard
+Customers are greeted within the agreed time
+Staff know the menu, prices and allergens
+Orders are accurate and served within the agreed time
+Complaints are handled politely and logged
+## Staff conduct
+Staff are in uniform, polite and not on personal phones
+Staff are following the SOPs
+## Payments
+Receipts are issued and prices match the menu
+Tills / POS are used correctly`},
+{key:'stock',name:'Stock & Inventory Audit',frequency:'Weekly',who:'Operations',items:`## Stock count
+Physical count matches the stock record
+Variances are explained and recorded
+Fast-moving items are above reorder level
+## Storage & expiry
+Stock is stored correctly and rotated (FIFO)
+No expired, damaged or unlabelled stock
+## Receiving & waste
+Deliveries are checked against the order and signed for
+Wastage is recorded with a reason`},
+{key:'cash',name:'Cash & Till Audit',frequency:'Weekly',who:'Operations',items:`## Cash handling
+Opening float matches the record
+Till totals match sales records for the period
+Cash is banked on time and deposit slips match
+Petty cash is supported by receipts
+## Controls
+Refunds, voids and discounts are authorised and logged
+Cash is counted by two people where required`},
+{key:'safety',name:'Health & Safety and Compliance Audit',frequency:'Monthly',who:'Operations',items:`## Premises safety
+Fire exits clear, signs visible, extinguishers in date
+First-aid kit stocked and accident book in use
+Electrical equipment is safe, with no exposed wires
+Floors are non-slip and spills are handled
+## Compliance documents
+Licences and permits are valid and displayed
+Staff food-handler / medical certificates are valid
+Insurance is current
+## Training & records
+Staff training records are up to date
+Incident and complaint logs are complete
+## Policies & SOPs
+Policies and SOPs are available to staff and are being followed`},
+{key:'ops',name:'Monthly Operations Audit',frequency:'Monthly',who:'Operations',items:`## Daily routines
+Opening and closing checks were done on all days this month
+Daily reports were submitted on time
+## Staff
+Attendance and punctuality are acceptable
+Staff know their duties and the SOPs
+## Customers
+Complaints this month were answered and closed
+## Management
+Previous audit actions have been completed
+Targets / KPIs were reviewed with the manager`}
+];
+const AU_FREQ_DAYS={Daily:1,Weekly:7,Monthly:31};
+function auParseItems(txt){
+  const out=[];let section='';
+  String(txt||'').split('\n').forEach(l=>{
+    const t=l.trim();if(!t)return;
+    if(t.startsWith('##')){section=t.replace(/^#+\s*/,'');return;}
+    out.push({section,text:t});
+  });
+  return out;
+}
+function auItemsToText(items){
+  let cur=null,out=[];
+  (items||[]).forEach(i=>{if((i.section||'')!==cur){cur=i.section||'';if(cur)out.push('## '+cur);}out.push(i.text);});
+  return out.join('\n');
+}
+function auDaysSince(d){if(!d)return null;const a=new Date(d+'T12:00:00'),b=new Date(localDateStr()+'T12:00:00');return Math.round((b-a)/86400000);}
+function auStatus(chk,last){
+  if(!last)return {text:'Never done',tone:'danger'};
+  const n=auDaysSince(last);
+  if(chk.frequency==='Daily'){
+    if(n<=0)return {text:'Done today',tone:'success'};
+    if(n===1)return {text:'Due today',tone:'gold'};
+    return {text:`Overdue — ${n} days`,tone:'danger'};
+  }
+  const lim=AU_FREQ_DAYS[chk.frequency];
+  if(!lim)return {text:n<=0?'Done today':`${n} day${n===1?'':'s'} ago`,tone:'muted'};
+  if(n<=lim)return {text:n<=0?'Done today':`Up to date (${n}d ago)`,tone:'success'};
+  return {text:`Overdue — ${n-lim} day${n-lim===1?'':'s'} late`,tone:'danger'};
+}
+function auTone(t){return t==='success'?'badge-green':t==='danger'?'badge-red':t==='gold'?'badge-gold':'badge-gray';}
+const SQL_HINT='<p style="font-size:13px;color:var(--danger)">The checklist tables are not set up yet. Run <strong>audit_checklists_migration.sql</strong> in the Supabase SQL Editor, then refresh.</p>';
+let _auCtx=null,_auCache={},_auRun=null;
+async function renderAuditHub(ctx,clientId,elId){
+  _auCtx={ctx,clientId,elId};
+  const el=document.getElementById(elId);if(!el)return;
+  if(!clientId){el.innerHTML='<p style="font-size:13px;color:var(--muted)">Choose a client to see their audits.</p>';return;}
+  el.innerHTML='<p style="font-size:13px;color:var(--muted)">Loading…</p>';
+  const [c1,c2]=await Promise.all([
+    db.from('audit_checklists').select('*').eq('client_id',clientId).order('created_at',{ascending:true}),
+    db.from('audit_submissions').select('*').eq('client_id',clientId).order('audit_date',{ascending:false}).order('created_at',{ascending:false}).limit(150)
+  ]);
+  if(c1.error||c2.error){
+    if(ctx==='sp'){const b=document.getElementById('sp-audits-box');if(b)b.style.display='none';return;}
+    el.innerHTML=SQL_HINT;return;
+  }
+  let chks=c1.data||[];const subs=c2.data||[];
+  chks.forEach(c=>{_auCache[c.id]=c;});
+  const canManage=ctx==='cv',canRun=ctx!=='pc';
+  if(ctx==='sp')chks=chks.filter(c=>c.active!==false&&(c.who==='Staff'||c.who==='Both'));
+  else if(ctx==='ops')chks=chks.filter(c=>c.active!==false);
+  const lastOf={};subs.forEach(s=>{if(s.checklist_id&&!lastOf[s.checklist_id])lastOf[s.checklist_id]=s;});
+  if(ctx==='sp'){
+    const box=document.getElementById('sp-audits-box');
+    if(!chks.length){if(box)box.style.display='none';return;}
+    if(box)box.style.display='block';
+  }
+  const mine=ctx==='sp'?subs.filter(s=>s.staff_id===_spStaffId).slice(0,5):[];
+  const openFails=subs.filter(s=>s.status==='Open'&&(s.fail_count||0)>0);
+  const card=c=>{
+    const last=lastOf[c.id];const st=auStatus(c,last&&last.audit_date);const paused=c.active===false;
+    const lastTxt=last?`Last: ${last.audit_date} by ${_esc(last.done_by||'—')} · <strong>${last.score_pct==null?'—':Math.round(last.score_pct)+'%'}</strong>${last.fail_count?` · <span style="color:var(--danger)">${last.fail_count} failed</span>`:''}`:'Not done yet';
+    return `<div style="border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:8px;${paused?'opacity:.55':''}">
+      <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:flex-start">
+        <div style="flex:1;min-width:220px">
+          <div style="font-size:14px;font-weight:600;color:var(--ink)">${_esc(c.name)}</div>
+          <div style="font-size:11.5px;color:var(--muted);margin-top:3px">${_esc(c.frequency)} · done by ${c.who==='Both'?'Staff or Operations':_esc(c.who)} · ${(c.items||[]).length} checks</div>
+          <div style="font-size:12px;color:var(--ink2);margin-top:5px">${lastTxt}</div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+          ${paused?'<span class="badge badge-gray">Paused</span>':`<span class="badge ${auTone(st.tone)}">${st.text}</span>`}
+          <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">
+            ${canRun&&!paused?`<button class="btn-add" onclick="startAudit('${c.id}')">▶ Start</button>`:''}
+            ${canManage?`<button class="btn-sm" onclick="auOpenEditor('${c.id}')">Edit</button><button class="btn-sm" onclick="auToggleActive('${c.id}')">${paused?'Resume':'Pause'}</button>`:''}
+          </div>
+        </div>
+      </div></div>`;
+  };
+  const subRow=s=>{
+    const res=s.results||[];const fails=res.filter(r=>r.result==='Fail');
+    const tone=s.score_pct==null?'badge-gray':s.score_pct>=90?'badge-green':s.score_pct>=70?'badge-gold':'badge-red';
+    return `<details style="border:1px solid var(--border);border-radius:9px;padding:9px 12px;margin-bottom:6px">
+      <summary style="cursor:pointer;display:flex;gap:8px;align-items:center;flex-wrap:wrap;list-style:none">
+        <span class="badge ${tone}">${s.score_pct==null?'—':Math.round(s.score_pct)+'%'}</span>
+        <strong style="font-size:13px">${_esc(s.checklist_name||'Audit')}</strong>
+        <span style="font-size:12px;color:var(--muted)">${s.audit_date} · ${_esc(s.done_by||'—')} (${_esc(s.done_by_role||'')})</span>
+        <span style="font-size:11.5px;color:var(--muted);margin-left:auto">✓${s.pass_count||0} ✗${s.fail_count||0} n/a ${s.na_count||0}${s.status==='Open'&&s.fail_count?' · <span style="color:var(--danger)">follow-up open</span>':''}</span>
+      </summary>
+      <div style="margin-top:10px;font-size:12.5px">
+        ${fails.length?`<div style="color:var(--danger);font-weight:600;margin-bottom:4px">Failed</div>${fails.map(f=>`<div style="padding:4px 0;border-bottom:1px solid var(--border)">✗ ${_esc(f.text)}${f.note?` — <em>${_esc(f.note)}</em>`:''}</div>`).join('')}`:'<div style="color:var(--success)">Everything passed.</div>'}
+        ${s.notes?`<div style="margin-top:8px"><strong>Notes:</strong> ${_esc(s.notes)}</div>`:''}
+        ${s.resolved_note?`<div style="margin-top:8px;color:var(--success)"><strong>Follow-up done:</strong> ${_esc(s.resolved_note)}</div>`:''}
+        <details style="margin-top:8px"><summary style="cursor:pointer;color:var(--gold)">See every line</summary>
+          ${res.map(r=>`<div style="padding:3px 0;color:${r.result==='Fail'?'var(--danger)':r.result==='Pass'?'var(--success)':'var(--muted)'}">${r.result==='Pass'?'✓':r.result==='Fail'?'✗':'–'} ${_esc(r.text)}</div>`).join('')}
+        </details>
+        ${canManage&&s.status==='Open'&&s.fail_count?`<button class="btn-save" style="margin-top:10px;padding:6px 14px;font-size:12px" onclick="auResolve('${s.id}')">✓ Mark follow-up done</button>`:''}
+      </div></details>`;
+  };
+  const have=new Set(chks.map(c=>c.name));
+  const lib=canManage?AUDIT_LIBRARY.filter(l=>!(c1.data||[]).some(c=>c.name===l.name)):[];
+  let html='';
+  if(ctx==='sp'){
+    html=`<div style="font-size:11.5px;color:var(--muted);margin-bottom:10px">Tap Start, mark each line Pass, Fail or N/A, and submit. Your manager sees it straight away.</div>`+chks.map(card).join('')+
+      (mine.length?`<div style="font-size:11px;text-transform:uppercase;color:var(--muted);margin:14px 0 6px">Your recent checklists</div>`+mine.map(subRow).join(''):'');
+  } else {
+    if(openFails.length&&ctx!=='ops')html+=`<div style="background:var(--danger-light);border:1.5px solid var(--danger);border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:13px;color:var(--danger)"><strong>${openFails.length} audit${openFails.length===1?'':'s'}</strong> with failed items still waiting for follow-up.</div>`;
+    html+=`<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px"><div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)">Checklists for this client</div>${canManage?`<button class="btn-add" onclick="auOpenEditor(null)">+ Create your own</button>`:''}</div>`;
+    html+=chks.length?chks.map(card).join(''):`<p style="font-size:13px;color:var(--muted)">${canManage?'No checklists yet — add the ready-made ones below.':'No checklists set up for this client yet.'}</p>`;
+    if(canManage&&lib.length)html+=`<div style="margin:16px 0 6px;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)">Add a ready-made checklist</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px">${lib.map(l=>`<button class="btn-sm" onclick="auAddFromLibrary('${l.key}')">+ ${l.name} <span style="color:var(--muted)">(${l.who}, ${l.frequency.toLowerCase()})</span></button>`).join('')}</div>
+      <button class="btn-save" style="padding:7px 16px;font-size:12px;margin-top:6px" onclick="auAddAllLibrary()">Add the whole café / restaurant pack</button>`;
+    if(ctx!=='ops'){
+      html+=`<div style="margin:20px 0 8px;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)">Audit history</div>`;
+      html+=subs.length?subs.slice(0,30).map(subRow).join(''):'<p style="font-size:13px;color:var(--muted)">No audits recorded yet.</p>';
+    }
+  }
+  el.innerHTML=html;
+}
+function auRefresh(){if(_auCtx)renderAuditHub(_auCtx.ctx,_auCtx.clientId,_auCtx.elId);}
+// ── Running a checklist ──
+function startAudit(id){
+  const chk=_auCache[id];if(!chk)return;
+  const items=chk.items||[];
+  _auRun={chk,ctx:_auCtx&&_auCtx.ctx,clientId:chk.client_id,answers:items.map(()=>null),notes:items.map(()=>'')};
+  document.getElementById('au-run-title').textContent=chk.name;
+  document.getElementById('au-run-sub').textContent=`${localDateStr()} · ${chk.frequency}`;
+  document.getElementById('au-run-notes').value='';
+  document.getElementById('au-run-feedback').innerHTML='';
+  let sec=null,html='';
+  items.forEach((it,i)=>{
+    if((it.section||'')!==sec){sec=it.section||'';if(sec)html+=`<div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--gold);font-weight:600;margin:16px 0 6px">${_esc(sec)}</div>`;}
+    html+=`<div class="au-row" id="au-row-${i}"><div class="au-text">${_esc(it.text)}</div>
+      <div class="au-btns"><button class="au-btn pass" onclick="auSet(${i},'Pass')">Pass</button><button class="au-btn fail" onclick="auSet(${i},'Fail')">Fail</button><button class="au-btn na" onclick="auSet(${i},'N/A')">N/A</button></div>
+      <input class="au-note" id="au-note-${i}" placeholder="What is wrong / what needs fixing? (required)" oninput="_auRun.notes[${i}]=this.value" style="display:none"></div>`;
+  });
+  document.getElementById('au-run-items').innerHTML=html;
+  auProgress();
+  openModal('modal-audit-run');
+}
+function auSet(i,v){
+  _auRun.answers[i]=v;
+  const row=document.getElementById('au-row-'+i);
+  row.querySelectorAll('.au-btn').forEach(b=>b.classList.remove('on'));
+  row.querySelector('.au-btn.'+(v==='Pass'?'pass':v==='Fail'?'fail':'na')).classList.add('on');
+  row.classList.toggle('failed',v==='Fail');
+  const n=document.getElementById('au-note-'+i);n.style.display=(v==='Fail')?'block':'none';
+  if(v==='Fail')n.focus();
+  auProgress();
+}
+function auAllPass(){_auRun.answers.forEach((a,i)=>{if(a===null)auSet(i,'Pass');});}
+function auProgress(){
+  const t=_auRun.answers.length,d=_auRun.answers.filter(a=>a!==null).length,f=_auRun.answers.filter(a=>a==='Fail').length;
+  document.getElementById('au-run-progress').innerHTML=`<strong>${d}</strong> of ${t} answered${f?` · <span style="color:var(--danger)">${f} failed</span>`:''}`;
+}
+async function auSubmit(){
+  const r=_auRun;if(!r)return;const fb=document.getElementById('au-run-feedback');
+  const items=r.chk.items||[];
+  const missing=r.answers.map((a,i)=>a===null?i:-1).filter(i=>i>=0);
+  if(missing.length){fb.innerHTML=`<div class="error-msg">${missing.length} line${missing.length===1?'':'s'} not answered yet.</div>`;const row=document.getElementById('au-row-'+missing[0]);if(row)row.scrollIntoView({behavior:'smooth',block:'center'});return;}
+  const noNote=r.answers.map((a,i)=>(a==='Fail'&&!(r.notes[i]||'').trim())?i:-1).filter(i=>i>=0);
+  if(noNote.length){fb.innerHTML=`<div class="error-msg">Please say what is wrong on every Fail line.</div>`;const row=document.getElementById('au-row-'+noNote[0]);if(row)row.scrollIntoView({behavior:'smooth',block:'center'});return;}
+  const results=items.map((it,i)=>({section:it.section||'',text:it.text,result:r.answers[i],note:r.answers[i]==='Fail'?r.notes[i].trim():''}));
+  const pass=results.filter(x=>x.result==='Pass').length,fail=results.filter(x=>x.result==='Fail').length,na=results.filter(x=>x.result==='N/A').length;
+  const score=(pass+fail)?Math.round(pass/(pass+fail)*1000)/10:null;
+  const isStaff=r.ctx==='sp';
+  const who=isStaff?(await _hoCtx('sp')).name:((currentUser&&(currentUser.name||currentUser.username))||'Operations');
+  const notes=document.getElementById('au-run-notes').value.trim();
+  const date=localDateStr();
+  const row={client_id:r.clientId,checklist_id:r.chk.id,checklist_name:r.chk.name,audit_date:date,done_by:who,done_by_role:isStaff?'Staff':'Operations',staff_id:isStaff?_spStaffId:null,results,pass_count:pass,fail_count:fail,na_count:na,score_pct:score,notes:notes||null,status:fail?'Open':'Closed'};
+  const {error}=await db.from('audit_submissions').insert(row);
+  if(error){fb.innerHTML=`<div class="error-msg">${error.message}</div>`;return;}
+  // Operations audits also appear in the client's Reports list (and the Full Report)
+  if(!isStaff){
+    const failLines=results.filter(x=>x.result==='Fail').map(x=>`${x.text} — ${x.note}`);
+    await db.from('reports').insert({client_id:r.clientId,date,title:`${r.chk.name} — ${date}`,report_type:'audit',
+      summary:`Score ${score==null?'n/a':score+'%'} — ${pass} passed, ${fail} failed, ${na} not applicable. Done by ${who}.${notes?' '+notes:''}`,
+      action_items:failLines.join('\n'),recommendations:'',type_data:{checklist:r.chk.name,score_pct:score,ops_score:score==null?'':String(Math.round(score/10)),passed:pass,failed:fail,na}});
+  }
+  await logActivity('Completed audit checklist',`${r.chk.name} — ${score==null?'n/a':score+'%'}`,r.clientId);
+  closeModal('modal-audit-run');_auRun=null;
+  auRefresh();
+  if(typeof loadDashboard==='function'&&currentUser&&currentUser.role!=='staff'&&document.getElementById('dashboard-content'))loadDashboard();
+}
+async function auResolve(id){
+  const note=prompt('What was done to fix the failed items?');if(note===null)return;
+  const {error}=await db.from('audit_submissions').update({status:'Closed',resolved_note:note.trim()||'Resolved',resolved_at:new Date().toISOString()}).eq('id',id);
+  if(error){alert(error.message);return;}
+  auRefresh();loadDashboard();
+}
+// ── Setting up checklists (Operations / owner) ──
+async function auAddFromLibrary(key){
+  const l=AUDIT_LIBRARY.find(x=>x.key===key);if(!l)return;
+  const {error}=await db.from('audit_checklists').insert({client_id:_auCtx.clientId,name:l.name,frequency:l.frequency,who:l.who,items:auParseItems(l.items),active:true});
+  if(error){alert(error.message);return;}
+  auRefresh();
+}
+async function auAddAllLibrary(){
+  const {data}=await db.from('audit_checklists').select('name').eq('client_id',_auCtx.clientId);
+  const have=new Set((data||[]).map(x=>x.name));
+  const rows=AUDIT_LIBRARY.filter(l=>!have.has(l.name)).map(l=>({client_id:_auCtx.clientId,name:l.name,frequency:l.frequency,who:l.who,items:auParseItems(l.items),active:true}));
+  if(!rows.length)return;
+  const {error}=await db.from('audit_checklists').insert(rows);
+  if(error){alert(error.message);return;}
+  auRefresh();
+}
+function auOpenEditor(id){
+  const c=id?_auCache[id]:null;
+  document.getElementById('au-ed-id').value=id||'';
+  document.getElementById('au-ed-title').textContent=c?'Edit checklist':'Create a checklist';
+  document.getElementById('au-ed-name').value=c?c.name:'';
+  document.getElementById('au-ed-freq').value=c?c.frequency:'Weekly';
+  document.getElementById('au-ed-who').value=c?c.who:'Operations';
+  document.getElementById('au-ed-items').value=c?auItemsToText(c.items):'## Section name\nFirst thing to check\nSecond thing to check';
+  document.getElementById('au-ed-del').style.display=c?'inline-block':'none';
+  document.getElementById('au-ed-feedback').innerHTML='';
+  openModal('modal-audit-edit');
+}
+async function auSaveEditor(){
+  const fb=document.getElementById('au-ed-feedback');
+  const id=document.getElementById('au-ed-id').value;
+  const name=document.getElementById('au-ed-name').value.trim();
+  const items=auParseItems(document.getElementById('au-ed-items').value);
+  if(!name||!items.length){fb.innerHTML='<div class="error-msg">Give it a name and at least one line to check.</div>';return;}
+  const payload={name,frequency:document.getElementById('au-ed-freq').value,who:document.getElementById('au-ed-who').value,items};
+  const q=id?db.from('audit_checklists').update(payload).eq('id',id):db.from('audit_checklists').insert({...payload,client_id:_auCtx.clientId,active:true});
+  const {error}=await q;
+  if(error){fb.innerHTML=`<div class="error-msg">${error.message}</div>`;return;}
+  closeModal('modal-audit-edit');auRefresh();
+}
+async function auDeleteChecklist(){
+  const id=document.getElementById('au-ed-id').value;if(!id)return;
+  if(!confirm('Delete this checklist? Past results are kept in the history.'))return;
+  const {error}=await db.from('audit_checklists').delete().eq('id',id);
+  if(error){alert(error.message);return;}
+  closeModal('modal-audit-edit');auRefresh();
+}
+async function auToggleActive(id){
+  const c=_auCache[id];if(!c)return;
+  await db.from('audit_checklists').update({active:c.active===false}).eq('id',id);
+  auRefresh();
+}
+// ── Add Report page: the Audit button now opens checklists instead of sliders ──
+function auToggleAddReport(){
+  const p=document.getElementById('audit-checklist-panel'),f=document.getElementById('report-form');
+  if(!p||!f)return;
+  const isAudit=reportType==='audit';
+  p.style.display=isAudit?'block':'none';f.style.display=isAudit?'none':'block';
+  if(isAudit)auRenderAddReport();
+}
+function auRenderAddReport(){
+  const p=document.getElementById('audit-checklist-panel');if(!p)return;
+  const keep=(document.getElementById('au-ar-client')||{}).value||document.getElementById('rf-client').value||_currentViewClientId||'';
+  const opts=allClients.filter(c=>clientHas(c,'operations')).map(c=>`<option value="${c.id}" ${c.id===keep?'selected':''}>${c.business_name}</option>`).join('');
+  p.innerHTML=`<div style="font-size:13px;color:var(--ink2);margin-bottom:12px">Audits are done as checklists — every line is <strong>Pass</strong>, <strong>Fail</strong> or <strong>N/A</strong>. Some are done by the client's own staff (daily opening and closing checks); the deeper ones are done by Operations.</div>
+    <div class="form-field" style="max-width:340px;margin-bottom:14px"><label>Client</label><select id="au-ar-client" onchange="renderAuditHub('ops',this.value,'au-ar-list')"><option value="">Select client…</option>${opts}</select></div>
+    <div id="au-ar-list"></div>`;
+  const sel=document.getElementById('au-ar-client');
+  if(sel&&sel.value)renderAuditHub('ops',sel.value,'au-ar-list');
+}
+
 async function assignStaffToShift(shiftId,targetId,clientId){
   const sel=document.getElementById('assign-select-'+shiftId);
   const staffId=sel.value;
