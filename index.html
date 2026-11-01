@@ -78,6 +78,14 @@ body *{font-family:'Jost',Arial,sans-serif !important}
 .tab-btn{font-size:13.5px;font-weight:500;color:rgba(255,255,255,.72);background:none;border:none;padding:10px 12px;text-align:left;cursor:pointer;transition:all .15s;border-radius:9px;width:100%;display:block;margin-bottom:2px}
 .tab-btn:hover{color:#fff;background:rgba(255,255,255,.08)}
 .tab-btn.active{color:var(--ink);background:var(--gold);font-weight:600}
+.nav-group{margin-bottom:4px;border-bottom:1px solid rgba(255,255,255,.07);padding-bottom:4px}
+.nav-head{display:flex;justify-content:space-between;align-items:center;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.55);padding:11px 12px;cursor:pointer;border-radius:9px;user-select:none}
+.nav-head:hover{color:#fff;background:rgba(255,255,255,.06)}
+.nav-head .chev{transition:transform .2s;font-size:12px}
+.nav-group.collapsed .chev{transform:rotate(-90deg)}
+.nav-group.collapsed .nav-items{display:none}
+.nav-items{padding:2px 0 4px 6px}
+.nav-items .tab-btn{font-size:13px;padding:8px 12px}
 .tab-section{font-size:10px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:rgba(255,255,255,.32);padding:16px 12px 6px;margin-top:6px}
 .content-area{flex:1;overflow-y:auto;padding:28px 32px;background:var(--surface)}
 .page{display:none}.page.active{display:block}
@@ -367,6 +375,58 @@ body *{font-family:'Jost',Arial,sans-serif !important}
 .au-btn.fail.on{background:var(--danger);border-color:var(--danger);color:#fff}
 .au-btn.na.on{background:var(--muted);border-color:var(--muted);color:#fff}
 .au-note{width:100%;margin-top:8px;padding:9px 11px;border:1.5px solid var(--danger);border-radius:9px;font-family:Arial;font-size:13px}
+
+.cvn-cats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-bottom:10px}
+.cvn-cat{display:flex;align-items:center;gap:8px;padding:11px 14px;border:1.5px solid var(--border);border-radius:11px;background:white;font-family:Arial,sans-serif;font-size:13px;font-weight:600;color:var(--ink2);cursor:pointer;text-align:left}
+.cvn-cat:hover{border-color:var(--gold)}
+.cvn-cat.on{background:var(--ink);border-color:var(--ink);color:#fff}
+.cvn-cat .ic{font-size:17px}
+.cvn-cat .ct{margin-left:auto;font-size:11px;opacity:.6;font-weight:500}
+.cvn-subs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:20px;padding:10px 12px;background:white;border:1px solid var(--border);border-radius:11px}
+.cvn-sub{padding:7px 13px;border:1px solid var(--border);border-radius:20px;background:var(--surface);font-family:Arial,sans-serif;font-size:12.5px;color:var(--ink2);cursor:pointer}
+.cvn-sub:hover{border-color:var(--gold)}
+.cvn-sub.on{background:var(--gold);border-color:var(--gold);color:var(--ink);font-weight:700}
+#sp-nav{order:-1;position:sticky;top:0;z-index:20;display:grid;grid-template-columns:repeat(5,1fr);gap:6px;background:var(--surface);padding:8px 0 12px;margin-bottom:6px}
+.spn{display:flex;flex-direction:column;align-items:center;gap:3px;padding:9px 4px;border:1.5px solid var(--border);border-radius:12px;background:white;font-family:Arial,sans-serif;font-size:11.5px;font-weight:600;color:var(--ink2);cursor:pointer}
+.spn .ic{font-size:19px;line-height:1}
+.spn.on{background:var(--ink);border-color:var(--ink);color:#fff}
+.spg-off{display:none!important}
+@media (max-width:520px){
+.spn{font-size:10.5px;padding:8px 2px}
+.cvn-cats{grid-template-columns:repeat(3,1fr);gap:6px}
+.cvn-cat{flex-direction:column;justify-content:center;text-align:center;gap:3px;padding:9px 4px;font-size:11px;line-height:1.2;min-height:64px}
+.cvn-cat .ct{display:none}
+.cvn-cat .ic{font-size:20px}
+.cvn-sub{font-size:12px;padding:7px 11px}
+#page-portal .welcome-bar{padding:14px 18px!important;margin-bottom:12px!important}
+#portal-welcome{font-size:20px!important}
+#pc-request-box{padding:10px 14px!important;margin-bottom:12px!important;flex-wrap:nowrap!important}
+#pc-request-box div+div,#pc-request-box>div>div:nth-child(2){display:none}
+#pc-request-box button{padding:9px 14px!important;white-space:nowrap}
+}
+/* ── Wider layout, calmer forms ── */
+.content-area>.page{max-width:1280px;margin-left:auto;margin-right:auto}
+@media (min-width:1100px){.content-area{padding:32px 48px}}
+.cv-sec-h{font-family:'Bricolage Grotesque',sans-serif;font-size:17px;font-weight:800;color:var(--ink);margin:6px 0 12px;padding-bottom:8px;border-bottom:2px solid var(--gold-light,#eee)}
+.cv-tab-content+.cv-tab-content .cv-sec-h{margin-top:26px}
+details.setbox{background:var(--surface2);border:1px solid var(--border);border-radius:9px;margin-bottom:16px}
+details.setbox>summary{cursor:pointer;padding:12px 14px;font-family:Arial;font-size:13px;font-weight:600;color:var(--ink2);list-style:none}
+details.setbox>summary::-webkit-details-marker{display:none}
+details.setbox>summary::after{content:'▾';float:right;color:var(--muted)}
+details.setbox[open]>summary::after{content:'▴'}
+details.setbox>div,details.setbox>.card{margin:0 12px 12px}
+.cv-tab-content,.portal-tab-content{overflow-x:auto}
+.cv-tab-content table,.portal-tab-content table{min-width:520px}
+.sm-day{display:flex;gap:12px;padding:11px 0;border-bottom:1px solid var(--border);align-items:flex-start;font-family:Arial;font-size:13px}
+.sm-date{min-width:74px;font-weight:700;color:var(--ink)}
+.sm-st{border:0;border-radius:99px;padding:3px 10px;font-size:11px;font-weight:700;cursor:pointer;font-family:Arial}
+.sm-Draft{background:#eee;color:#555}.sm-Scheduled{background:#fff3cd;color:#8a6d00}.sm-Posted{background:#d9f2e0;color:#17693a}
+@media (max-width:520px){
+  .form-grid{grid-template-columns:1fr!important}
+  input,select,textarea{font-size:16px!important}
+  .btn-save,.btn-add,.btn-cancel{width:100%;margin-bottom:8px}
+  .content-area{padding:16px 12px}
+}
 </style>
 
 <script>
@@ -493,7 +553,8 @@ self.addEventListener('notificationclick',function(e){
       <button class="btn-logout" onclick="logout()">Sign Out</button>
     </div>
   </div>
-  <div style="max-width:720px;margin:32px auto;padding:0 20px 60px;width:100%">
+  <div id="sp-container" style="max-width:720px;margin:20px auto;padding:0 16px 60px;width:100%">
+    <div id="sp-nav"></div>
 
     <!-- PROFILE HEADER -->
     <div style="background:white;border:1.5px solid var(--border);border-radius:14px;padding:20px 24px;margin-bottom:16px;display:flex;gap:16px;align-items:center;flex-wrap:wrap;box-shadow:0 2px 10px rgba(100,74,60,.06)">
@@ -524,7 +585,7 @@ self.addEventListener('notificationclick',function(e){
     </div>
 
     <!-- MY DETAILS NAG + FORM -->
-    <div id="sp-details-nag" style="display:none;background:var(--gold-light);border:1.5px solid var(--gold);border-radius:12px;padding:16px 20px;margin-bottom:16px;cursor:pointer" onclick="document.getElementById('sp-details-form-box').scrollIntoView({behavior:'smooth'})">
+    <div id="sp-details-nag" style="display:none;background:var(--gold-light);border:1.5px solid var(--gold);border-radius:12px;padding:16px 20px;margin-bottom:16px;cursor:pointer" onclick="spShowGroup('me');document.getElementById('sp-details-form-box').scrollIntoView({behavior:'smooth'})">
       <div style="font-family:Arial;font-size:13px;font-weight:600;color:var(--ink)">📝 Complete your details</div>
       <div id="sp-details-nag-text" style="font-family:Arial;font-size:12px;color:var(--ink2);margin-top:2px">We're missing some of your personal info — fill it in below so your file is complete.</div>
     </div>
@@ -816,44 +877,74 @@ self.addEventListener('notificationclick',function(e){
 
     <!-- ADMIN NAV -->
     <nav id="admin-nav">
-      <div class="tab-section">Clients</div>
-      <button class="tab-btn active" id="dashboard-tab-btn" data-dept="all" onclick="showAdminTab('dashboard',this)">🏠 Dashboard <span id="dashboard-badge" style="background:var(--danger);color:white;border-radius:10px;padding:1px 7px;font-size:10px;margin-left:4px;display:none">0</span></button>
-      <button class="tab-btn" data-dept="all" onclick="showAdminTab('myprofile',this)">👤 My Profile</button>
-      <button class="tab-btn" id="clients-tab-btn" data-dept="all" onclick="showAdminTab('clients',this)">All Clients</button>
-      <button class="tab-btn" onclick="showAdminTab('mywork',this)">📋 My Work (All Clients)</button>
-      <button class="tab-btn" onclick="showAdminTab('calendar',this)">📅 Calendar</button>
-      <button class="tab-btn" onclick="showAdminTab('reports',this)">Add Report</button>
-      <div class="tab-section" id="finance-section" style="display:none!important">Finance</div>
-      <button class="tab-btn" id="invoices-tab-btn" data-dept="finance" style="display:none!important" onclick="showAdminTab('invoices',this)">Invoices</button>
-      <div class="tab-section">Operations</div>
-      <button class="tab-btn" onclick="showAdminTab('complaints',this)">Complaints</button>
-      <button class="tab-btn" onclick="showAdminTab('eventplanner',this)">🎪 Event Planner</button>
-      <button class="tab-btn" onclick="showAdminTab('actions',this)">Action Tracker</button>
-      <button class="tab-btn" onclick="showAdminTab('projects',this)">📁 Projects</button>
-      <button class="tab-btn" onclick="showAdminTab('staff',this)">Client Staff (Placed at Clients)</button>
-      <button class="tab-btn" id="dailyhr-tab-btn" data-dept="all" onclick="showAdminTab('dailyhr',this)">📋 Daily HR Report</button>
-      <button class="tab-btn" onclick="showAdminTab('contracts',this)">Contracts</button>
-      <button class="tab-btn" onclick="showAdminTab('documents',this)">Documents</button>
-      <button class="tab-btn" id="compliance-tab-btn" onclick="showAdminTab('compliance',this)">🗂 Compliance</button>
-      <div class="tab-section" id="admin-section" style="display:none">Admin</div>
-      <button class="tab-btn" id="onboarding-tab-btn" style="display:none" onclick="showAdminTab('onboarding',this)">Onboarding</button>
-      <button class="tab-btn" id="expenditure-tab-btn" data-dept="finance" style="display:none" onclick="showAdminTab('expenditure',this)">Expenditure</button>
-      <button class="tab-btn" id="income-tab-btn" data-dept="finance" style="display:none" onclick="showAdminTab('income',this)">💵 Income</button>
-      <button class="tab-btn" onclick="showAdminTab('training',this)">🍽 Food Training</button>
-      <button class="tab-btn" onclick="showAdminTab('talentpool',this)">🧑‍💻 Talent Pool</button>
-      <div class="tab-section">Talent Development</div>
-      <button class="tab-btn" onclick="showAdminTab('courses',this)">🎓 Courses</button>
-      <button class="tab-btn" onclick="showAdminTab('interviews',this)">🗣 Interviews</button>
-      <button class="tab-btn" onclick="showAdminTab('screening',this)">📝 Screening Tests</button>
-      <button class="tab-btn" data-dept="finance" onclick="showAdminTab('payroll',this)">💰 Payroll & Tax</button>
-      <button class="tab-btn" data-dept="finance" onclick="showAdminTab('accounting',this)">📚 Accounting</button>
-      <div class="tab-section" id="ownersection" style="display:none">Your Team (Internal)</div>
-      <button class="tab-btn" id="activitylog-tab-btn" data-dept="owner" style="display:none" onclick="showAdminTab('activitylog',this)">🕵 Activity Log</button>
-      <button class="tab-btn" id="teamratings-tab-btn" data-dept="owner" style="display:none" onclick="showAdminTab('teamratings',this)">🏅 Team Ratings</button>
-      <button class="tab-btn" id="staffhr-tab-btn" data-dept="owner" style="display:none" onclick="showAdminTab('staffhr',this)">🗂 Team HR Files (Internal)</button>
-      <button class="tab-btn" id="manageteam-tab-btn" data-dept="owner" style="display:none" onclick="showAdminTab('manageteam',this)">👥 Manage Team</button>
-      <button class="tab-btn" id="internalpayroll-tab-btn" data-dept="owner" style="display:none" onclick="showAdminTab('internalpayroll',this)">💷 Internal Payroll</button>
-      <button class="tab-btn" id="teamtraining-tab-btn" data-dept="owner" style="display:none" onclick="showAdminTab('teamtraining',this)">🎯 Team Training</button>
+      <span id="finance-section" style="display:none"></span><span id="admin-section" style="display:none"></span><span id="ownersection" style="display:none"></span>
+      <div class="nav-group" data-g="home">
+        <div class="nav-head" onclick="toggleNavGroup(this)"><span>🏠 Home</span><span class="chev">▾</span></div>
+        <div class="nav-items">
+          <button class="tab-btn active" id="dashboard-tab-btn" data-dept="all" onclick="showAdminTab('dashboard',this)">🏠 Dashboard <span id="dashboard-badge" style="background:var(--danger);color:white;border-radius:10px;padding:1px 7px;font-size:10px;margin-left:4px;display:none">0</span></button>
+          <button class="tab-btn" data-dept="all" onclick="showAdminTab('myprofile',this)">👤 My Profile</button>
+          <button class="tab-btn" onclick="showAdminTab('calendar',this)">📅 Calendar</button>
+          <button class="tab-btn" onclick="showAdminTab('mywork',this)">📋 My Work</button>
+        </div>
+      </div>
+      <div class="nav-group" data-g="clients">
+        <div class="nav-head" onclick="toggleNavGroup(this)"><span>🏢 Clients</span><span class="chev">▾</span></div>
+        <div class="nav-items">
+          <button class="tab-btn" id="clients-tab-btn" data-dept="all" onclick="showAdminTab('clients',this)">🏢 All Clients</button>
+          <button class="tab-btn" onclick="showAdminTab('reports',this)">📝 Reports &amp; Audits</button>
+          <button class="tab-btn" onclick="showAdminTab('complaints',this)">⚠ Complaints</button>
+          <button class="tab-btn" onclick="showAdminTab('actions',this)">✔ Action Tracker</button>
+          <button class="tab-btn" onclick="showAdminTab('projects',this)">📁 Projects</button>
+          <button class="tab-btn" onclick="showAdminTab('contracts',this)">📄 Contracts</button>
+          <button class="tab-btn" onclick="showAdminTab('documents',this)">🗃 Documents</button>
+          <button class="tab-btn" onclick="showAdminTab('eventplanner',this)">🎪 Event Planner</button>
+        </div>
+      </div>
+      <div class="nav-group" data-g="staff">
+        <div class="nav-head" onclick="toggleNavGroup(this)"><span>👥 Staff &amp; HR</span><span class="chev">▾</span></div>
+        <div class="nav-items">
+          <button class="tab-btn" onclick="showAdminTab('staff',this)">👥 Client Staff</button>
+          <button class="tab-btn" id="dailyhr-tab-btn" data-dept="all" onclick="showAdminTab('dailyhr',this)">📋 Daily HR Report</button>
+          <button class="tab-btn" id="compliance-tab-btn" onclick="showAdminTab('compliance',this)">🗂 Compliance</button>
+        </div>
+      </div>
+      <div class="nav-group" data-g="money">
+        <div class="nav-head" onclick="toggleNavGroup(this)"><span>💰 Money</span><span class="chev">▾</span></div>
+        <div class="nav-items">
+          <button class="tab-btn" id="invoices-tab-btn" data-dept="finance" style="display:none!important" onclick="showAdminTab('invoices',this)">🧾 Invoices</button>
+          <button class="tab-btn" data-dept="finance" onclick="showAdminTab('payroll',this)">💰 Payroll & Tax</button>
+          <button class="tab-btn" data-dept="finance" onclick="showAdminTab('accounting',this)">📚 Accounting</button>
+          <button class="tab-btn" id="expenditure-tab-btn" data-dept="finance" style="display:none" onclick="showAdminTab('expenditure',this)">💸 Expenditure</button>
+          <button class="tab-btn" id="income-tab-btn" data-dept="finance" style="display:none" onclick="showAdminTab('income',this)">💵 Income</button>
+        </div>
+      </div>
+      <div class="nav-group" data-g="talent">
+        <div class="nav-head" onclick="toggleNavGroup(this)"><span>🎓 Training &amp; Talent</span><span class="chev">▾</span></div>
+        <div class="nav-items">
+          <button class="tab-btn" onclick="showAdminTab('training',this)">🍽 Food Training</button>
+          <button class="tab-btn" onclick="showAdminTab('courses',this)">🎓 Courses</button>
+          <button class="tab-btn" onclick="showAdminTab('interviews',this)">🗣 Interviews</button>
+          <button class="tab-btn" onclick="showAdminTab('screening',this)">📝 Screening Tests</button>
+          <button class="tab-btn" onclick="showAdminTab('talentpool',this)">🧑‍💻 Talent Pool</button>
+        </div>
+      </div>
+      <div class="nav-group" data-g="admin">
+        <div class="nav-head" onclick="toggleNavGroup(this)"><span>⚙ Admin</span><span class="chev">▾</span></div>
+        <div class="nav-items">
+          <button class="tab-btn" id="onboarding-tab-btn" style="display:none" onclick="showAdminTab('onboarding',this)">🚀 Onboarding</button>
+        </div>
+      </div>
+      <div class="nav-group" data-g="team">
+        <div class="nav-head" onclick="toggleNavGroup(this)"><span>🔒 Your Team (Internal)</span><span class="chev">▾</span></div>
+        <div class="nav-items">
+          <button class="tab-btn" id="activitylog-tab-btn" data-dept="owner" style="display:none" onclick="showAdminTab('activitylog',this)">🕵 Activity Log</button>
+          <button class="tab-btn" id="teamratings-tab-btn" data-dept="owner" style="display:none" onclick="showAdminTab('teamratings',this)">🏅 Team Ratings</button>
+          <button class="tab-btn" id="staffhr-tab-btn" data-dept="owner" style="display:none" onclick="showAdminTab('staffhr',this)">🗂 Team HR Files (Internal)</button>
+          <button class="tab-btn" id="manageteam-tab-btn" data-dept="owner" style="display:none" onclick="showAdminTab('manageteam',this)">👥 Manage Team</button>
+          <button class="tab-btn" id="internalpayroll-tab-btn" data-dept="owner" style="display:none" onclick="showAdminTab('internalpayroll',this)">💷 Internal Payroll</button>
+          <button class="tab-btn" id="teamtraining-tab-btn" data-dept="owner" style="display:none" onclick="showAdminTab('teamtraining',this)">🎯 Team Training</button>
+        </div>
+      </div>
     </nav>
 
     <div class="content-area">
@@ -998,7 +1089,8 @@ self.addEventListener('notificationclick',function(e){
             Select a client to see niche-specific report fields
           </div>
           <div class="inner-tabs">
-            <button class="inner-tab active" onclick="switchReportType('audit',this)">Audit</button>
+            <button class="inner-tab active" style="font-weight:700" onclick="switchReportType('quick',this)">⚡ Quick Report</button>
+            <button class="inner-tab" onclick="switchReportType('audit',this)">Audit</button>
             <button class="inner-tab" onclick="switchReportType('supervision',this)">Supervision</button>
             <button class="inner-tab" onclick="switchReportType('site_visit',this)">Site Visit</button>
             <button class="inner-tab" onclick="switchReportType('cx_mystery',this)">CX Mystery</button>
@@ -1008,8 +1100,20 @@ self.addEventListener('notificationclick',function(e){
             <button class="inner-tab" onclick="switchReportType('kpi',this)">KPI Review</button>
             <button class="inner-tab" style="background:var(--gold-light);color:var(--warn);font-weight:600" onclick="generateFullReport()">📄 Full Report</button>
           </div>
+          <div id="quick-report-panel">
+            <div style="font-size:13px;color:var(--ink2);margin-bottom:14px">Just pick the department, set the date and paste your report. No forms to fill in.</div>
+            <div class="form-grid">
+              <div class="form-field"><label>Client</label><select id="qr-client"><option value="">Select client…</option></select></div>
+              <div class="form-field"><label>Department</label><select id="qr-dept"><option>Operations</option><option>Social Media</option><option>HR</option><option>Finance</option><option>General</option></select></div>
+              <div class="form-field"><label>Date</label><input type="date" id="qr-date"></div>
+              <div class="form-field"><label>Title <span style="color:var(--muted);font-weight:400">(optional)</span></label><input type="text" id="qr-title" placeholder="Leave blank to name it automatically"></div>
+              <div class="form-field" style="grid-column:1/-1"><label>Report</label><textarea id="qr-text" rows="14" placeholder="Paste or type the full report here…" style="min-height:260px"></textarea></div>
+            </div>
+            <div style="margin-top:14px"><button class="btn-save" onclick="saveQuickReport()">Save Report</button> <button class="btn-cancel" onclick="qrClear()">Clear</button></div>
+            <div id="qr-feedback"></div>
+          </div>
           <div id="audit-checklist-panel" style="display:none"></div>
-          <div id="report-form">
+          <div id="report-form" style="display:none">
             <div class="form-grid">
               <div class="form-field"><label>Client</label><select id="rf-client"><option value="">Select client…</option></select></div>
               <div class="form-field"><label>Date</label><input type="date" id="rf-date"></div>
@@ -2221,7 +2325,8 @@ self.addEventListener('notificationclick',function(e){
           </div>
         </div>
         <div id="cv-low-stock-banner" style="display:none;background:var(--danger-light);border:1.5px solid var(--danger);border-radius:9px;padding:10px 16px;margin-bottom:16px;font-family:Arial;font-size:13px;color:var(--danger);cursor:pointer" onclick="loadClientViewTab('cv-inventory')"></div>
-        <div class="inner-tabs" style="margin-bottom:20px">
+        <div id="cv-nav"></div>
+        <div class="inner-tabs" id="cv-tabs-old" style="margin-bottom:20px;display:none">
           <button class="inner-tab cv-tab active" id="cvtab-cv-reports" onclick="loadClientViewTab('cv-reports')">Reports</button>
           <button class="inner-tab cv-tab" id="cvtab-cv-complaints" onclick="loadClientViewTab('cv-complaints')">Complaints</button>
           <button class="inner-tab cv-tab" id="cvtab-cv-actions" onclick="loadClientViewTab('cv-actions')">Actions</button>
@@ -2246,6 +2351,7 @@ self.addEventListener('notificationclick',function(e){
           <button class="inner-tab cv-tab" id="cvtab-cv-enquiries" onclick="loadClientViewTab('cv-enquiries')" style="color:var(--brand);font-weight:600">☎ Customer Enquiries</button>
           <button class="inner-tab cv-tab" id="cvtab-cv-credentials" style="display:none;color:var(--danger);font-weight:600" onclick="loadClientViewTab('cv-credentials')">🔐 Access Vault</button>
           <button class="inner-tab cv-tab" id="cvtab-cv-policies" style="display:none;color:var(--danger);font-weight:600" onclick="loadClientViewTab('cv-policies')">📘 Policies &amp; Procedures</button>
+          <button class="inner-tab cv-tab" id="cvtab-cv-social" onclick="loadClientViewTab('cv-social')">📱 Content Planner</button>
           <button class="inner-tab cv-tab" id="cvtab-cv-strategy" onclick="loadClientViewTab('cv-strategy')" style="color:var(--gold);font-weight:600">🧭 Strategy</button>
         </div>
         <div id="cv-reports-panel" class="cv-tab-content">
@@ -2291,6 +2397,7 @@ self.addEventListener('notificationclick',function(e){
         </div>
         <div id="cv-leaderboard-panel" class="cv-tab-content" style="display:none"><div id="cv-leaderboard-list"></div></div>
         <div id="cv-attendance-panel" class="cv-tab-content" style="display:none">
+          <details class="setbox"><summary>⚙ Attendance settings — work location, work hours, closed days</summary>
           <div id="cv-geofence-box" style="background:var(--surface2);border:1px solid var(--border);border-radius:9px;padding:14px;margin-bottom:16px">
             <div style="font-family:Arial;font-size:11px;text-transform:uppercase;color:var(--muted);margin-bottom:8px">📍 Work Location (staff must be within this radius to clock in)</div>
             <div id="cv-geofence-status" style="font-family:Arial;font-size:12px;color:var(--ink);margin-bottom:8px"></div>
@@ -2310,24 +2417,34 @@ self.addEventListener('notificationclick',function(e){
           </div>
           <div id="cv-workhours-box" style="background:var(--surface2);border:1px solid var(--border);border-radius:9px;padding:14px;margin-bottom:16px">
             <div style="font-family:Arial;font-size:11px;text-transform:uppercase;color:var(--muted);margin-bottom:8px">🕒 Work Hours (used to flag late clock-ins &amp; early clock-outs)</div>
-            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-              <label style="font-family:Arial;font-size:12px;color:var(--muted)">Opens:</label>
-              <input type="time" id="wh-open-cv" style="padding:6px 8px;border:1px solid var(--border);border-radius:9px;font-family:Arial;font-size:12px">
-              <label style="font-family:Arial;font-size:12px;color:var(--muted)">Closes:</label>
-              <input type="time" id="wh-close-cv" style="padding:6px 8px;border:1px solid var(--border);border-radius:9px;font-family:Arial;font-size:12px">
-              <label style="font-family:Arial;font-size:12px;color:var(--muted)">Grace (min):</label>
-              <input type="number" id="wh-grace-cv" value="10" style="width:70px;padding:6px 8px;border:1px solid var(--border);border-radius:9px;font-family:Arial;font-size:12px">
-              <button class="btn-sm" onclick="saveWorkHours('cv')">Save Work Hours</button>
+            <div style="display:grid;grid-template-columns:auto 1fr;gap:8px 12px;align-items:center;max-width:560px">
+              <label style="font-family:Arial;font-size:12px;color:var(--muted)">Mon – Fri</label>
+              <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><input type="time" id="wh-open-cv" style="padding:6px 8px;border:1px solid var(--border);border-radius:9px;font-family:Arial;font-size:12px"> <span style="font-family:Arial;font-size:12px;color:var(--muted)">to</span> <input type="time" id="wh-close-cv" style="padding:6px 8px;border:1px solid var(--border);border-radius:9px;font-family:Arial;font-size:12px"></div>
+              <label style="font-family:Arial;font-size:12px;color:var(--muted)">Sat – Sun</label>
+              <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><input type="time" id="wh-wopen-cv" style="padding:6px 8px;border:1px solid var(--border);border-radius:9px;font-family:Arial;font-size:12px"> <span style="font-family:Arial;font-size:12px;color:var(--muted)">to</span> <input type="time" id="wh-wclose-cv" style="padding:6px 8px;border:1px solid var(--border);border-radius:9px;font-family:Arial;font-size:12px"> <span style="font-family:Arial;font-size:12px;color:var(--muted)">(leave empty = same as weekdays)</span></div>
+              <label style="font-family:Arial;font-size:12px;color:var(--muted)">Starts on</label>
+              <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><input type="date" id="wh-start-cv" style="padding:6px 8px;border:1px solid var(--border);border-radius:9px;font-family:Arial;font-size:12px"> <span style="font-family:Arial;font-size:12px;color:var(--muted)">(no late flags before this date)</span></div>
+              <label style="font-family:Arial;font-size:12px;color:var(--muted)">Grace (min)</label>
+              <div><input type="number" id="wh-grace-cv" value="10" style="width:70px;padding:6px 8px;border:1px solid var(--border);border-radius:9px;font-family:Arial;font-size:12px"></div>
+            </div>
+            <button class="btn-sm" style="margin-top:10px" onclick="saveWorkHours('cv')">Save Work Hours</button>
+            <div style="border-top:1px solid var(--border);margin-top:14px;padding-top:12px">
+              <div style="font-family:Arial;font-size:11px;text-transform:uppercase;color:var(--muted);margin-bottom:8px">🔒 Closed days (rest &amp; reset — no clock-in, nobody marked absent)</div>
+              <div id="wh-closed-cv" style="margin-bottom:8px"></div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><input type="date" id="wh-cdate-cv" style="padding:6px 8px;border:1px solid var(--border);border-radius:9px;font-family:Arial;font-size:12px"><input type="text" id="wh-creason-cv" placeholder="Reason (e.g. Rest &amp; reset day)" style="min-width:200px;padding:6px 8px;border:1px solid var(--border);border-radius:9px;font-family:Arial;font-size:12px"><button class="btn-sm" onclick="addClosedDay('cv')">+ Add closed day</button></div>
             </div>
           </div>
+          </details>
           <div id="cv-attendance-list"></div>
         </div>
+        <div id="cv-social-panel" class="cv-tab-content" style="display:none"><div id="cv-social-box"></div></div>
         <div id="cv-leave-panel" class="cv-tab-content" style="display:none"><div id="cv-leave-list"></div></div>
         <div id="cv-audits-panel" class="cv-tab-content" style="display:none"><div id="cv-audits-content"></div></div>
         <div id="cv-handover-panel" class="cv-tab-content" style="display:none">
           <div id="cv-handover-container"></div>
         </div>
         <div id="cv-shifts-panel" class="cv-tab-content" style="display:none">
+          <details class="setbox"><summary>📥 Rota tools — upload a rota or create a whole month</summary>
           <div class="card" style="padding:16px 20px;margin-bottom:16px">
             <div style="font-size:13px;font-weight:600;color:var(--ink);margin-bottom:4px">📥 Upload a Rota (Excel / CSV)</div>
             <div style="font-family:Arial;font-size:11.5px;color:var(--muted);margin-bottom:10px">Drop in a spreadsheet with columns <strong>Date, Staff, Shift, Start, End</strong> (one row per person per day). It creates the shifts, assigns the people, and staff see it straight away in their shifts list and team rota calendar. You get a preview before anything is saved.</div>
@@ -2360,6 +2477,7 @@ self.addEventListener('notificationclick',function(e){
             <div><button class="btn-save" onclick="bulkCreateShifts()">📅 Create Shifts For The Month</button></div>
             <div id="bsh-feedback" style="margin-top:8px"></div>
           </div>
+          </details>
           <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
             <input type="text" id="sh-name" placeholder="Shift name" style="width:140px;padding:7px 10px;border:1px solid var(--border);border-radius:9px;font-family:Arial;font-size:12px">
             <input type="date" id="sh-date" style="padding:7px 10px;border:1px solid var(--border);border-radius:9px;font-family:Arial;font-size:12px">
@@ -2810,14 +2928,15 @@ self.addEventListener('notificationclick',function(e){
           <h2 id="portal-welcome">Welcome</h2>
           <p id="portal-package"></p>
         </div>
-        <div style="background:#F7F5F0;border:2px solid #1B2A4A;border-radius:6px;padding:16px 20px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
+        <div id="pc-request-box" style="background:#F7F5F0;border:2px solid #1B2A4A;border-radius:6px;padding:16px 20px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
           <div>
             <div style="font-family:Arial;font-size:14px;font-weight:600;color:#1B2A4A;margin-bottom:3px">Need something from Haida Consulting?</div>
             <div style="font-family:Arial;font-size:12px;color:#C9A24B">Submit a request and it goes directly to our team</div>
           </div>
           <button onclick="switchPortalTab('portal-requests-tab',document.querySelector('.ptab:last-child'))" style="background:#1B2A4A;color:white;border:none;padding:10px 20px;border-radius:12px;font-family:Arial;font-size:13px;font-weight:600;cursor:pointer">+ New Request</button>
         </div>
-        <div class="portal-tabs">
+        <div id="pc-nav"></div>
+        <div class="portal-tabs" id="pc-tabs-old" style="display:none">
           <button class="ptab active" data-service="operations" onclick="switchPortalTab('portal-reports-tab',this)">Reports</button>
           <button class="ptab" data-service="operations" onclick="switchPortalTab('portal-docs-tab',this)">Documents</button>
           <button class="ptab" data-service="operations" onclick="switchPortalTab('portal-actions-tab',this)">Action Items</button>
@@ -2837,6 +2956,7 @@ self.addEventListener('notificationclick',function(e){
           <button class="ptab" data-service="staffing" onclick="switchPortalTab('portal-staffing-tab',this);loadStaffingOverview(currentUser.clientId,'portal-staffing-list')" style="font-weight:600;color:var(--danger)">📅 Staffing</button>
           <button class="ptab" data-service="staffing" onclick="switchPortalTab('portal-procurement-tab',this);loadProcurementRequests(currentUser.clientId,'portal-procurement-list',false)" style="font-weight:600;color:var(--gold)">🧑‍💼 Request Staff</button>
           <button class="ptab" data-service="staffing" onclick="switchPortalTab('portal-candidates-tab',this);loadCandidates(currentUser.clientId,'portal-candidates-list',false)" style="font-weight:600;color:var(--gold)">🧑‍🎓 Candidates</button>
+          <button class="ptab" data-service="social" onclick="switchPortalTab('portal-social-tab',this);loadSocial(currentUser.clientId,'portal-social-tab',true)">📱 Content Planner</button>
           <button class="ptab" onclick="switchPortalTab('portal-projects-tab',this);loadPortalProjects(currentUser.clientId)">📁 Projects</button>
           <button class="ptab" onclick="switchPortalTab('portal-messages-tab',this);loadClientMessages(currentUser.clientId,'portal')" style="font-weight:600;color:var(--brand)">💬 Messages</button>
           <button class="ptab" onclick="switchPortalTab('portal-credentials-tab',this);loadClientCredentials(currentUser.clientId,'pc',true)" style="font-weight:600;color:var(--danger)">🔐 Access & Logins</button>
@@ -2870,6 +2990,7 @@ self.addEventListener('notificationclick',function(e){
         <div id="portal-docs-tab" class="portal-tab-content" style="display:none"></div>
         <div id="portal-actions-tab" class="portal-tab-content" style="display:none"></div>
         <div id="portal-projects-tab" class="portal-tab-content" style="display:none"></div>
+        <div id="portal-social-tab" class="portal-tab-content" style="display:none"></div>
         <div id="portal-staff-tab" class="portal-tab-content" style="display:none"></div>
         <div id="portal-events-tab" class="portal-tab-content" style="display:none"><div id="portal-events-list"></div></div>
         <div id="portal-attendance-tab" class="portal-tab-content" style="display:none">
@@ -2891,14 +3012,21 @@ self.addEventListener('notificationclick',function(e){
           </div>
           <div id="portal-workhours-box" style="background:var(--surface2);border:1px solid var(--border);border-radius:9px;padding:14px;margin-bottom:16px">
             <div style="font-family:Arial;font-size:11px;text-transform:uppercase;color:var(--muted);margin-bottom:8px">🕒 Work Hours (used to flag late clock-ins &amp; early clock-outs)</div>
-            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-              <label style="font-family:Arial;font-size:12px;color:var(--muted)">Opens:</label>
-              <input type="time" id="wh-open-portal" style="padding:6px 8px;border:1px solid var(--border);border-radius:9px;font-family:Arial;font-size:12px">
-              <label style="font-family:Arial;font-size:12px;color:var(--muted)">Closes:</label>
-              <input type="time" id="wh-close-portal" style="padding:6px 8px;border:1px solid var(--border);border-radius:9px;font-family:Arial;font-size:12px">
-              <label style="font-family:Arial;font-size:12px;color:var(--muted)">Grace (min):</label>
-              <input type="number" id="wh-grace-portal" value="10" style="width:70px;padding:6px 8px;border:1px solid var(--border);border-radius:9px;font-family:Arial;font-size:12px">
-              <button class="btn-sm" onclick="saveWorkHours('portal')">Save Work Hours</button>
+            <div style="display:grid;grid-template-columns:auto 1fr;gap:8px 12px;align-items:center;max-width:560px">
+              <label style="font-family:Arial;font-size:12px;color:var(--muted)">Mon – Fri</label>
+              <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><input type="time" id="wh-open-portal" style="padding:6px 8px;border:1px solid var(--border);border-radius:9px;font-family:Arial;font-size:12px"> <span style="font-family:Arial;font-size:12px;color:var(--muted)">to</span> <input type="time" id="wh-close-portal" style="padding:6px 8px;border:1px solid var(--border);border-radius:9px;font-family:Arial;font-size:12px"></div>
+              <label style="font-family:Arial;font-size:12px;color:var(--muted)">Sat – Sun</label>
+              <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><input type="time" id="wh-wopen-portal" style="padding:6px 8px;border:1px solid var(--border);border-radius:9px;font-family:Arial;font-size:12px"> <span style="font-family:Arial;font-size:12px;color:var(--muted)">to</span> <input type="time" id="wh-wclose-portal" style="padding:6px 8px;border:1px solid var(--border);border-radius:9px;font-family:Arial;font-size:12px"> <span style="font-family:Arial;font-size:12px;color:var(--muted)">(leave empty = same as weekdays)</span></div>
+              <label style="font-family:Arial;font-size:12px;color:var(--muted)">Starts on</label>
+              <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><input type="date" id="wh-start-portal" style="padding:6px 8px;border:1px solid var(--border);border-radius:9px;font-family:Arial;font-size:12px"> <span style="font-family:Arial;font-size:12px;color:var(--muted)">(no late flags before this date)</span></div>
+              <label style="font-family:Arial;font-size:12px;color:var(--muted)">Grace (min)</label>
+              <div><input type="number" id="wh-grace-portal" value="10" style="width:70px;padding:6px 8px;border:1px solid var(--border);border-radius:9px;font-family:Arial;font-size:12px"></div>
+            </div>
+            <button class="btn-sm" style="margin-top:10px" onclick="saveWorkHours('portal')">Save Work Hours</button>
+            <div style="border-top:1px solid var(--border);margin-top:14px;padding-top:12px">
+              <div style="font-family:Arial;font-size:11px;text-transform:uppercase;color:var(--muted);margin-bottom:8px">🔒 Closed days (rest &amp; reset — no clock-in, nobody marked absent)</div>
+              <div id="wh-closed-portal" style="margin-bottom:8px"></div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><input type="date" id="wh-cdate-portal" style="padding:6px 8px;border:1px solid var(--border);border-radius:9px;font-family:Arial;font-size:12px"><input type="text" id="wh-creason-portal" placeholder="Reason (e.g. Rest &amp; reset day)" style="min-width:200px;padding:6px 8px;border:1px solid var(--border);border-radius:9px;font-family:Arial;font-size:12px"><button class="btn-sm" onclick="addClosedDay('portal')">+ Add closed day</button></div>
             </div>
           </div>
           <div id="portal-attendance-list"></div>
@@ -3509,13 +3637,18 @@ self.addEventListener('notificationclick',function(e){
 <div class="modal-overlay" id="modal-audit-edit">
   <div class="modal" style="max-width:560px">
     <div class="modal-header"><div class="modal-title" id="au-ed-title">Checklist</div><button class="modal-close" onclick="closeModal('modal-audit-edit')">×</button></div>
-    <div class="modal-body">
+    <div class="modal-body" style="max-height:78vh;overflow-y:auto">
       <input type="hidden" id="au-ed-id">
       <div class="form-field"><label>Name</label><input type="text" id="au-ed-name" placeholder="e.g. Kitchen Hygiene Audit"></div>
       <div class="form-grid" style="margin-top:10px">
         <div class="form-field"><label>How often</label><select id="au-ed-freq"><option>Daily</option><option>Weekly</option><option>Monthly</option><option>As needed</option></select></div>
-        <div class="form-field"><label>Who does it</label><select id="au-ed-who"><option value="Staff">Staff (in their portal)</option><option value="Operations">Operations</option><option value="Both">Either</option></select></div>
+        <div class="form-field"><label>Who does it</label><select id="au-ed-who" onchange="auEdToggle()"><option value="Staff">Staff (in their portal)</option><option value="Operations">Operations</option><option value="Both">Either</option></select></div>
+        <div class="form-field"><label>When</label><select id="au-ed-phase"><option value="Opening">When they arrive (opening)</option><option value="Closing">When they close (closing)</option><option value="Audit">Audit / other</option></select></div>
       </div>
+      <div class="form-field" id="au-ed-aud-wrap" style="margin-top:10px"><label>Which staff see it in their portal</label>
+        <select id="au-ed-aud" onchange="auEdToggle()"><option value="">Everyone (all staff)</option><option value="chef,cook,kitchen,sous">Chefs &amp; kitchen team</option><option value="bartender,barista,bar,mixolog">Bartenders &amp; bar team</option><option value="manager,admin,supervisor">Manager / Admin of the business</option><option value="custom">Other job title…</option></select>
+        <input type="text" id="au-ed-aud-custom" placeholder="Job title words, separated by commas (e.g. waiter, server, cashier)" style="display:none;margin-top:6px">
+        <div style="font-size:11px;color:var(--muted);margin-top:4px">Matched against each staff member's job title (the Role on their profile).</div></div>
       <div class="form-field" style="margin-top:10px"><label>Lines to check — one per line. Start a line with ## to make a section heading.</label><textarea id="au-ed-items" rows="12" style="font-family:Arial;font-size:13px"></textarea></div>
       <div style="display:flex;gap:8px;margin-top:12px"><button class="btn-save" onclick="auSaveEditor()">Save checklist</button><button class="btn-danger" id="au-ed-del" onclick="auDeleteChecklist()" style="display:none">Delete</button></div>
       <div id="au-ed-feedback"></div>
@@ -4815,7 +4948,7 @@ const TASK_URL='https://vbffwaztmnrrgishlqln.supabase.co';
 const TASK_KEY='sb_publishable_L-r2y9EXb2U5vULz7uiuEQ_yfOAC5Zt';
 const taskDb=supabase.createClient(TASK_URL,TASK_KEY);
 
-let currentUser=null,allClients=[],reportType='audit';
+let currentUser=null,allClients=[],reportType='quick';
 
 // ══ NICHES ══
 const nicheLabels={cafe:'☕ Café/F&B',aesthetics:'💆 Aesthetics',hair:'💇 Hair & Beauty',education:'🎓 Education',faith:'🕌 Faith Org',events:'🎉 Events',event_planner:'🎪 Event Planner',hospitality:'🏠 Hospitality',media:'🎬 Media',halal:'✅ Halal Brand',wellness:'🏥 Wellness',retail:'🛍️ Retail',corporate:'🏢 Corporate',logistics:'🚚 Logistics',tech:'💻 Tech Firm',homebrand:'📦 Home Brand / DTC',delivery:'🛵 Delivery / Rider Co',general:'📋 General'};
@@ -5439,7 +5572,168 @@ async function saveClientServices(){
   if(!re)setTimeout(()=>{closeModal('modal-manage-services');fb.innerHTML='';},900);
 }
 
+// ══ NAVIGATION: grouped menus (admin sidebar, client page, client portal, staff portal) ══
+function _navState(){try{return JSON.parse(localStorage.getItem('navCollapsed')||'null');}catch(e){return null;}}
+function _saveNavState(){
+  try{const o={};document.querySelectorAll('#admin-nav .nav-group').forEach(g=>{o[g.dataset.g]=g.classList.contains('collapsed');});localStorage.setItem('navCollapsed',JSON.stringify(o));}catch(e){}
+}
+function toggleNavGroup(h){h.parentElement.classList.toggle('collapsed');_saveNavState();}
+function initNavGroups(){
+  const saved=_navState();
+  document.querySelectorAll('#admin-nav .nav-group').forEach(g=>{
+    const any=[...g.querySelectorAll('.tab-btn')].some(b=>getComputedStyle(b).display!=='none');
+    g.style.display=any?'':'none';
+    const hasActive=!!g.querySelector('.tab-btn.active');
+    let col=saved&&saved[g.dataset.g]!=null?saved[g.dataset.g]:!(g.dataset.g==='home'||g.dataset.g==='clients');
+    if(hasActive)col=false;
+    g.classList.toggle('collapsed',col);
+  });
+}
+// ── Client page (admin side) ──
+const CV_PAGES={
+ 'pg-team':{label:'Team',members:['cv-staff','cv-staffing']},
+ 'pg-time':{label:'Time & Rota',members:['cv-attendance','cv-shifts','cv-leave']},
+ 'pg-hiring':{label:'Hiring',members:['cv-procurement','cv-candidates']},
+ 'pg-board':{label:'Team Board',members:['cv-handover','cv-notices','cv-leaderboard']}
+};
+const SEC_TITLES={staff:'Staff',staffing:'Staffing & coverage',attendance:'Attendance',shifts:'Shifts',leave:'Leave',procurement:'Staff requests',candidates:'Candidates',handover:'Handover',notices:'Notice board',leaderboard:'Leaderboard',events:'Events'};
+function _secTitle(t){return SEC_TITLES[t.replace(/^(cv|portal)-/,'').replace(/-tab$/,'')]||t;}
+const CV_GROUPS=[
+ {id:'overview',icon:'🏠',label:'Overview',tabs:['cv-reports','cv-kpis','cv-strategy','cv-docs','cv-actions','cv-complaints']},
+ {id:'ops',icon:'⚙️',label:'Operations',tabs:['cv-audits','cv-compliance','cv-qc','cv-inventory','cv-policies','cv-kb']},
+ {id:'hr',icon:'👥',label:'HR',tabs:['pg-team','pg-time','pg-hiring','pg-board']},
+ {id:'social',icon:'📱',label:'Social Media',tabs:['cv-social']},
+ {id:'comms',icon:'💬',label:'Communication',tabs:['cv-messages','cv-enquiries']},
+ {id:'access',icon:'🔐',label:'Access',tabs:['cv-credentials']}
+];
+function _cvVisible(t){
+  if(CV_PAGES[t])return CV_PAGES[t].members.some(_cvVisible);
+  const b=document.getElementById('cvtab-'+t);return !!b&&b.style.display!=='none';}
+function _cvLabel(t){
+  if(CV_PAGES[t])return CV_PAGES[t].label;
+  const b=document.getElementById('cvtab-'+t);return b?b.textContent.trim():t;}
+function _cvPageOf(t){const k=Object.keys(CV_PAGES).find(k=>CV_PAGES[k].members.includes(t));return k||t;}
+function cvRenderNav(active){
+  const el=document.getElementById('cv-nav');if(!el)return;
+  active=_cvPageOf(active);
+  const known=new Set(CV_GROUPS.flatMap(g=>g.tabs).flatMap(t=>CV_PAGES[t]?CV_PAGES[t].members.concat([t]):[t]));
+  const extra=[...document.querySelectorAll('#cv-tabs-old .cv-tab')].map(b=>b.id.replace('cvtab-','')).filter(t=>!known.has(t));
+  const groups=CV_GROUPS.concat(extra.length?[{id:'more',icon:'⋯',label:'More',tabs:extra}]:[]);
+  const vis=groups.map(g=>({...g,tabs:g.tabs.filter(_cvVisible)})).filter(g=>g.tabs.length);
+  const cur=vis.find(g=>g.tabs.includes(active))||vis[0];
+  if(!cur){el.innerHTML='';return;}
+  el.innerHTML=`<div class="cvn-cats">${vis.map(g=>`<button class="cvn-cat ${g.id===cur.id?'on':''}" onclick="cvOpenPage('${g.tabs.includes(_cvLast[g.id])?_cvLast[g.id]:g.tabs[0]}')"><span class="ic">${g.icon}</span>${g.label}<span class="ct">${g.tabs.length}</span></button>`).join('')}</div>
+    <div class="cvn-subs">${cur.tabs.map(t=>`<button class="cvn-sub ${t===active?'on':''}" onclick="cvOpenPage('${t}')">${_cvLabel(t)}</button>`).join('')}</div>`;
+  if(cur)_cvLast[cur.id]=active;
+}
+async function cvOpenPage(pid){
+  const pg=CV_PAGES[pid];
+  if(!pg){return loadClientViewTab(pid);}
+  const mem=pg.members.filter(_cvVisible);
+  if(!mem.length)return;
+  const cid=_currentViewClientId;
+  await loadClientViewTab(mem[0],cid);
+  for(const m of mem.slice(1)){await loadClientViewTab(m,cid,true);}
+  if(mem.length>1){
+    const host=document.getElementById(mem[0]+'-panel').parentNode;
+    mem.forEach(m=>{
+      const pn=document.getElementById(m+'-panel');host.appendChild(pn);
+      if(!pn.querySelector(':scope>.cv-sec-h')){const h=document.createElement('div');h.className='cv-sec-h';h.textContent=_secTitle(m);pn.insertBefore(h,pn.firstChild);}
+    });
+  }
+  cvRenderNav(pid);
+}
+const _cvLast={};
+// ── Client portal ──
+const PC_PAGES={
+ 'pp-team':{label:'Team',members:['portal-staff-tab','portal-staffing-tab']},
+ 'pp-time':{label:'Time & Rota',members:['portal-attendance-tab','portal-shifts-tab','portal-leave-tab']},
+ 'pp-hiring':{label:'Hiring',members:['portal-procurement-tab','portal-candidates-tab']},
+ 'pp-board':{label:'Team Board',members:['portal-handover-tab','portal-notices-tab','portal-leaderboard-tab','portal-events-tab']}
+};
+const PC_GROUPS=[
+ {id:'overview',icon:'🏠',label:'Overview',tabs:['portal-reports-tab','portal-docs-tab','portal-actions-tab','portal-strategy-tab','portal-projects-tab']},
+ {id:'ops',icon:'⚙️',label:'Operations',tabs:['portal-audits-tab','portal-qc-tab','portal-inventory-tab','portal-policies-tab','portal-kb-tab']},
+ {id:'hr',icon:'👥',label:'HR',tabs:['pp-team','pp-time','pp-hiring','pp-board']},
+ {id:'social',icon:'📱',label:'Social Media',tabs:['portal-social-tab']},
+ {id:'money',icon:'💰',label:'Finance',tabs:['portal-accounting-tab']},
+ {id:'talk',icon:'💬',label:'Messages & Requests',tabs:['portal-messages-tab','portal-requests-tab','portal-credentials-tab']}
+];
+let _pcMulti=false;
+function _pcBtns(){
+  const m={};
+  document.querySelectorAll('#pc-tabs-old .ptab').forEach(b=>{const r=/switchPortalTab\('([^']+)'/.exec(b.getAttribute('onclick')||'');if(r)m[r[1]]=b;});
+  return m;
+}
+function _pcVis(t,map){if(PC_PAGES[t])return PC_PAGES[t].members.some(x=>_pcVis(x,map));return !!map[t]&&map[t].style.display!=='none';}
+function pcRenderNav(active){
+  const el=document.getElementById('pc-nav');if(!el)return;
+  const map=_pcBtns();
+  if(!active){const a=document.querySelector('#pc-tabs-old .ptab.active');const r=a&&/switchPortalTab\('([^']+)'/.exec(a.getAttribute('onclick')||'');active=r?r[1]:'portal-reports-tab';}
+  const pk=Object.keys(PC_PAGES).find(k=>PC_PAGES[k].members.includes(active));if(pk)active=pk;
+  const known=new Set(PC_GROUPS.flatMap(g=>g.tabs).flatMap(t=>PC_PAGES[t]?PC_PAGES[t].members.concat([t]):[t]));
+  const extra=Object.keys(map).filter(t=>!known.has(t));
+  const groups=PC_GROUPS.concat(extra.length?[{id:'more',icon:'⋯',label:'More',tabs:extra}]:[]);
+  const vis=groups.map(g=>({...g,tabs:g.tabs.filter(t=>_pcVis(t,map))})).filter(g=>g.tabs.length);
+  const cur=vis.find(g=>g.tabs.includes(active))||vis[0];
+  if(!cur){el.innerHTML='';return;}
+  const lab=t=>PC_PAGES[t]?PC_PAGES[t].label:map[t].textContent.trim();
+  const go=t=>`pcGo('${t}')`;
+  el.innerHTML=`<div class="cvn-cats">${vis.map(g=>`<button class="cvn-cat ${g.id===cur.id?'on':''}" onclick="${go(g.tabs[0])}"><span class="ic">${g.icon}</span>${g.label}</button>`).join('')}</div>
+    <div class="cvn-subs">${cur.tabs.map(t=>`<button class="cvn-sub ${t===active?'on':''}" onclick="${go(t)}">${lab(t)}</button>`).join('')}</div>`;
+}
+function pcGo(tabId){
+  const map=_pcBtns();
+  const pg=PC_PAGES[tabId];
+  if(!pg){const b=map[tabId];if(b)b.click();return;}
+  const mem=pg.members.filter(t=>map[t]&&map[t].style.display!=='none');
+  if(!mem.length)return;
+  document.querySelectorAll('.portal-tab-content .cv-sec-h').forEach(h=>h.remove());
+  map[mem[0]].click();
+  _pcMulti=true;
+  try{mem.slice(1).forEach(t=>map[t].click());}finally{_pcMulti=false;}
+  if(mem.length>1){
+    mem.forEach(t=>{const pn=document.getElementById(t);if(!pn)return;pn.parentNode.appendChild(pn);
+      if(!pn.querySelector(':scope>.cv-sec-h')){const h=document.createElement('div');h.className='cv-sec-h';h.textContent=_secTitle(t);pn.insertBefore(h,pn.firstChild);}});
+  }
+  pcRenderNav(tabId);
+}
+// ── Staff portal: five clear sections instead of one very long page ──
+const SP_TABS=[['today','🏠','Today'],['schedule','📅','Schedule'],['learn','📚','Learn'],['reports','📝','Reports'],['me','👤','Me']];
+const SP_MAP=[
+ ['PROFILE HEADER','today me'],['ATTENDANCE','today'],['CHECKLISTS','today'],['HANDOVER','today'],['NOTICE BOARD','today'],['NOTES / REQUESTS','today'],
+ ['ROTA CALENDAR','schedule'],['SHIFTS','schedule'],['SWAP REQUESTS','schedule'],['LEAVE','schedule'],
+ ['READING LIST','learn'],['TRAINING DUE','learn'],['MY COURSES','learn'],['KNOWLEDGE BASE','learn'],
+ ['DAILY REPORT','reports'],['TEAM REPORTS','reports'],['INCIDENT','reports'],
+ ['MY DETAILS','today'],['CORE DETAILS','me'],['LEADERBOARD','me'],['FACE REGISTRATION','me'],['STRIKES','me']
+];
+let _spNavBuilt=false;
+function spBuildNav(){
+  if(_spNavBuilt)return;
+  const box=document.getElementById('sp-container');if(!box)return;
+  let cur='today',ord=0;
+  box.style.display='flex';box.style.flexDirection='column';
+  [...box.childNodes].forEach(n=>{
+    if(n.nodeType===8){const t=n.nodeValue.trim().toUpperCase();const i=SP_MAP.findIndex(m=>t.startsWith(m[0]));if(i>=0){cur=SP_MAP[i][1];ord=i*10;}}
+    else if(n.nodeType===1&&n.id!=='sp-nav'){n.dataset.spg=cur;n.style.order=ord++;}
+  });
+  const up=id=>{let e=document.getElementById(id);while(e&&e.parentElement!==box)e=e.parentElement;return e;};
+  const form=up('sp-details-form-box');if(form)form.dataset.spg='me';
+  const nag=up('sp-details-nag');if(nag){nag.dataset.spg='today';nag.style.order=25;}
+  document.getElementById('sp-nav').innerHTML=SP_TABS.map(t=>`<button class="spn" data-g="${t[0]}" onclick="spShowGroup('${t[0]}')"><span class="ic">${t[1]}</span>${t[2]}</button>`).join('');
+  _spNavBuilt=true;
+  let g='today';try{g=sessionStorage.getItem('spTab')||'today';}catch(e){}
+  spShowGroup(g);
+}
+function spShowGroup(g){
+  document.querySelectorAll('#sp-container [data-spg]').forEach(e=>e.classList.toggle('spg-off',!e.dataset.spg.split(' ').includes(g)));
+  document.querySelectorAll('#sp-nav .spn').forEach(b=>b.classList.toggle('on',b.dataset.g===g));
+  try{sessionStorage.setItem('spTab',g);}catch(e){}
+  window.scrollTo({top:0});
+}
+
 function showApp(){
+  {const mb=document.querySelector('.menu-btn');if(mb)mb.style.display='';}
   document.getElementById('login-screen').style.display='none';
   document.getElementById('app').style.display='flex';
   document.getElementById('admin-nav').style.display='flex';
@@ -5478,9 +5772,11 @@ function showApp(){
   }
   loadClients();loadComplaints();loadActions();loadStaff();loadContracts();loadDocs();loadEvents();
   renderTypeFields();
+  initNavGroups();
 }
 
 async function showClientPortal(client){
+  {const mb=document.querySelector('.menu-btn');if(mb)mb.style.display='none';}
   document.getElementById('login-screen').style.display='none';
   document.getElementById('app').style.display='flex';
   // CRITICAL: clients must never see admin nav
@@ -5514,6 +5810,7 @@ function applyClientServiceVisibility(client){
   // If the currently-active tab just got hidden, fall back to the first visible one
   const activeBtn=document.querySelector('.portal-tabs .ptab.active');
   if(activeBtn&&activeBtn.style.display==='none'&&firstVisible)firstVisible.click();
+  pcRenderNav();
 }
 
 function logout(){
@@ -5678,6 +5975,7 @@ async function markModuleComplete(enrollmentId,moduleId,btn){
 
 let _spStaffId=null,_spClientId=null;
 async function showStaffPortal(staff){
+  try{spBuildNav();}catch(e){console.error(e);}
   document.getElementById('login-screen').style.display='none';
   document.getElementById('app').style.display='none';
   document.getElementById('staff-portal-screen').style.display='flex';
@@ -5936,6 +6234,22 @@ async function loadSpAttendance(){
     </div>`;
   }).join(''):'<p style="font-family:Arial;font-size:12px;color:var(--muted)">No attendance yet.</p>';
 }
+// ── Work hours: weekday / weekend hours, a start date, and closed days ──
+function whIsWeekend(ds){const d=new Date(ds+'T12:00:00').getDay();return d===0||d===6;}
+function whClosures(client){let c=client&&client.closed_dates;if(typeof c==='string'){try{c=JSON.parse(c);}catch(e){c=[];}}return Array.isArray(c)?c:[];}
+function effectiveHours(client,ds){
+  ds=ds||localDateStr();
+  const out={open:null,close:null,closed:false,reason:'',notStarted:false};
+  if(!client)return out;
+  const cl=whClosures(client).find(x=>x.date===ds);
+  if(cl){out.closed=true;out.reason=cl.reason||'';return out;}
+  if(client.work_hours_start&&ds<String(client.work_hours_start).slice(0,10)){out.notStarted=true;return out;}
+  const wk=whIsWeekend(ds);
+  const o=(wk&&client.weekend_opening_time)?client.weekend_opening_time:client.opening_time;
+  const c=(wk&&client.weekend_closing_time)?client.weekend_closing_time:client.closing_time;
+  out.open=o?String(o).slice(0,5):null;out.close=c?String(c).slice(0,5):null;
+  return out;
+}
 function computeLateness(openingTime,graceMinutes){
   if(!openingTime)return{isLate:false,lateMinutes:0};
   const now=new Date();
@@ -6180,7 +6494,8 @@ async function toggleClock(){
       return;
     }
     // Clocking IN — check geofence first, then require a photo before saving
-    const {data:client}=await db.from('clients').select('work_lat,work_lng,work_radius_m,opening_time,late_grace_minutes').eq('id',_spClientId).single();
+    const {data:client}=await db.from('clients').select('*').eq('id',_spClientId).single();
+    {const hrs=effectiveHours(client,today);if(hrs.closed){statusEl.innerHTML=`<span style="color:var(--ink);font-weight:600">The business is closed today${hrs.reason?' — '+_esc(hrs.reason):''}. There is no clock-in today — enjoy the rest.</span>`;return;}}
     if(client&&client.work_lat!=null&&client.work_lng!=null){
       if(!navigator.geolocation){statusEl.textContent='Your device does not support location — ask your consultant for help.';return;}
       statusEl.textContent='Checking your location…';
@@ -6217,8 +6532,8 @@ async function doClockOut(){
   try{
     const open=await _findOpenAttendance();
     if(!open){await loadSpAttendance();return;}
-    const {data:client}=await db.from('clients').select('closing_time').eq('id',_spClientId).single();
-    const el=computeEarlyLeave(client&&client.closing_time);
+    const {data:client}=await db.from('clients').select('*').eq('id',_spClientId).single();
+    const el=computeEarlyLeave(effectiveHours(client,open.work_date||localDateStr()).close);
     const {error:outErr}=await db.from('staff_attendance').update({clock_out:new Date().toISOString(),is_early_leave:el.isEarly,early_minutes:el.earlyMinutes}).eq('id',open.id);
     if(outErr){statusEl.innerHTML='<span style="color:var(--danger)">Could not save your clock-out: '+_esc(outErr.message)+'</span>';return;}
     await loadSpAttendance();
@@ -6230,7 +6545,7 @@ async function saveClockInRecord(today,client,faceMatchScore){
   const dupe=await _findOpenAttendance();
   if(dupe){await loadSpAttendance();return;}
   // Photo is never saved — it only ever exists in the browser for this one check, then it's discarded.
-  const lt=computeLateness(client&&client.opening_time,client&&client.late_grace_minutes);
+  const lt=computeLateness(effectiveHours(client,today).open,client&&client.late_grace_minutes);
   const {error:insertErr}=await db.from('staff_attendance').insert({staff_id:_spStaffId,client_id:_spClientId,work_date:today,clock_in:new Date().toISOString(),is_late:lt.isLate,late_minutes:lt.lateMinutes,face_match_score:faceMatchScore});
   if(insertErr){statusEl.innerHTML='<span style="color:var(--danger)">Could not save your clock-in: '+_esc(insertErr.message)+'</span>';return;}
   _faceTechFails=0;
@@ -6547,7 +6862,7 @@ function populateAllDropdowns(){
   // Action Tracker: explicit "Internal / Company" category instead of a blank placeholder
   const actEl=document.getElementById('act-client');
   if(actEl)actEl.innerHTML=opts.replace('<option value="">Select client…</option>','<option value="">Internal / Company</option>');
-  if(typeof auToggleAddReport==='function'&&reportType==='audit')auToggleAddReport();
+  if(typeof auToggleAddReport==='function'&&(reportType==='audit'||reportType==='quick'))auToggleAddReport();
 }
 
 async function saveClient(){
@@ -6590,6 +6905,7 @@ function goAddReport(clientId){
   showAdminTabByName('reports');
   setTimeout(()=>{
     document.getElementById('rf-client').value=clientId;
+    const _q=document.getElementById('qr-client');if(_q)_q.value=clientId;
     renderTypeFields();auToggleAddReport();
     // After save, return to client view
     _currentViewClientId=clientId;
@@ -6610,7 +6926,7 @@ async function generateFullReport(){
   const clientName=allClients.find(c=>c.id===clientId)?.business_name||'Client';
   const byType={};
   reports.forEach(r=>{if(!byType[r.report_type])byType[r.report_type]=[];byType[r.report_type].push(r);});
-  const typeLabel={audit:'Audit Reports',supervision:'Supervision Reports',site_visit:'Site Visit Notes',cx_mystery:'CX Mystery Visits',staff_training:'Staff Training Records',brand_review:'Brand Reviews',performance:'Performance Reviews',kpi:'KPI Reviews'};
+  const typeLabel={general:'General Reports',audit:'Audit Reports',supervision:'Supervision Reports',site_visit:'Site Visit Notes',cx_mystery:'CX Mystery Visits',staff_training:'Staff Training Records',brand_review:'Brand Reviews',performance:'Performance Reviews',kpi:'KPI Reviews'};
   let html=`<div style="font-family:Arial;padding:32px;max-width:700px;margin:0 auto">
     <div style="border-bottom:3px solid #1B2A4A;padding-bottom:16px;margin-bottom:24px">
       <div style="font-size:11px;letter-spacing:3px;text-transform:uppercase;color:#C9A24B;margin-bottom:4px">Haida Yammar Consulting</div>
@@ -6680,7 +6996,77 @@ async function saveReport(){
   setTimeout(()=>fb.innerHTML='',3000);
 }
 
+function qrInit(){
+  const sel=document.getElementById('qr-client');if(!sel)return;
+  if(typeof allClients!=='undefined'){const keepV=sel.value;sel.innerHTML='<option value="">Select client…</option>'+allClients.map(c=>`<option value="${c.id}">${c.business_name}</option>`).join('');sel.value=keepV;}
+  if(_currentViewClientId&&!sel.value)sel.value=_currentViewClientId;
+  const d=document.getElementById('qr-date');if(d&&!d.value)d.value=localDateStr();
+}
+function qrClear(){['qr-title','qr-text'].forEach(i=>{const e=document.getElementById(i);if(e)e.value='';});document.getElementById('qr-feedback').innerHTML='';}
+async function saveQuickReport(){
+  const fb=document.getElementById('qr-feedback');
+  const clientId=document.getElementById('qr-client').value,dept=document.getElementById('qr-dept').value,date=document.getElementById('qr-date').value,text=document.getElementById('qr-text').value.trim();
+  if(!clientId||!date||!text){fb.innerHTML='<div class="error-msg">Pick a client, a date and paste the report text.</div>';return;}
+  let title=document.getElementById('qr-title').value.trim();
+  if(!title){const dd=new Date(date+'T12:00:00');title=dept+' report — '+dd.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});}
+  const {error}=await db.from('reports').insert({client_id:clientId,date,title,report_type:'general',summary:text,type_data:{department:dept}});
+  if(error){fb.innerHTML=`<div class="error-msg">${error.message}</div>`;return;}
+  fb.innerHTML='<div class="success-msg">✓ Report saved — the client can see it under Reports.</div>';
+  qrClear();
+  if(_currentViewClientId===clientId){setTimeout(()=>{showPage('page-client-view');loadClientViewTab('cv-reports');},900);}
+  setTimeout(()=>fb.innerHTML='',3500);
+}
 function clearReportForm(){['rf-client','rf-date','rf-title','rf-location','rf-summary','rf-actions','rf-recs'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});document.getElementById('form-feedback').innerHTML='';}
+
+// ══ SOCIAL MEDIA CONTENT PLANNER ══
+const SM_PLATFORMS=['Instagram','TikTok','Facebook','X / Twitter','LinkedIn','WhatsApp','YouTube'];
+const SM_STATUS=['Draft','Scheduled','Posted'];
+async function loadSocial(clientId,elId,readonly){
+  const el=document.getElementById(elId);if(!el||!clientId)return;
+  const {data,error}=await db.from('social_posts').select('*').eq('client_id',clientId).order('post_date',{ascending:true});
+  if(error){el.innerHTML='<div class="card" style="padding:18px;font-size:13px">The content planner needs its table first — run <strong>social_planner_migration.sql</strong> in Supabase. <span style="color:var(--muted)">('+error.message+')</span></div>';return;}
+  const posts=data||[];
+  const today=localDateStr();
+  const form=readonly?'':`<div class="card" style="padding:16px 18px;margin-bottom:16px">
+    <div style="font-weight:600;font-size:13px;margin-bottom:10px">Plan a post</div>
+    <div class="form-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px">
+      <div class="form-field"><label>Date</label><input type="date" id="sm-date" value="${today}"></div>
+      <div class="form-field"><label>Platform</label><select id="sm-platform">${SM_PLATFORMS.map(p=>`<option>${p}</option>`).join('')}</select></div>
+      <div class="form-field"><label>Status</label><select id="sm-status">${SM_STATUS.map(p=>`<option>${p}</option>`).join('')}</select></div>
+      <div class="form-field"><label>Link (optional)</label><input type="text" id="sm-link" placeholder="https://…"></div>
+    </div>
+    <div class="form-field" style="margin-top:10px"><label>Caption / idea</label><textarea id="sm-caption" rows="3" placeholder="What is the post?"></textarea></div>
+    <button class="btn-add" style="margin-top:10px" onclick="addSocialPost('${clientId}','${elId}')">+ Add to planner</button>
+    <div id="sm-fb" style="margin-top:8px"></div></div>`;
+  const row=p=>{
+    const d=new Date(p.post_date+'T12:00:00');
+    const st=readonly?`<span class="sm-st sm-${p.status}">${p.status}</span>`:`<button class="sm-st sm-${p.status}" title="Tap to change" onclick="cycleSocialStatus('${p.id}','${p.status}','${clientId}','${elId}')">${p.status}</button>`;
+    return `<div class="sm-day"><div class="sm-date">${d.toLocaleDateString('en-GB',{day:'numeric',month:'short'})}<div style="font-weight:400;font-size:11px;color:var(--muted)">${d.toLocaleDateString('en-GB',{weekday:'short'})}</div></div>
+      <div style="flex:1;min-width:0"><div style="font-weight:600;margin-bottom:3px">${p.platform||''} ${st}</div><div style="white-space:pre-wrap;color:var(--ink2);line-height:1.5">${(p.caption||'').replace(/</g,'&lt;')}</div>${p.link?`<a href="${p.link}" target="_blank" style="font-size:12px;color:var(--gold)">Open post ↗</a>`:''}</div>
+      ${readonly?'':`<button class="btn-sm" style="color:var(--danger)" onclick="delSocialPost('${p.id}','${clientId}','${elId}')">✕</button>`}</div>`;};
+  const up=posts.filter(p=>p.post_date>=today),past=posts.filter(p=>p.post_date<today).reverse();
+  el.innerHTML=(readonly?'<div class="cv-sec-h">Content planner</div>':'')+form+
+   `<div class="card" style="padding:6px 18px"><div style="font-weight:700;font-size:14px;padding:12px 0 2px">Coming up (${up.length})</div>${up.length?up.map(row).join(''):'<div style="padding:14px 0;color:var(--muted);font-size:13px">Nothing planned yet.</div>'}</div>
+    ${past.length?`<details class="setbox" style="margin-top:14px"><summary>Earlier posts (${past.length})</summary><div style="padding:0 6px">${past.map(row).join('')}</div></details>`:''}`;
+}
+async function addSocialPost(cid,elId){
+  const g=i=>document.getElementById(i).value;
+  const fb=document.getElementById('sm-fb');
+  if(!g('sm-date')||!g('sm-caption').trim()){fb.innerHTML='<div class="error-msg">Add a date and a caption.</div>';return;}
+  const {error}=await db.from('social_posts').insert({client_id:cid,post_date:g('sm-date'),platform:g('sm-platform'),status:g('sm-status'),caption:g('sm-caption').trim(),link:g('sm-link').trim()||null});
+  if(error){fb.innerHTML='<div class="error-msg">'+error.message+'</div>';return;}
+  loadSocial(cid,elId,false);
+}
+async function cycleSocialStatus(id,cur,cid,elId){
+  const next=SM_STATUS[(SM_STATUS.indexOf(cur)+1)%SM_STATUS.length];
+  await db.from('social_posts').update({status:next}).eq('id',id);
+  loadSocial(cid,elId,false);
+}
+async function delSocialPost(id,cid,elId){
+  if(!confirm('Remove this post from the planner?'))return;
+  await db.from('social_posts').delete().eq('id',id);
+  loadSocial(cid,elId,false);
+}
 
 // ══ INVOICES ══
 const PAYMENT_DETAILS={
@@ -7935,9 +8321,14 @@ async function loadPortalEvents(clientId){
 }
 
 function switchPortalTab(tabId,btn){
-  document.querySelectorAll('.ptab').forEach(b=>b.classList.remove('active'));btn.classList.add('active');
-  document.querySelectorAll('.portal-tab-content').forEach(t=>t.style.display='none');
+  if(!_pcMulti){
+    document.querySelectorAll('.ptab').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.portal-tab-content').forEach(t=>t.style.display='none');
+    document.querySelectorAll('.portal-tab-content .cv-sec-h').forEach(h=>h.remove());
+  }
+  btn.classList.add('active');
   document.getElementById(tabId).style.display='block';
+  pcRenderNav(tabId);
 }
 
 // ══ REPORTS RENDER ══
@@ -7955,8 +8346,8 @@ function buildFieldLabelMap(){
 
 function renderReportList(reports){
   if(!reports.length)return'<div style="text-align:center;padding:32px;font-family:Arial;font-size:13px;color:var(--muted)">No reports yet.</div>';
-  const typeLabel={audit:'Audit Report',supervision:'Supervision Report',site_visit:'Site Visit Note',cx_mystery:'CX Mystery Visit',staff_training:'Staff Training Record',brand_review:'Brand Review',performance:'Performance Review',kpi:'KPI Review','Compliance Summary':'Compliance Summary','Infection Control':'Infection Control Report'};
-  const typeBadge={audit:'badge-gold',supervision:'badge-blue',site_visit:'badge-blue',cx_mystery:'badge-green',staff_training:'badge-green',brand_review:'badge-blue',performance:'badge-green',kpi:'badge-gray','Compliance Summary':'badge-gold','Infection Control':'badge-green'};
+  const typeLabel={general:'Report',audit:'Audit Report',supervision:'Supervision Report',site_visit:'Site Visit Note',cx_mystery:'CX Mystery Visit',staff_training:'Staff Training Record',brand_review:'Brand Review',performance:'Performance Review',kpi:'KPI Review','Compliance Summary':'Compliance Summary','Infection Control':'Infection Control Report'};
+  const typeBadge={general:'badge-blue',audit:'badge-gold',supervision:'badge-blue',site_visit:'badge-blue',cx_mystery:'badge-green',staff_training:'badge-green',brand_review:'badge-blue',performance:'badge-green',kpi:'badge-gray','Compliance Summary':'badge-gold','Infection Control':'badge-green'};
   const labelMap=buildFieldLabelMap();
   const isAdmin=currentUser&&(currentUser.isOwner||currentUser.role==='admin');
   let html='';
@@ -7972,13 +8363,13 @@ function renderReportList(reports){
       scores.forEach(function(e){kpiHtml+='<div class="kpi-box"><div class="kpi-score">'+e[1]+'</div><div class="kpi-label">'+(labelMap[e[0]]||e[0].replace(/_/g,' '))+'</div></div>';});
       kpiHtml+='</div>';
     }
-    var otherFields=Object.entries(td).filter(function(e){return !e[0].includes('score')&&e[1]&&e[1]!==''&&!e[0].startsWith('_');});
+    var otherFields=Object.entries(td).filter(function(e){return !e[0].includes('score')&&e[1]&&e[1]!==''&&!e[0].startsWith('_')&&!(r.report_type==='general'&&e[0]==='department');});
     var fieldsHtml='';
     otherFields.forEach(function(e){
       var lbl=labelMap[e[0]]||e[0].replace(/_/g,' ').split(' ').map(function(w){return w.charAt(0).toUpperCase()+w.slice(1);}).join(' ');
       fieldsHtml+='<div class="detail-section"><h4>'+lbl+'</h4><div class="detail-text">'+e[1]+'</div></div>';
     });
-    var summaryHtml=r.summary?'<div class="detail-section"><h4>Summary</h4><div class="detail-text">'+r.summary+'</div></div>':'';
+    var summaryHtml=r.summary?(r.report_type==='general'?'<div class="detail-section"><div class="detail-text" style="white-space:pre-wrap;line-height:1.7">'+r.summary+'</div></div>':'<div class="detail-section"><h4>Summary</h4><div class="detail-text">'+r.summary+'</div></div>'):'';
     // Handle compliance summary and infection control reports that use the content field
     if(r.content && (r.report_type==='Compliance Summary'||r.report_type==='Infection Control')){
       summaryHtml='<div class="detail-section"><div class="detail-text" style="white-space:pre-wrap;font-size:12px;line-height:1.8">'+r.content+'</div></div>';
@@ -8008,7 +8399,7 @@ function renderReportList(reports){
     html+='<div class="report-card">';
     html+='<div class="report-header" data-bid="'+bid+'" onclick="toggleReport(this.dataset.bid,this)">';
     html+='<div><div class="report-title">'+r.title+'</div><div class="report-meta">'+(r.date||new Date(r.created_at).toLocaleDateString('en-GB')||'')+(r.location?' · '+r.location:'')+'</div></div>';
-    html+='<div style="display:flex;align-items:center;gap:10px"><span class="badge '+(typeBadge[r.report_type]||'badge-gray')+'">'+(typeLabel[r.report_type]||r.report_type)+'</span>';
+    html+='<div style="display:flex;align-items:center;gap:10px"><span class="badge '+(typeBadge[r.report_type]||'badge-gray')+'">'+(r.report_type==='general'?((td.department||'General')+' report'):(typeLabel[r.report_type]||r.report_type))+'</span>';
     html+='<span class="expand-icon" id="icon-'+bid+'">›</span></div>';
     html+='</div>';
     html+='<div class="report-body" id="'+bid+'">';
@@ -8094,7 +8485,7 @@ async function viewClient(clientId){
 const CV_TAB_SERVICE={
   'cv-staff':'staffing','cv-leaderboard':'staffing','cv-attendance':'staffing','cv-leave':'staffing','cv-shifts':'staffing','cv-handover':'staffing',
   'cv-notices':'staffing','cv-staffing':'staffing','cv-procurement':'staffing','cv-candidates':'staffing',
-  'cv-inventory':'operations','cv-qc':'operations','cv-compliance':'operations','cv-audits':'operations'
+  'cv-social':'social','cv-inventory':'operations','cv-qc':'operations','cv-compliance':'operations','cv-audits':'operations'
 };
 function applyClientViewServices(client){
   Object.keys(CV_TAB_SERVICE).forEach(tab=>{
@@ -8127,14 +8518,20 @@ function exportClientReportsCSV(){
   downloadCSV('client_reports.csv',['Date','Report Type','Details (JSON)'],rows);
 }
 
-async function loadClientViewTab(tab,clientId){
+async function loadClientViewTab(tab,clientId,keep){
   const cid=clientId||_currentViewClientId;
-  document.querySelectorAll('.cv-tab').forEach(b=>b.classList.remove('active'));
+  if(!keep){
+    document.querySelectorAll('.cv-tab').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.cv-sec-h').forEach(h=>h.remove());
+    document.querySelectorAll('.cv-tab-content').forEach(t=>t.style.display='none');
+  }
   const btn=document.getElementById('cvtab-'+tab);if(btn)btn.classList.add('active');
-  document.querySelectorAll('.cv-tab-content').forEach(t=>t.style.display='none');
+  cvRenderNav(tab);
   const panel=document.getElementById(tab+'-panel');if(panel)panel.style.display='block';
 
-  if(tab==='cv-reports'){
+  if(tab==='cv-social'){
+    await loadSocial(cid,'cv-social-box',false);
+  } else if(tab==='cv-reports'){
     const {data}=await db.from('reports').select('*').eq('client_id',cid).order('date',{ascending:false});
     document.getElementById('cv-reports-list').innerHTML=renderReportList(data||[]);
   } else if(tab==='cv-complaints'){
@@ -8518,7 +8915,7 @@ function haversineMeters(lat1,lng1,lat2,lng2){
   return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
 }
 async function loadGeofenceStatus(clientId,scope){
-  const {data:client}=await db.from('clients').select('work_lat,work_lng,work_radius_m,opening_time,closing_time,late_grace_minutes').eq('id',clientId).single();
+  const {data:client}=await db.from('clients').select('*').eq('id',clientId).single();
   const statusEl=document.getElementById(scope+'-geofence-status');
   const radiusEl=document.getElementById('geo-radius-'+scope);
   const latEl=document.getElementById('geo-lat-'+scope),lngEl=document.getElementById('geo-lng-'+scope);
@@ -8531,21 +8928,51 @@ async function loadGeofenceStatus(clientId,scope){
     statusEl.textContent='Not set yet — staff can clock in from anywhere until this is set.';
   }
   if(radiusEl&&client&&client.work_radius_m)radiusEl.value=client.work_radius_m;
-  const openEl=document.getElementById('wh-open-'+scope),closeEl=document.getElementById('wh-close-'+scope),graceEl=document.getElementById('wh-grace-'+scope);
+  const $=id=>document.getElementById(id+'-'+scope);
   if(client){
-    if(openEl&&client.opening_time)openEl.value=client.opening_time.slice(0,5);
-    if(closeEl&&client.closing_time)closeEl.value=client.closing_time.slice(0,5);
-    if(graceEl&&client.late_grace_minutes!=null)graceEl.value=client.late_grace_minutes;
+    const set=(id,v)=>{const e=$(id);if(e)e.value=v?String(v).slice(0,id==='wh-start'?10:5):'';};
+    set('wh-open',client.opening_time);set('wh-close',client.closing_time);
+    set('wh-wopen',client.weekend_opening_time);set('wh-wclose',client.weekend_closing_time);
+    set('wh-start',client.work_hours_start);
+    const g=$('wh-grace');if(g&&client.late_grace_minutes!=null)g.value=client.late_grace_minutes;
+    renderClosedDays(scope,client);
   }
 }
+function renderClosedDays(scope,client){
+  const el=document.getElementById('wh-closed-'+scope);if(!el)return;
+  const list=whClosures(client).slice().sort((a,b)=>a.date.localeCompare(b.date));
+  el.innerHTML=list.length?list.map(x=>`<span style="display:inline-flex;align-items:center;gap:6px;background:white;border:1px solid var(--border);border-radius:10px;padding:3px 6px 3px 10px;margin:2px 6px 2px 0;font-family:Arial;font-size:12px">${new Date(x.date+'T12:00:00').toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short',year:'numeric'})}${x.reason?' · '+_esc(x.reason):''} <button onclick="removeClosedDay('${scope}','${x.date}')" style="border:none;background:none;color:var(--danger);cursor:pointer;font-size:14px">×</button></span>`).join(''):'<span style="font-family:Arial;font-size:12px;color:var(--muted)">No closed days set.</span>';
+}
+function _whClientId(scope){return scope==='cv'?_currentViewClientId:currentUser.clientId;}
 async function saveWorkHours(scope){
-  const clientId=scope==='cv'?_currentViewClientId:currentUser.clientId;
-  const opening_time=document.getElementById('wh-open-'+scope).value||null;
-  const closing_time=document.getElementById('wh-close-'+scope).value||null;
-  const late_grace_minutes=parseInt(document.getElementById('wh-grace-'+scope).value)||10;
-  const {error}=await db.from('clients').update({opening_time,closing_time,late_grace_minutes}).eq('id',clientId);
-  if(error){alert('Could not save work hours: '+error.message);return;}
+  const clientId=_whClientId(scope);
+  const v=id=>(document.getElementById(id+'-'+scope)||{}).value||null;
+  const basic={opening_time:v('wh-open'),closing_time:v('wh-close'),late_grace_minutes:parseInt(v('wh-grace'))||10};
+  const full={...basic,weekend_opening_time:v('wh-wopen'),weekend_closing_time:v('wh-wclose'),work_hours_start:v('wh-start')};
+  let {error}=await db.from('clients').update(full).eq('id',clientId);
+  if(error){
+    const r=await db.from('clients').update(basic).eq('id',clientId);
+    if(r.error){alert('Could not save work hours: '+r.error.message);return;}
+    alert('Weekday hours saved. The weekend hours, start date and closed days need work_hours_migration.sql run in Supabase first.');return;
+  }
   alert('Work hours saved.');
+}
+async function _saveClosures(scope,list){
+  const {error}=await db.from('clients').update({closed_dates:list}).eq('id',_whClientId(scope));
+  if(error){alert('Could not save — run work_hours_migration.sql in Supabase first.\n\n'+error.message);return false;}
+  renderClosedDays(scope,{closed_dates:list});return true;
+}
+async function addClosedDay(scope){
+  const date=(document.getElementById('wh-cdate-'+scope)||{}).value;
+  if(!date){alert('Pick the date the business is closed.');return;}
+  const {data:c}=await db.from('clients').select('*').eq('id',_whClientId(scope)).single();
+  const list=whClosures(c).filter(x=>x.date!==date);
+  list.push({date,reason:((document.getElementById('wh-creason-'+scope)||{}).value||'').trim()});
+  if(await _saveClosures(scope,list)){document.getElementById('wh-cdate-'+scope).value='';document.getElementById('wh-creason-'+scope).value='';}
+}
+async function removeClosedDay(scope,date){
+  const {data:c}=await db.from('clients').select('*').eq('id',_whClientId(scope)).single();
+  await _saveClosures(scope,whClosures(c).filter(x=>x.date!==date));
 }
 async function saveManualLocation(scope){
   const clientId=scope==='cv'?_currentViewClientId:currentUser.clientId;
@@ -10989,45 +11416,121 @@ async function loadShifts(clientId,targetId,canManage){
 
 // ══ AUDIT CHECKLISTS — Pass / Fail / N/A, done by staff (daily checks) or Operations (deeper audits) ══
 const AUDIT_LIBRARY=[
-{key:'open',name:'Daily Opening Check',frequency:'Daily',who:'Staff',items:`## Premises & hygiene
-Entrance, floors and tables are clean and tidy
-Toilets are clean and stocked (soap, tissue, hand towels)
-Handwashing station has soap, running water and paper towels
-Bins are emptied and lined
-## Food safety
-Fridge and freezer temperatures checked and logged
-Hot-holding equipment is working and at the right temperature
-All stored food is covered, labelled and in date
-Raw and cooked food are stored separately
-No expired or damaged stock is in use
-Allergen information is up to date and visible
-## Staff
-Staff arrived on time, in full uniform, hair covered, no jewellery
-Nobody is working while unwell
+{key:'all_open',name:'Opening Check — All Staff',frequency:'Daily',who:'Staff',phase:'Opening',roles:'',items:`## Yourself
+I arrived on time and signed in
+I am in full, clean uniform with hair covered and no jewellery
+I am well and fit to work (no vomiting, diarrhoea, fever or open wounds)
+I have washed my hands properly
+## Your area
+My work area is clean, tidy and ready for service
+I have read the handover note from the last shift
+I know today's specials, out-of-stock items and any allergen alerts
+## Safety
+I know where the fire exits, extinguisher and first-aid kit are
+There are no spills, hazards or broken items in my area`},
+{key:'all_close',name:'Closing Check — All Staff',frequency:'Daily',who:'Staff',phase:'Closing',roles:'',items:`## Your area
+My station / area is cleaned and sanitised
+Food, drinks and supplies in my area are put away, covered and labelled
+My waste is disposed of in the right bins
+## Reporting
+Anything broken, missing or low in stock has been reported
+I have written anything the next shift must know in the handover note
+## Leaving
+My personal belongings are collected and I have clocked out
+I have not left any equipment on`},
+{key:'chef_open',name:'Opening Check — Kitchen (Chef)',frequency:'Daily',who:'Staff',phase:'Opening',roles:'chef,cook,kitchen,sous',items:`## Food safety
+Fridge and freezer temperatures checked and logged (fridge 0–5°C, freezer -18°C or colder)
+Probe thermometer is clean, working and calibrated
+All stored food is covered, labelled, dated and in date
+Raw meat and fish are stored below ready-to-eat food
+No expired, damaged or unlabelled food is in use
+Allergen matrix is up to date and visible in the kitchen
+## Preparation
+Prep list for today is written and assigned
+Mise en place is done and stored correctly
+Chopping boards and knives are colour-coded and clean
+Sanitiser is mixed at the right strength (test strip used)
 ## Equipment & safety
-All equipment is working (cooker, grill, coffee machine, POS, lights, AC)
-Fire exits are clear and the extinguisher is in place
-First-aid kit is stocked
-## Stock & cash
-Key ingredients and supplies are enough for the day
-Cash float is counted and matches the record`},
-{key:'close',name:'Daily Closing Check',frequency:'Daily',who:'Staff',items:`## Food & stock
-All food is covered, labelled, dated and stored
-Fridges and freezers are closed and at the right temperature
-Waste and leftovers are disposed of properly
+Gas, cooker, oven, grill and fryer are working safely
+Extraction fan / hood is on and clean
+Handwash sink has soap, hot water and paper towels
+First-aid kit, fire blanket and extinguisher are in place
+## Stock
+Deliveries received were checked and signed for
+Key ingredients are enough for today's menu`},
+{key:'chef_close',name:'Closing Check — Kitchen (Chef)',frequency:'Daily',who:'Staff',phase:'Closing',roles:'chef,cook,kitchen,sous',items:`## Food
+All leftover food is cooled quickly, covered, labelled and dated, or thrown away
+Raw and cooked food are stored separately
+Fridge and freezer temperatures logged and doors fully closed
+Tomorrow's prep list and order list are written
 ## Cleaning
-Kitchen surfaces, floors and equipment are cleaned and sanitised
-Dining area, tables and toilets are cleaned
+Cooking equipment, surfaces, boards and knives are cleaned and sanitised
+Floors are swept and mopped, drains are clear
 Bins are emptied and taken out
-## Cash & records
-Till is cashed up and matches sales
-Cash is banked or locked away
+## Shutdown
+Gas, fryers, ovens, grills and extraction are switched off
+Back door and kitchen store are locked
+Any breakages or faults are reported to the manager`},
+{key:'bar_open',name:'Opening Check — Bar (Bartender)',frequency:'Daily',who:'Staff',phase:'Opening',roles:'bartender,barista,bar,mixolog',items:`## Bar set-up
+Bar top, shelves and equipment are clean and sanitised
+Glassware is clean, polished and stocked
+Ice machine / ice supply is clean and full
+Fruit, garnish, milk and syrups are fresh and in date
+## Stock & drinks
+Spirits, mixers, beer and wine are stocked and counted against the stock sheet
+Fridge temperature checked and logged
+Taps / kegs / coffee machine are working and flushed
+Menu, prices and today's specials are correct
+## Till & compliance
+Till float is counted and matches the record
+POS and card machine are working
+Age-check rule is understood (no sales to under-18s)
+## Hygiene & safety
+Handwash and bar sink have soap and clean towels
+No broken glass or wet floors behind or in front of the bar`},
+{key:'bar_close',name:'Closing Check — Bar (Bartender)',frequency:'Daily',who:'Staff',phase:'Closing',roles:'bartender,barista,bar,mixolog',items:`## Stock & cash
+Closing stock counted and recorded; variances explained
+Perishables (milk, fruit, juice) stored covered and labelled
+Till is cashed up and matches sales; cash handed over
+Spirits cabinet / bar store is locked
+## Cleaning
+Bar top, sinks, taps / machines and drip trays are cleaned
+Glassware is washed and put away; broken glass disposed of safely
+Floor behind the bar is cleaned; bins emptied
+## Shutdown
+Ice machine, coffee machine and lights switched off as required
+Bar is left ready for the next shift`},
+{key:'mgr_open',name:'Opening Check — Manager / Admin',frequency:'Daily',who:'Staff',phase:'Opening',roles:'manager,admin,supervisor',items:`## Premises & security
+Alarm / CCTV are working; the premises were found secure
+Walk-through done: front, kitchen, bar, toilets, store
+Fire exits are clear; extinguishers and first-aid kit are in place
+Lights, AC, water and power are working
+## People
+All rostered staff have arrived and are in uniform
+Shortfalls are covered or reported to Haida
+Daily briefing given (targets, specials, allergens, reservations)
+## Money & stock
+Safe and float counted and recorded
+POS and card machines are working
+Stock deliveries expected today are noted; nothing critical is out of stock
+## Records
+Yesterday's closing check and handover note were reviewed
+Fridge / freezer temperature logs for yesterday are complete`},
+{key:'mgr_close',name:'Closing Check — Manager / Admin',frequency:'Daily',who:'Staff',phase:'Closing',roles:'manager,admin,supervisor',items:`## People & records
+All staff have completed their closing checks and clocked out
 Daily report and handover note are written
-## Security & safety
-All equipment, gas and non-essential power are switched off
-Windows, doors and back entrance are locked
-Alarm / CCTV is on`},
-{key:'kitchen',name:'Kitchen Hygiene & Food Safety Audit',frequency:'Weekly',who:'Operations',items:`## Personal hygiene
+Incidents, complaints and accidents are logged
+## Money
+Cash up is done and matches sales; takings banked or locked in the safe
+Discounts, voids and refunds are reviewed and signed
+## Premises
+Kitchen, bar and dining area are clean and equipment is off
+Gas is off; windows and doors are locked
+Alarm set and CCTV is running
+## Tomorrow
+Rota for tomorrow is confirmed
+Orders for low stock have been placed`},
+{key:'kitchen',name:'Kitchen Hygiene & Food Safety Audit',frequency:'Weekly',who:'Operations',phase:'Audit',roles:'',items:`## Personal hygiene
 Staff wash hands correctly and at the right times
 Clean uniform, hair covered, nails short, no jewellery
 Illness reporting is followed
@@ -11047,7 +11550,7 @@ Extraction, drains and grease traps are clean
 ## Pest control & waste
 No signs of pests; pest-control visits are recorded
 Waste is separated and bins are covered`},
-{key:'foh',name:'Front of House & Customer Service Audit',frequency:'Weekly',who:'Operations',items:`## Appearance
+{key:'foh',name:'Front of House & Customer Service Audit',frequency:'Weekly',who:'Operations',phase:'Audit',roles:'',items:`## Appearance
 Entrance, signage and menu boards are clean and correct
 Tables, chairs, floors and windows are clean
 Toilets are clean and stocked
@@ -11062,7 +11565,7 @@ Staff are following the SOPs
 ## Payments
 Receipts are issued and prices match the menu
 Tills / POS are used correctly`},
-{key:'stock',name:'Stock & Inventory Audit',frequency:'Weekly',who:'Operations',items:`## Stock count
+{key:'stock',name:'Stock & Inventory Audit',frequency:'Weekly',who:'Operations',phase:'Audit',roles:'',items:`## Stock count
 Physical count matches the stock record
 Variances are explained and recorded
 Fast-moving items are above reorder level
@@ -11072,7 +11575,7 @@ No expired, damaged or unlabelled stock
 ## Receiving & waste
 Deliveries are checked against the order and signed for
 Wastage is recorded with a reason`},
-{key:'cash',name:'Cash & Till Audit',frequency:'Weekly',who:'Operations',items:`## Cash handling
+{key:'cash',name:'Cash & Till Audit',frequency:'Weekly',who:'Operations',phase:'Audit',roles:'',items:`## Cash handling
 Opening float matches the record
 Till totals match sales records for the period
 Cash is banked on time and deposit slips match
@@ -11080,7 +11583,7 @@ Petty cash is supported by receipts
 ## Controls
 Refunds, voids and discounts are authorised and logged
 Cash is counted by two people where required`},
-{key:'safety',name:'Health & Safety and Compliance Audit',frequency:'Monthly',who:'Operations',items:`## Premises safety
+{key:'safety',name:'Health & Safety and Compliance Audit',frequency:'Monthly',who:'Operations',phase:'Audit',roles:'',items:`## Premises safety
 Fire exits clear, signs visible, extinguishers in date
 First-aid kit stocked and accident book in use
 Electrical equipment is safe, with no exposed wires
@@ -11094,7 +11597,7 @@ Staff training records are up to date
 Incident and complaint logs are complete
 ## Policies & SOPs
 Policies and SOPs are available to staff and are being followed`},
-{key:'ops',name:'Monthly Operations Audit',frequency:'Monthly',who:'Operations',items:`## Daily routines
+{key:'ops',name:'Monthly Operations Audit',frequency:'Monthly',who:'Operations',phase:'Audit',roles:'',items:`## Daily routines
 Opening and closing checks were done on all days this month
 Daily reports were submitted on time
 ## Staff
@@ -11107,6 +11610,21 @@ Previous audit actions have been completed
 Targets / KPIs were reviewed with the manager`}
 ];
 const AU_FREQ_DAYS={Daily:1,Weekly:7,Monthly:31};
+const AU_AUDIENCES=[['','Everyone (all staff)'],['chef,cook,kitchen,sous','Chefs & kitchen team'],['bartender,barista,bar,mixolog','Bartenders & bar team'],['manager,admin,supervisor','Manager / Admin of the business'],['custom','Other job title…']];
+function auAudienceLabel(r){
+  if(!r)return 'All staff';
+  const hit=AU_AUDIENCES.find(a=>a[0]===r);
+  return hit?hit[1]:'Job title: '+r.split(',').map(x=>x.trim()).filter(Boolean).join(' / ');
+}
+// Does this staff member's job title match the checklist's audience?
+function auAudienceMatch(roles,st){
+  if(!roles||!String(roles).trim())return true;
+  const kws=String(roles).toLowerCase().split(',').map(x=>x.trim()).filter(Boolean);
+  const jt=String((st&&st.role)||'').toLowerCase();
+  if(kws.some(k=>jt.includes(k)))return true;
+  if(st&&st.is_ops_manager&&kws.some(k=>['manager','admin','supervisor'].includes(k)))return true;
+  return false;
+}
 function auParseItems(txt){
   const out=[];let section='';
   String(txt||'').split('\n').forEach(l=>{
@@ -11154,9 +11672,13 @@ async function renderAuditHub(ctx,clientId,elId){
   let chks=c1.data||[];const subs=c2.data||[];
   chks.forEach(c=>{_auCache[c.id]=c;});
   const canManage=ctx==='cv',canRun=ctx!=='pc';
-  if(ctx==='sp')chks=chks.filter(c=>c.active!==false&&(c.who==='Staff'||c.who==='Both'));
+  const {data:staffAll}=await db.from('client_staff').select('id,name,role,is_ops_manager').eq('client_id',clientId).neq('status','Terminated');
+  const roster=staffAll||[];
+  const me=ctx==='sp'?roster.find(x=>x.id===_spStaffId):null;
+  if(ctx==='sp')chks=chks.filter(c=>c.active!==false&&(c.who==='Staff'||c.who==='Both')&&auAudienceMatch(c.for_roles,me||{}));
   else if(ctx==='ops')chks=chks.filter(c=>c.active!==false);
-  const lastOf={};subs.forEach(s=>{if(s.checklist_id&&!lastOf[s.checklist_id])lastOf[s.checklist_id]=s;});
+  const lastOf={};(ctx==='sp'?subs.filter(s=>s.staff_id===_spStaffId):subs).forEach(s=>{if(s.checklist_id&&!lastOf[s.checklist_id])lastOf[s.checklist_id]=s;});
+  const todayStr=localDateStr();
   if(ctx==='sp'){
     const box=document.getElementById('sp-audits-box');
     if(!chks.length){if(box)box.style.display='none';return;}
@@ -11164,6 +11686,13 @@ async function renderAuditHub(ctx,clientId,elId){
   }
   const mine=ctx==='sp'?subs.filter(s=>s.staff_id===_spStaffId).slice(0,5):[];
   const openFails=subs.filter(s=>s.status==='Open'&&(s.fail_count||0)>0);
+  const auTodayLine=(c,roster,subs,today,showWarn)=>{
+    const must=roster.filter(x=>auAudienceMatch(c.for_roles,x));
+    if(!must.length)return showWarn?`<div style="font-size:12px;color:var(--danger);margin-top:5px">⚠ No staff have a job title matching "${_esc(auAudienceLabel(c.for_roles))}" — nobody will see this one yet. Set job titles under Staff.</div>`:'';
+    const done=new Set(subs.filter(x=>x.checklist_id===c.id&&x.audit_date===today&&x.staff_id).map(x=>x.staff_id));
+    const missing=must.filter(x=>!done.has(x.id));
+    return `<div style="font-size:12px;margin-top:5px;color:${missing.length?'var(--danger)':'var(--success)'}">Today: <strong>${must.length-missing.length} of ${must.length}</strong> staff done${missing.length?` — not yet: ${missing.map(x=>_esc(x.name)).join(', ')}`:' ✓'}</div>`;
+  };
   const card=c=>{
     const last=lastOf[c.id];const st=auStatus(c,last&&last.audit_date);const paused=c.active===false;
     const lastTxt=last?`Last: ${last.audit_date} by ${_esc(last.done_by||'—')} · <strong>${last.score_pct==null?'—':Math.round(last.score_pct)+'%'}</strong>${last.fail_count?` · <span style="color:var(--danger)">${last.fail_count} failed</span>`:''}`:'Not done yet';
@@ -11171,8 +11700,9 @@ async function renderAuditHub(ctx,clientId,elId){
       <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:flex-start">
         <div style="flex:1;min-width:220px">
           <div style="font-size:14px;font-weight:600;color:var(--ink)">${_esc(c.name)}</div>
-          <div style="font-size:11.5px;color:var(--muted);margin-top:3px">${_esc(c.frequency)} · done by ${c.who==='Both'?'Staff or Operations':_esc(c.who)} · ${(c.items||[]).length} checks</div>
+          <div style="font-size:11.5px;color:var(--muted);margin-top:3px">${c.phase&&c.phase!=='Audit'?_esc(c.phase)+' · ':''}${_esc(c.frequency)} · ${c.who==='Operations'?'done by Operations':c.who==='Both'?'staff or Operations':'staff: '+_esc(auAudienceLabel(c.for_roles))} · ${(c.items||[]).length} checks</div>
           <div style="font-size:12px;color:var(--ink2);margin-top:5px">${lastTxt}</div>
+          ${ctx!=='sp'&&c.who!=='Operations'&&c.frequency==='Daily'?auTodayLine(c,roster,subs,todayStr,canManage):''}
         </div>
         <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
           ${paused?'<span class="badge badge-gray">Paused</span>':`<span class="badge ${auTone(st.tone)}">${st.text}</span>`}
@@ -11207,7 +11737,14 @@ async function renderAuditHub(ctx,clientId,elId){
   const lib=canManage?AUDIT_LIBRARY.filter(l=>!(c1.data||[]).some(c=>c.name===l.name)):[];
   let html='';
   if(ctx==='sp'){
-    html=`<div style="font-size:11.5px;color:var(--muted);margin-bottom:10px">Tap Start, mark each line Pass, Fail or N/A, and submit. Your manager sees it straight away.</div>`+chks.map(card).join('')+
+    const grp=(label,list)=>list.length?`<div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--gold);font-weight:600;margin:14px 0 8px">${label}</div>`+list.map(card).join(''):'';
+    const pend=ph=>chks.filter(c=>c.phase===ph&&!(lastOf[c.id]&&lastOf[c.id].audit_date===todayStr)).length;
+    const po=pend('Opening'),pc2=pend('Closing');
+    const banner=(po?`<div style="background:var(--gold-light);border:1.5px solid var(--gold);border-radius:10px;padding:10px 14px;margin-bottom:10px;font-size:13px;color:var(--ink)">🌅 <strong>Do your opening check now</strong> — it is the first thing to do when you arrive.</div>`:'')+(pc2?`<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 14px;margin-bottom:10px;font-size:13px;color:var(--ink2)">🌙 Remember your <strong>closing check</strong> before you leave.</div>`:'');
+    html=banner+`<div style="font-size:11.5px;color:var(--muted);margin-bottom:4px">Tap Start, mark each line Pass, Fail or N/A, and submit. Your manager sees it straight away.</div>`+
+      grp('🌅 When you arrive — before you start work',chks.filter(c=>c.phase==='Opening'))+
+      grp('🌙 When you close — before you leave',chks.filter(c=>c.phase==='Closing'))+
+      grp('Other checklists',chks.filter(c=>c.phase!=='Opening'&&c.phase!=='Closing'))+
       (mine.length?`<div style="font-size:11px;text-transform:uppercase;color:var(--muted);margin:14px 0 6px">Your recent checklists</div>`+mine.map(subRow).join(''):'');
   } else {
     if(openFails.length&&ctx!=='ops')html+=`<div style="background:var(--danger-light);border:1.5px solid var(--danger);border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:13px;color:var(--danger)"><strong>${openFails.length} audit${openFails.length===1?'':'s'}</strong> with failed items still waiting for follow-up.</div>`;
@@ -11297,14 +11834,14 @@ async function auResolve(id){
 // ── Setting up checklists (Operations / owner) ──
 async function auAddFromLibrary(key){
   const l=AUDIT_LIBRARY.find(x=>x.key===key);if(!l)return;
-  const {error}=await db.from('audit_checklists').insert({client_id:_auCtx.clientId,name:l.name,frequency:l.frequency,who:l.who,items:auParseItems(l.items),active:true});
+  const {error}=await db.from('audit_checklists').insert({client_id:_auCtx.clientId,name:l.name,frequency:l.frequency,who:l.who,phase:l.phase||'Audit',for_roles:l.roles||null,items:auParseItems(l.items),active:true});
   if(error){alert(error.message);return;}
   auRefresh();
 }
 async function auAddAllLibrary(){
   const {data}=await db.from('audit_checklists').select('name').eq('client_id',_auCtx.clientId);
   const have=new Set((data||[]).map(x=>x.name));
-  const rows=AUDIT_LIBRARY.filter(l=>!have.has(l.name)).map(l=>({client_id:_auCtx.clientId,name:l.name,frequency:l.frequency,who:l.who,items:auParseItems(l.items),active:true}));
+  const rows=AUDIT_LIBRARY.filter(l=>!have.has(l.name)).map(l=>({client_id:_auCtx.clientId,name:l.name,frequency:l.frequency,who:l.who,phase:l.phase||'Audit',for_roles:l.roles||null,items:auParseItems(l.items),active:true}));
   if(!rows.length)return;
   const {error}=await db.from('audit_checklists').insert(rows);
   if(error){alert(error.message);return;}
@@ -11316,11 +11853,21 @@ function auOpenEditor(id){
   document.getElementById('au-ed-title').textContent=c?'Edit checklist':'Create a checklist';
   document.getElementById('au-ed-name').value=c?c.name:'';
   document.getElementById('au-ed-freq').value=c?c.frequency:'Weekly';
-  document.getElementById('au-ed-who').value=c?c.who:'Operations';
+  document.getElementById('au-ed-who').value=c?c.who:'Staff';
+  document.getElementById('au-ed-phase').value=c?(c.phase||'Audit'):'Opening';
+  {const r=c?(c.for_roles||''):'';const known=AU_AUDIENCES.some(a=>a[0]===r&&a[0]!=='custom');
+   document.getElementById('au-ed-aud').value=known?r:'custom';
+   document.getElementById('au-ed-aud-custom').value=known?'':r;}
+  auEdToggle();
   document.getElementById('au-ed-items').value=c?auItemsToText(c.items):'## Section name\nFirst thing to check\nSecond thing to check';
   document.getElementById('au-ed-del').style.display=c?'inline-block':'none';
   document.getElementById('au-ed-feedback').innerHTML='';
   openModal('modal-audit-edit');
+}
+function auEdToggle(){
+  const who=document.getElementById('au-ed-who').value;
+  document.getElementById('au-ed-aud-wrap').style.display=who==='Operations'?'none':'block';
+  document.getElementById('au-ed-aud-custom').style.display=document.getElementById('au-ed-aud').value==='custom'?'block':'none';
 }
 async function auSaveEditor(){
   const fb=document.getElementById('au-ed-feedback');
@@ -11328,7 +11875,10 @@ async function auSaveEditor(){
   const name=document.getElementById('au-ed-name').value.trim();
   const items=auParseItems(document.getElementById('au-ed-items').value);
   if(!name||!items.length){fb.innerHTML='<div class="error-msg">Give it a name and at least one line to check.</div>';return;}
-  const payload={name,frequency:document.getElementById('au-ed-freq').value,who:document.getElementById('au-ed-who').value,items};
+  const who=document.getElementById('au-ed-who').value;
+  let aud=document.getElementById('au-ed-aud').value;
+  if(aud==='custom')aud=document.getElementById('au-ed-aud-custom').value.split(',').map(x=>x.trim()).filter(Boolean).join(',');
+  const payload={name,frequency:document.getElementById('au-ed-freq').value,who,phase:document.getElementById('au-ed-phase').value,for_roles:who==='Operations'?null:(aud||null),items};
   const q=id?db.from('audit_checklists').update(payload).eq('id',id):db.from('audit_checklists').insert({...payload,client_id:_auCtx.clientId,active:true});
   const {error}=await q;
   if(error){fb.innerHTML=`<div class="error-msg">${error.message}</div>`;return;}
@@ -11350,8 +11900,10 @@ async function auToggleActive(id){
 function auToggleAddReport(){
   const p=document.getElementById('audit-checklist-panel'),f=document.getElementById('report-form');
   if(!p||!f)return;
-  const isAudit=reportType==='audit';
-  p.style.display=isAudit?'block':'none';f.style.display=isAudit?'none':'block';
+  const isAudit=reportType==='audit',isQuick=reportType==='quick';
+  const q=document.getElementById('quick-report-panel');
+  if(q){q.style.display=isQuick?'block':'none';if(isQuick)qrInit();}
+  p.style.display=isAudit?'block':'none';f.style.display=(isAudit||isQuick)?'none':'block';
   if(isAudit)auRenderAddReport();
 }
 function auRenderAddReport(){
@@ -11585,7 +12137,7 @@ async function rotaFileChosen(pfx){
     const wb=XLSX.read(await file.arrayBuffer(),{type:'array'});
     const [{data:staffRows},{data:cl}]=await Promise.all([
       db.from('client_staff').select('id,name').eq('client_id',_shClientId).neq('status','Terminated'),
-      db.from('clients').select('opening_time,closing_time').eq('id',_shClientId).maybeSingle()
+      db.from('clients').select('*').eq('id',_shClientId).maybeSingle()
     ]);
     const staff=staffRows||[];
     const matchStaff=raw=>{
@@ -11624,8 +12176,10 @@ async function rotaFileChosen(pfx){
       const entries=_rotaParseGrid(wb);
       if(!entries.length){out.innerHTML='<div class="error-msg">Couldn\'t recognise this file. Use the template (Date, Staff, Shift, Start, End), or a rota with Week sheets showing ON/OFF per day.</div>';return;}
       gridMode=true;
-      const st=(cl&&cl.opening_time||'08:00').slice(0,5),en=(cl&&cl.closing_time||'17:00').slice(0,5);
       entries.forEach(e=>{
+        const hrs=effectiveHours(cl,e.date);
+        if(hrs.closed){problems.push(e.date+': the business is marked closed ('+(hrs.reason||'closed day')+') — skipped');return;}
+        const st=hrs.open||'08:00',en=hrs.close||'17:00';
         const key=e.date+'|'+e.section.toLowerCase();
         const g=groups[key]=groups[key]||{date:e.date,shiftName:e.section,start:st,end:en,slots:1,people:[]};
         const m=matchStaff(e.rawName);
@@ -13543,7 +14097,7 @@ async function loadDailyHRReport(){
   const date=dateEl.value;
   // A client counts as "portal" if flagged active, OR anyone there has clocked in that day, OR any of its staff have portal logins
   const [{data:allCl},{data:attToday},{data:credStaff}]=await Promise.all([
-    db.from('clients').select('id,business_name,staff_portal_active').neq('status','Inactive').order('business_name',{ascending:true}),
+    db.from('clients').select('*').neq('status','Inactive').order('business_name',{ascending:true}),
     db.from('staff_attendance').select('client_id').eq('work_date',date),
     db.from('client_staff').select('client_id').not('username','is',null).neq('username','').neq('status','Terminated')
   ]);
@@ -13571,7 +14125,8 @@ async function loadDailyHRReport(){
   let staffQ=db.from('client_staff').select('id,name,client_id,clients(business_name)').eq('status','Active').in('client_id',scopedClientIds);
   const {data:allStaff}=await staffQ;
   const clockedIds=new Set(rows.map(r=>r.staff_id));
-  const absentees=(allStaff||[]).filter(s=>!clockedIds.has(s.id));
+  const closedToday=new Set(portalClients.filter(c=>effectiveHours(c,date).closed).map(c=>c.id));
+  const absentees=(allStaff||[]).filter(s=>!clockedIds.has(s.id)&&!closedToday.has(s.client_id));
   const lateCount=rows.filter(r=>r.is_late).length;
   const earlyCount=rows.filter(r=>r.is_early_leave).length;
   const stillOpenCount=rows.filter(r=>!r.clock_out).length;
@@ -13706,6 +14261,7 @@ function showAdminTab(tab,btn){
   if(tab==='teamtraining'&&(!currentUser||!currentUser.isOwner)){return;}
   document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
+  {const g=btn.closest('.nav-group');if(g)g.classList.remove('collapsed');}
   showPage('page-'+tab);
   if(tab==='compliance') loadCompliancePage();
   if(tab==='activitylog') loadActivityLog();
