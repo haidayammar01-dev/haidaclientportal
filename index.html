@@ -11427,6 +11427,8 @@ function renderShifts(){
   if(_shCal.view==='list'){el.innerHTML=bar+shifts.map(shShiftCard).join('');return;}
   const byDate={};shifts.forEach(s=>{(byDate[s.shift_date]=byDate[s.shift_date]||[]).push(s);});
   const first=new Date(y,m,1),days=new Date(y,m+1,0).getDate(),lead=(first.getDay()+6)%7,today=localDateStr();
+  const _mm=_shData.client?shMismatched(shifts):[];
+  const fixBar=(_shData.canManage&&_mm.length)?`<div style="background:#fdecea;border:1px solid #f5c2c0;border-radius:9px;padding:10px 14px;margin-bottom:12px;font-family:Arial;font-size:12.5px;display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap"><span>⚠ <strong>${_mm.length} shifts</strong> have start/end times that don't match the client's opening hours (the red ⚠ days).</span><button class="btn-sm" onclick="shBulkMatchHours(shMismatched(_shData.shifts))">✨ Fix all times</button></div>`:'';
   let grid=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(d=>`<div style="font-family:Arial;font-size:10.5px;font-weight:600;color:var(--muted);text-align:center;padding:4px 0">${d}</div>`).join('');
   for(let i=0;i<lead;i++)grid+='<div></div>';
   for(let d=1;d<=days;d++){
@@ -11445,14 +11447,15 @@ function renderShifts(){
     const sel=_shCal.sel===ds;
     grid+=`<div onclick="shSelectDay('${ds}')" style="cursor:pointer;min-height:84px;border:${sel?'2px solid var(--gold)':'1px solid var(--border)'};border-radius:7px;padding:4px;background:${ds===today?'var(--gold-light)':'white'};min-width:0"><div style="display:flex;justify-content:space-between;gap:2px;font-family:Arial;font-size:10px;color:${ds===today?'var(--ink)':'var(--muted)'};font-weight:${ds===today?'700':'400'}"><span style="font-size:11px">${d}</span>${hoursTag}</div>${chips}${more}</div>`;
   }
-  let detail='<div style="font-family:Arial;font-size:12px;color:var(--muted);margin-top:12px">Tap a day to see its shifts and make changes. <span style="display:inline-block;width:10px;height:10px;background:#DDEFE3;border-radius:2px;vertical-align:middle"></span> team complete · <span style="display:inline-block;width:10px;height:10px;background:#F6EAC8;border-radius:2px;vertical-align:middle"></span> still needs people (e.g. Chef 1/2 = one of two chefs assigned) · the hours in each day are opening hours</div>';
+  let detail='<div style="font-family:Arial;font-size:12px;color:var(--muted);margin-top:12px">Tap a day to see its shifts and make changes. <span style="display:inline-block;width:10px;height:10px;background:#DDEFE3;border-radius:2px;vertical-align:middle"></span> team complete · <span style="display:inline-block;width:10px;height:10px;background:#F6EAC8;border-radius:2px;vertical-align:middle"></span> still needs people (e.g. Chef 1/2 = one of two chefs assigned) · the hours in each day are opening hours · <span style="color:#b00020;font-weight:700">red ⚠</span> = shift times do not match the opening hours</div>';
   if(_shCal.sel){
     const list=byDate[_shCal.sel]||[];
     const ef=_shData.client?effectiveHours(_shData.client,_shCal.sel):null;
     const efTxt=ef?(ef.closed?` — <span style="color:#b00020">Closed${ef.reason?' ('+_esc(ef.reason)+')':''}</span>`:(ef.open?` — open ${ef.open}–${ef.close}${ef.special?' <span style="color:#8a6d00">(special hours)</span>':''}`:'')):'';
-    detail=`<div style="margin-top:14px"><div style="font-family:Arial;font-size:13px;font-weight:600;margin-bottom:8px">${new Date(_shCal.sel+'T12:00:00').toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'})}${efTxt}</div>${list.length?list.map(shShiftCard).join(''):'<p style="font-family:Arial;font-size:12.5px;color:var(--muted)">No shifts this day.</p>'}</div>`;
+    detail=`<div id="shift-day-detail" style="margin-top:14px;background:#fffdf5;border:2px solid var(--gold);border-radius:10px;padding:14px 16px"><div style="font-family:Arial;font-size:14px;font-weight:700;margin-bottom:10px">${new Date(_shCal.sel+'T12:00:00').toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'})}${efTxt}</div>${list.length?list.map(shShiftCard).join(''):'<p style="font-family:Arial;font-size:12.5px;color:var(--muted)">No shifts on this day yet.</p>'}${_shData.canManage&&!(ef&&ef.closed)?`<button class="btn-sm" style="margin-top:6px" onclick="shBuildDay('${_shCal.sel}')">+ Add the daily team for this day</button>`:''}</div>`;
   }
-  el.innerHTML=bar+`<div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px">${grid}</div>`+detail;
+  el.innerHTML=bar+fixBar+`<div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px">${grid}</div>`+detail;
+  if(_shCal.sel){const dd=document.getElementById('shift-day-detail');if(dd)setTimeout(()=>dd.scrollIntoView({behavior:'smooth',block:'center'}),50);}
 }
 async function loadShifts(clientId,targetId,canManage){
   _shClientId=clientId;
@@ -11478,7 +11481,7 @@ async function loadShifts(clientId,targetId,canManage){
 function shTemplate(){
   let t=_shData&&_shData.client&&_shData.client.shift_template;
   if(typeof t==='string'){try{t=JSON.parse(t);}catch(e){t=null;}}
-  return Array.isArray(t)&&t.length?t:[{name:'Chef',n:2},{name:'Admin',n:1},{name:'Waiter',n:1}];
+  return Array.isArray(t)&&t.length?t:[{name:'Chef',n:2},{name:'Admin',n:1},{name:'Waiter',n:1},{name:'Bartender',n:1}];
 }
 function shInitTools(){
   const rows=document.getElementById('tpl-rows');if(!rows)return;
@@ -11537,6 +11540,11 @@ async function shBuildRota(){
   fb.innerHTML=`<div class="success-msg">✓ Created ${rows.length} shifts across ${days} days.</div>`;
   loadShifts(_shClientId,_shData.targetId,true);
 }
+function shBuildDay(ds){
+  const f=document.getElementById('bld-from'),t=document.getElementById('bld-to');
+  if(!f||!t){alert('Open the Rota builder above to add shifts.');return;}
+  f.value=ds;t.value=ds;document.getElementById('bld-replace').checked=false;shBuildRota();
+}
 function shBulkFiltered(){
   const f=(document.getElementById('be-from')||{}).value,t=(document.getElementById('be-to')||{}).value,r=(document.getElementById('be-role')||{}).value;
   return (_shData?_shData.shifts:[]).filter(s=>(!f||s.shift_date>=f)&&(!t||s.shift_date<=t)&&(!r||(s.shift_name||'Shift')===r));
@@ -11569,8 +11577,11 @@ async function shBulkApply(){
   ['be-start','be-end','be-slots','be-name'].forEach(i=>document.getElementById(i).value='');
   loadShifts(_shClientId,_shData.targetId,true);
 }
-async function shBulkMatchHours(){
-  const list=shBulkFiltered();const fb=document.getElementById('be-fb');
+function shMismatched(list){
+  return list.filter(s=>{const e=effectiveHours(_shData.client,s.shift_date);return !e.closed&&e.open&&e.close&&(String(s.start_time||'').slice(0,5)!==e.open||String(s.end_time||'').slice(0,5)!==e.close);});
+}
+async function shBulkMatchHours(listOverride){
+  const list=Array.isArray(listOverride)?listOverride:shBulkFiltered();const fb=document.getElementById('be-fb')||document.getElementById('bld-fb')||{};
   if(!list.length){fb.innerHTML='<div class="error-msg">No shifts match.</div>';return;}
   const groups={};let skipped=0;
   list.forEach(s=>{const e=effectiveHours(_shData.client,s.shift_date);if(e.closed||!e.open||!e.close){skipped++;return;}
