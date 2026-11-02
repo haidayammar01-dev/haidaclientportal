@@ -779,20 +779,20 @@ self.addEventListener('notificationclick',function(e){
     <!-- ROTA CALENDAR -->
     <div style="background:white;border:1px solid var(--border);border-radius:12px;padding:24px;margin-bottom:16px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-        <div style="font-family:Arial;font-size:11px;text-transform:uppercase;color:var(--muted)">📅 Team Rota</div>
+        <div style="font-family:Arial;font-size:11px;text-transform:uppercase;color:var(--muted)">📅 My Rota</div>
         <div style="display:flex;gap:6px;align-items:center">
           <button class="btn-sm" onclick="spRotaShiftMonth(-1)">‹</button>
           <span id="sp-rota-month-label" style="font-family:Arial;font-size:12px;color:var(--ink);min-width:110px;text-align:center;display:inline-block"></span>
           <button class="btn-sm" onclick="spRotaShiftMonth(1)">›</button>
         </div>
       </div>
-      <div style="font-family:Arial;font-size:11.5px;color:var(--muted);margin-bottom:10px">Everyone's shifts at a glance — yours are highlighted gold.</div>
+      <div style="font-family:Arial;font-size:11.5px;color:var(--muted);margin-bottom:10px">The days you are working are highlighted gold.</div>
       <div id="sp-rota-calendar" style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px"></div>
     </div>
 
     <!-- SHIFTS -->
     <div style="background:white;border:1px solid var(--border);border-radius:12px;padding:24px;margin-bottom:16px">
-      <div style="font-family:Arial;font-size:11px;text-transform:uppercase;color:var(--muted);margin-bottom:10px">📆 Available Shifts</div>
+      <div style="font-family:Arial;font-size:11px;text-transform:uppercase;color:var(--muted);margin-bottom:10px">📆 My Shifts</div>
       <div id="sp-shifts-list"></div>
     </div>
 
@@ -6241,7 +6241,7 @@ async function loadSpAttendance(){
   const btn=document.getElementById('sp-clock-btn');
   if(openToday){
     _spOpenAttendanceId=openToday.id;
-    statusEl.innerHTML='<span style="color:var(--success);font-weight:600">✅ You are clocked in since '+new Date(openToday.clock_in).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})+'</span><br><span style="font-size:11.5px;color:var(--muted)">Only tap the button again when you are leaving.</span>';
+    statusEl.innerHTML='<span style="color:var(--success);font-weight:600">✅ You are clocked in since '+(openToday.work_date!==today?new Date(openToday.clock_in).toLocaleDateString('en-GB',{weekday:'long'})+' ':'')+new Date(openToday.clock_in).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})+'</span><br><span style="font-size:11.5px;color:var(--muted)">Only tap the button again when you are leaving.</span>';
     btn.textContent='Clock Out';btn.style.background='var(--danger)';
   } else {
     _spOpenAttendanceId=null;
@@ -6280,19 +6280,14 @@ function effectiveHours(client,ds){
 }
 function computeLateness(openingTime,graceMinutes){
   if(!openingTime)return{isLate:false,lateMinutes:0};
-  const now=new Date();
   const [h,m]=openingTime.split(':').map(Number);
-  const openToday=new Date(now.getFullYear(),now.getMonth(),now.getDate(),h,m,0);
-  const graceMs=(graceMinutes||0)*60000;
-  const diffMin=Math.round((now-openToday-graceMs)/60000);
+  const diffMin=lagosNow().minutes-(h*60+m)-(graceMinutes||0);
   return diffMin>0?{isLate:true,lateMinutes:diffMin}:{isLate:false,lateMinutes:0};
 }
 function computeEarlyLeave(closingTime){
   if(!closingTime)return{isEarly:false,earlyMinutes:0};
-  const now=new Date();
   const [h,m]=closingTime.split(':').map(Number);
-  const closeToday=new Date(now.getFullYear(),now.getMonth(),now.getDate(),h,m,0);
-  const diffMin=Math.round((closeToday-now)/60000);
+  const diffMin=(h*60+m)-lagosNow().minutes;
   return diffMin>0?{isEarly:true,earlyMinutes:diffMin}:{isEarly:false,earlyMinutes:0};
 }
 // ══ FACE MATCHING (in-browser, free — no photo ever leaves the device for this) ══
@@ -6650,20 +6645,27 @@ async function submitLeaveRequest(){
 // ══ STAFF SHIFTS (view available + claim) ══
 let _spRotaMonth=new Date();
 async function loadSpShifts(){
-  const {data:shiftRows}=await db.from('shifts').select('*').eq('client_id',_spClientId).order('shift_date',{ascending:true});
-  const shiftsList=shiftRows||[];
-  const {data:assignRows}=await db.from('shift_assignments').select('*').in('shift_id',shiftsList.map(s=>s.id).length?shiftsList.map(s=>s.id):['00000000-0000-0000-0000-000000000000']);
-  const assigns=assignRows||[];
   const el=document.getElementById('sp-shifts-list');
-  if(!shiftsList.length){el.innerHTML='<p style="font-family:Arial;font-size:12px;color:var(--muted)">No shifts posted yet.</p>';return;}
-  el.innerHTML=shiftsList.map(s=>{
-    const taken=assigns.filter(a=>a.shift_id===s.id);
-    const mine=taken.some(a=>a.staff_id===_spStaffId);
-    const full=taken.length>=(s.slots||1);
-    return`<div style="display:flex;justify-content:space-between;align-items:center;border:1px solid var(--border);border-radius:9px;padding:10px 14px;margin-bottom:8px;${mine?'background:var(--gold-light)':''}">
-      <div><strong style="font-family:Arial;font-size:13px">${s.shift_name||'Shift'}</strong> · ${s.shift_date||''}<br>
-      <span style="font-family:Arial;font-size:12px;color:var(--muted)">${s.start_time||''}–${s.end_time||''} · ${taken.length}/${s.slots||1} filled</span></div>
-      ${mine?`<div style="display:flex;gap:6px;align-items:center"><span class="badge badge-green">You're on this</span><button class="btn-sm" onclick="openRequestSwapModal('${s.id}','${(s.shift_name||'Shift').replace(/'/g,"\\'")} · ${s.shift_date||''}')">Request Swap</button></div>`:(full?'<span class="badge badge-gray">Full</span>':`<button class="btn-sm" onclick="claimShift('${s.id}')">Take Shift</button>`)}
+  const today=localDateStr();
+  const {data:shiftRows}=await db.from('shifts').select('*').eq('client_id',_spClientId).gte('shift_date',today).order('shift_date',{ascending:true});
+  const shiftsList=shiftRows||[];
+  const ids=shiftsList.map(s=>s.id);
+  const {data:assignRows}=await db.from('shift_assignments').select('*,client_staff(name)').in('shift_id',ids.length?ids:['00000000-0000-0000-0000-000000000000']);
+  const assigns=assignRows||[];
+  const mineShifts=shiftsList.filter(s=>assigns.some(a=>a.shift_id===s.id&&a.staff_id===_spStaffId));
+  if(!mineShifts.length){el.innerHTML='<p style="font-family:Arial;font-size:13px;color:var(--muted)">You have no upcoming shifts. Your manager will assign you.</p>';return;}
+  const dayName=ds=>ds===today?'Today':new Date(ds+'T12:00:00').toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'short'});
+  el.innerHTML=mineShifts.map(s=>{
+    const sameDay=shiftsList.filter(x=>x.shift_date===s.shift_date);
+    const mates=[];
+    sameDay.forEach(x=>assigns.filter(a=>a.shift_id===x.id&&a.staff_id!==_spStaffId).forEach(a=>{const nm=(a.client_staff&&a.client_staff.name)||'—';if(!mates.some(m=>m.nm===nm))mates.push({nm,role:x.shift_name||''});}));
+    return`<div style="border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:10px;${s.shift_date===today?'background:var(--gold-light);border-color:var(--gold)':''}">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex-wrap:wrap">
+        <div><strong style="font-family:Arial;font-size:14px">${dayName(s.shift_date)}</strong><br>
+        <span style="font-family:Arial;font-size:13px;color:var(--ink2)">${_esc(s.shift_name||'Shift')} · ${String(s.start_time||'').slice(0,5)}–${String(s.end_time||'').slice(0,5)}</span></div>
+        <button class="btn-sm" onclick="openRequestSwapModal('${s.id}','${(s.shift_name||'Shift').replace(/'/g,"\\'")} · ${s.shift_date||''}')">Request Swap</button>
+      </div>
+      <div style="font-family:Arial;font-size:12px;color:var(--muted);margin-top:8px"><strong style="color:var(--ink2)">Working with you:</strong> ${mates.length?mates.map(m=>_esc(m.nm)+(m.role?' <span style="color:var(--muted)">('+_esc(m.role)+')</span>':'')).join(', '):'no one else is assigned yet'}</div>
     </div>`;
   }).join('');
 }
@@ -6689,12 +6691,12 @@ async function loadSpRotaCalendar(){
   let html=dow.map(d=>`<div style="font-family:Arial;font-size:10px;color:var(--muted);text-align:center;font-weight:600">${d}</div>`).join('');
   for(let i=0;i<firstDay.getDay();i++)html+='<div></div>';
   for(let d=1;d<=lastDay.getDate();d++){
-    const dateStr=new Date(y,m,d).toISOString().slice(0,10);
+    const dateStr=localDateStr(new Date(y,m,d));
     const dayShifts=byDate[dateStr]||[];
-    const cells=dayShifts.map(s=>{
+    const cells=dayShifts.filter(s=>assigns.some(a=>a.shift_id===s.id&&a.staff_id===_spStaffId)).map(s=>{
       const names=assigns.filter(a=>a.shift_id===s.id).map(a=>(a.client_staff&&a.client_staff.name)||'—');
       const mine=assigns.some(a=>a.shift_id===s.id&&a.staff_id===_spStaffId);
-      return `<div title="${s.shift_name||'Shift'} ${s.start_time||''}-${s.end_time||''}: ${names.join(', ')||'Open'}" style="font-size:8.5px;background:${mine?'#C9A24B':'#E7E0D2'};color:${mine?'#1B2A4A':'#5E4F46'};border-radius:3px;padding:1px 3px;margin-top:2px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">${names.length?names.join(', '):'Open'}</div>`;
+      return `<div title="${s.shift_name||'Shift'} ${s.start_time||''}-${s.end_time||''}" style="font-size:8.5px;background:#C9A24B;color:#1B2A4A;border-radius:3px;padding:1px 3px;margin-top:2px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">${String(s.start_time||'').slice(0,5)} ${_esc(s.shift_name||'')}</div>`;
     }).join('');
     html+=`<div style="min-height:56px;border:1px solid var(--border);border-radius:6px;padding:3px;font-family:Arial">
       <div style="font-size:10px;color:var(--muted)">${d}</div>${cells}
@@ -8931,8 +8933,22 @@ function tierBadgeHtml(tier){
 // Local calendar date (not UTC) — Nigeria is UTC+1, so toISOString() can
 // land on the wrong day right around local midnight. Always use this for
 // "today" in attendance, not new Date().toISOString().slice(0,10).
+// ── Everything in this portal runs on Nigerian time (Africa/Lagos, UTC+1), whatever the phone/computer clock says ──
+const APP_TZ='Africa/Lagos';
+(function(){
+  ['toLocaleTimeString','toLocaleDateString','toLocaleString'].forEach(fn=>{
+    const orig=Date.prototype[fn];
+    Date.prototype[fn]=function(loc,opts){
+      opts=Object.assign({},opts||{});
+      if(!opts.timeZone)opts.timeZone=APP_TZ;
+      return orig.call(this,loc,opts);
+    };
+  });
+})();
+const _lagosDtf=new Intl.DateTimeFormat('en-CA',{timeZone:APP_TZ,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'});
+function lagosNow(){const o={};_lagosDtf.formatToParts(new Date()).forEach(p=>{o[p.type]=p.value;});return {date:o.year+'-'+o.month+'-'+o.day,minutes:(parseInt(o.hour)%24)*60+parseInt(o.minute)};}
 function localDateStr(d){
-  d=d||new Date();
+  if(!d)return lagosNow().date;
   const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');
   return `${y}-${m}-${day}`;
 }
@@ -9218,7 +9234,7 @@ async function loadDashboard(){
     </div>`;
   };
 
-  const hour=new Date().getHours();
+  const hour=Math.floor(lagosNow().minutes/60);
   const greeting=hour<12?'Good morning':hour<17?'Good afternoon':'Good evening';
   const totalUrgent2=overdueTrainings.length+overdueBills.length+auOverdue.length;
   const kpi=(icon,val,label,tone)=>`
@@ -11341,17 +11357,41 @@ async function loadAttendance(clientId,targetId){
   const {data}=await db.from('staff_attendance').select('*,client_staff(name)').eq('client_id',clientId).order('work_date',{ascending:false}).limit(60);
   const rows=data||[];const el=document.getElementById(targetId);if(!el)return;
   if(!rows.length){el.innerHTML='<p style="font-family:Arial;font-size:13px;color:var(--muted)">No attendance logged yet.</p>';return;}
-  el.innerHTML=`<table class="data-table"><thead><tr><th>Staff</th><th>Date</th><th>Clock In</th><th>Clock Out</th><th>Hours</th></tr></thead><tbody>`+
+  const isClient=currentUser&&currentUser.role==='client';
+  const todayS=localDateStr();
+  el.innerHTML=`<div style="overflow-x:auto"><table class="data-table"><thead><tr><th>Staff</th><th>Date</th><th>Clock In</th><th>Clock Out</th><th>Hours</th><th>Status</th></tr></thead><tbody>`+
     rows.map(r=>{
       const hrs=(r.clock_in&&r.clock_out)?((new Date(r.clock_out)-new Date(r.clock_in))/3600000).toFixed(1):'—';
+      let st='<span style="color:var(--muted);font-size:12px">Done</span>';
+      if(r.clock_in&&!r.clock_out){
+        const el2=(Date.now()-new Date(r.clock_in).getTime())/3600000;
+        st=(r.work_date===todayS&&el2<16)?'<span class="badge badge-green">🟢 Working now</span>':`<span class="badge badge-red">⚠ Never clocked out</span>${isClient?'':` <button class="btn-sm" onclick="adminCloseAttendance('${r.id}','${clientId}','${targetId}')">Clock out</button>`}`;
+        if(r.work_date===todayS&&el2<16&&!isClient)st+=` <button class="btn-sm" onclick="adminCloseAttendance('${r.id}','${clientId}','${targetId}')">Clock out</button>`;
+      }
       return`<tr>
         <td style="font-family:Arial;font-size:13px">${(r.client_staff&&r.client_staff.name)||'—'}</td>
         <td style="font-family:Arial;font-size:12px;color:var(--muted)">${r.work_date}</td>
         <td style="font-family:Arial;font-size:12px">${r.clock_in?new Date(r.clock_in).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}):'—'}</td>
         <td style="font-family:Arial;font-size:12px">${r.clock_out?new Date(r.clock_out).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}):'—'}</td>
         <td style="font-family:Arial;font-size:12px">${hrs}</td>
+        <td>${st}</td>
       </tr>`;
-    }).join('')+`</tbody></table>`;
+    }).join('')+`</tbody></table></div>`;
+}
+async function adminCloseAttendance(id,clientId,targetId){
+  const {data:rec}=await db.from('staff_attendance').select('*').eq('id',id).maybeSingle();
+  if(!rec)return;
+  let when=new Date();
+  if(rec.work_date<localDateStr()){
+    const {data:c}=await db.from('clients').select('*').eq('id',clientId).maybeSingle();
+    const e=effectiveHours(c,rec.work_date);
+    if(e&&e.close){const t=new Date(rec.work_date+'T'+e.close+':00+01:00');if(t>new Date(rec.clock_in))when=t;}
+  }
+  const label=when.toLocaleString('en-GB',{weekday:'short',hour:'2-digit',minute:'2-digit'});
+  if(!confirm('Clock this person out at '+label+'?'))return;
+  const {error}=await db.from('staff_attendance').update({clock_out:when.toISOString()}).eq('id',id);
+  if(error){alert('Could not update: '+error.message);return;}
+  loadAttendance(clientId,targetId);
 }
 
 // ══ LEAVE REQUESTS (shared) ══
@@ -11390,7 +11430,8 @@ async function decideLeave(id,status,targetId,clientId){
 
 // ══ SHIFTS (shared) ══
 let _shClientId=null;
-let _shData=null,_shCal={clientId:null,month:new Date(),view:'calendar',sel:null};
+let _shData=null,_shCal={clientId:null,month:new Date(),view:'calendar',sel:null,person:''};
+function shSetPerson(v){_shCal.person=v;renderShifts();}
 function shShiftCard(s){
   const {clientId,targetId,canManage,assigns,staffOptions}=_shData;
   const taken=assigns.filter(a=>a.shift_id===s.id);
@@ -11421,14 +11462,21 @@ function renderShifts(){
   const tabBtn=(v,l)=>`<button class="btn-sm" onclick="shSetView('${v}')" style="${_shCal.view===v?'font-weight:700;background:var(--gold-light);border-color:var(--gold)':''}">${l}</button>`;
   const y=_shCal.month.getFullYear(),m=_shCal.month.getMonth();
   const bar=`<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px">
-    <div style="display:flex;gap:6px">${tabBtn('calendar','📅 Calendar')}${tabBtn('list','☰ List')}</div>
+    <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">${tabBtn('calendar','📅 Calendar')}${tabBtn('list','☰ List')}<select onchange="shSetPerson(this.value)" style="padding:6px 8px;border:1px solid var(--border);border-radius:9px;font-size:12px"><option value="">👤 Everyone</option>${(_shData.staffList||[]).map(x=>`<option value="${x.id}" ${x.id===_shCal.person?'selected':''}>${_esc(x.name)}</option>`).join('')}</select></div>
     ${_shCal.view==='calendar'?`<div style="display:flex;align-items:center;gap:6px"><button class="btn-sm" onclick="shMove(-1)">‹</button><strong style="font-family:Arial;font-size:14px;min-width:130px;text-align:center">${new Date(y,m,1).toLocaleString('default',{month:'long',year:'numeric'})}</strong><button class="btn-sm" onclick="shMove(1)">›</button><button class="btn-sm" onclick="shToday()">Today</button></div>`:''}
   </div>`;
-  if(_shCal.view==='list'){el.innerHTML=bar+shifts.map(shShiftCard).join('');return;}
+  if(_shCal.view==='list'){el.innerHTML=bar+shifts.filter(s2=>!_shCal.person||assigns.some(a=>a.shift_id===s2.id&&a.staff_id===_shCal.person)).map(shShiftCard).join('');return;}
   const byDate={};shifts.forEach(s=>{(byDate[s.shift_date]=byDate[s.shift_date]||[]).push(s);});
   const first=new Date(y,m,1),days=new Date(y,m+1,0).getDate(),lead=(first.getDay()+6)%7,today=localDateStr();
   const _mm=_shData.client?shMismatched(shifts):[];
   const fixBar=(_shData.canManage&&_mm.length)?`<div style="background:#fdecea;border:1px solid #f5c2c0;border-radius:9px;padding:10px 14px;margin-bottom:12px;font-family:Arial;font-size:12.5px;display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap"><span>⚠ <strong>${_mm.length} shifts</strong> have start/end times that don't match the client's opening hours (the red ⚠ days).</span><button class="btn-sm" onclick="shBulkMatchHours(shMismatched(_shData.shifts))">✨ Fix all times</button></div>`:'';
+  let personBox='';
+  if(_shCal.person){
+    const per=(_shData.staffList||[]).find(x=>x.id===_shCal.person);
+    const mine=assigns.filter(a=>a.staff_id===_shCal.person).map(a=>({a,s:shifts.find(x=>x.id===a.shift_id)})).filter(x=>x.s).sort((x,y)=>(x.s.shift_date+x.s.start_time).localeCompare(y.s.shift_date+y.s.start_time));
+    const tdy=localDateStr();const up=mine.filter(x=>x.s.shift_date>=tdy);
+    personBox=`<div style="background:#eef3ff;border:1px solid #c9d6f5;border-radius:9px;padding:12px 14px;margin-bottom:12px;font-family:Arial;font-size:12.5px"><div style="font-weight:700;margin-bottom:6px">${_esc(per?per.name:'')} — ${up.length} upcoming shift${up.length===1?'':'s'}</div>${up.length?up.map(x=>`<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:4px 0;border-top:1px solid #dbe4fa"><span>${new Date(x.s.shift_date+'T12:00:00').toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'})} · <strong>${_esc(x.s.shift_name||'Shift')}</strong> · ${String(x.s.start_time||'').slice(0,5)}–${String(x.s.end_time||'').slice(0,5)}</span>${_shData.canManage?`<button class="btn-sm" style="color:var(--danger)" onclick="unassignShift('${x.a.id}','${targetId}','${_shData.clientId}')">✕ Remove from shift</button>`:''}</div>`).join(''):'<div style="color:var(--muted)">Not assigned to any upcoming shift.</div>'}</div>`;
+  }
   let grid=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(d=>`<div style="font-family:Arial;font-size:10.5px;font-weight:600;color:var(--muted);text-align:center;padding:4px 0">${d}</div>`).join('');
   for(let i=0;i<lead;i++)grid+='<div></div>';
   for(let d=1;d<=days;d++){
@@ -11437,10 +11485,10 @@ function renderShifts(){
     const eff=_shData.client?effectiveHours(_shData.client,ds):null;
     const hh=t=>{t=String(t||'').slice(0,5);return t.endsWith(':00')?String(parseInt(t)):t;};
     const groups={};
-    list.forEach(s2=>{const k=(s2.shift_name||'Shift');const g=groups[k]=groups[k]||{slots:0,filled:0,names:[]};g.slots+=(s2.slots||1);const nm=assigns.filter(a=>a.shift_id===s2.id).map(a=>((a.client_staff&&a.client_staff.name)||'—').split(' ')[0]);g.filled+=nm.length;g.names=g.names.concat(nm);});
+    list.filter(s2=>!_shCal.person||assigns.some(a=>a.shift_id===s2.id&&a.staff_id===_shCal.person)).forEach(s2=>{const k=(s2.shift_name||'Shift');const g=groups[k]=groups[k]||{slots:0,filled:0,names:[]};g.slots+=(s2.slots||1);const nm=assigns.filter(a=>a.shift_id===s2.id).map(a=>((a.client_staff&&a.client_staff.name)||'—').split(' ')[0]);g.filled+=nm.length;g.names=g.names.concat(nm);});
     const keys=Object.keys(groups);
     const chips=keys.slice(0,5).map(k=>{const g=groups[k];const ok=g.filled>=g.slots;
-      return `<div title="${k}: ${g.names.join(', ')||'nobody assigned yet'}" style="font-family:Arial;font-size:9.5px;line-height:1.25;margin-top:2px;padding:2px 4px;border-radius:4px;background:${ok?'#DDEFE3':'#F6EAC8'};color:#28395e;overflow:hidden;white-space:nowrap;text-overflow:ellipsis"><strong>${k}</strong> ${g.filled}/${g.slots}</div>`;}).join('');
+      return `<div title="${k}: ${g.names.join(', ')||'nobody assigned yet'}" style="font-family:Arial;font-size:9.5px;line-height:1.25;margin-top:2px;padding:2px 4px;border-radius:4px;background:${ok?'#DDEFE3':'#F6EAC8'};color:#28395e;overflow:hidden;white-space:nowrap;text-overflow:ellipsis"><strong>${k}</strong> ${g.filled}/${g.slots}${g.names.length?' · '+g.names.join(', '):''}</div>`;}).join('');
     const more=keys.length>5?`<div style="font-family:Arial;font-size:9.5px;color:var(--muted);margin-top:2px">+${keys.length-5} more</div>`:'';
     const mism=eff&&!eff.closed&&eff.open&&list.some(s2=>String(s2.start_time||'').slice(0,5)!==eff.open||String(s2.end_time||'').slice(0,5)!==eff.close);
     const hoursTag=eff?(eff.closed?'<span style="color:#b00020;font-weight:600">Closed</span>':(eff.open?`<span title="${mism?'Shift times differ from opening hours — use Match opening hours':'Opening hours'}" style="color:${mism?'#b00020':(eff.special?'#8a6d00':'var(--muted)')};font-weight:${(mism||eff.special)?'700':'400'}">${hh(eff.open)}–${hh(eff.close)}${mism?' ⚠':''}</span>`:'')):'';
@@ -11454,7 +11502,7 @@ function renderShifts(){
     const efTxt=ef?(ef.closed?` — <span style="color:#b00020">Closed${ef.reason?' ('+_esc(ef.reason)+')':''}</span>`:(ef.open?` — open ${ef.open}–${ef.close}${ef.special?' <span style="color:#8a6d00">(special hours)</span>':''}`:'')):'';
     detail=`<div id="shift-day-detail" style="margin-top:14px;background:#fffdf5;border:2px solid var(--gold);border-radius:10px;padding:14px 16px"><div style="font-family:Arial;font-size:14px;font-weight:700;margin-bottom:10px">${new Date(_shCal.sel+'T12:00:00').toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'})}${efTxt}</div>${list.length?list.map(shShiftCard).join(''):'<p style="font-family:Arial;font-size:12.5px;color:var(--muted)">No shifts on this day yet.</p>'}${_shData.canManage&&!(ef&&ef.closed)?`<button class="btn-sm" style="margin-top:6px" onclick="shBuildDay('${_shCal.sel}')">+ Add the daily team for this day</button>`:''}</div>`;
   }
-  el.innerHTML=bar+fixBar+`<div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px">${grid}</div>`+detail;
+  el.innerHTML=bar+personBox+fixBar+`<div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px">${grid}</div>`+detail;
   if(_shCal.sel){const dd=document.getElementById('shift-day-detail');if(dd)setTimeout(()=>dd.scrollIntoView({behavior:'smooth',block:'center'}),50);}
 }
 async function loadShifts(clientId,targetId,canManage){
@@ -11472,7 +11520,7 @@ async function loadShifts(clientId,targetId,canManage){
     _shCal.month=next?new Date(next.shift_date+'T12:00:00'):new Date();
   }
   const {data:clRow}=await db.from('clients').select('*').eq('id',clientId).maybeSingle();
-  _shData={clientId,targetId,canManage,shifts,assigns:assignRows||[],staffOptions,client:clRow||null};
+  _shData={clientId,targetId,canManage,shifts,assigns:assignRows||[],staffOptions,client:clRow||null,staffList:staffRows||[]};
   renderShifts();
   if(canManage)shInitTools();
 }
