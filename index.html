@@ -1,4 +1,4 @@
-\<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -2429,6 +2429,11 @@ self.addEventListener('notificationclick',function(e){
             </div>
             <button class="btn-sm" style="margin-top:10px" onclick="saveWorkHours('cv')">Save Work Hours</button>
             <div style="border-top:1px solid var(--border);margin-top:14px;padding-top:12px">
+              <div style="font-family:Arial;font-size:11px;text-transform:uppercase;color:var(--muted);margin-bottom:8px">⏰ Special hours (different hours for certain days only — every other day uses the normal hours above)</div>
+              <div id="wh-special-cv" style="margin-bottom:8px"></div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-family:Arial;font-size:12px;color:var(--muted)">From <input type="date" id="wh-sfrom-cv" style="padding:6px 8px;border:1px solid var(--border);border-radius:9px;font-size:12px"> to <input type="date" id="wh-sto-cv" style="padding:6px 8px;border:1px solid var(--border);border-radius:9px;font-size:12px"> open <input type="time" id="wh-sopen-cv" style="padding:6px 8px;border:1px solid var(--border);border-radius:9px;font-size:12px"> close <input type="time" id="wh-sclose-cv" style="padding:6px 8px;border:1px solid var(--border);border-radius:9px;font-size:12px"><button class="btn-sm" onclick="addSpecialHours('cv')">+ Add special hours</button></div>
+            </div>
+            <div style="border-top:1px solid var(--border);margin-top:14px;padding-top:12px">
               <div style="font-family:Arial;font-size:11px;text-transform:uppercase;color:var(--muted);margin-bottom:8px">🔒 Closed days (rest &amp; reset — no clock-in, nobody marked absent)</div>
               <div id="wh-closed-cv" style="margin-bottom:8px"></div>
               <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><input type="date" id="wh-cdate-cv" style="padding:6px 8px;border:1px solid var(--border);border-radius:9px;font-family:Arial;font-size:12px"><input type="text" id="wh-creason-cv" placeholder="Reason (e.g. Rest &amp; reset day)" style="min-width:200px;padding:6px 8px;border:1px solid var(--border);border-radius:9px;font-family:Arial;font-size:12px"><button class="btn-sm" onclick="addClosedDay('cv')">+ Add closed day</button></div>
@@ -2444,7 +2449,27 @@ self.addEventListener('notificationclick',function(e){
           <div id="cv-handover-container"></div>
         </div>
         <div id="cv-shifts-panel" class="cv-tab-content" style="display:none">
-          <details class="setbox"><summary>📥 Rota tools — upload a rota or create a whole month</summary>
+          <details class="setbox" open><summary>🧩 Rota builder &amp; bulk edit — build, fix or delete many shifts at once</summary>
+          <div class="card" style="padding:16px 20px;margin-bottom:16px">
+            <div style="font-size:13px;font-weight:600;color:var(--ink);margin-bottom:4px">🧩 Build the rota — who is needed every day</div>
+            <div style="font-family:Arial;font-size:11.5px;color:var(--muted);margin-bottom:10px">Set the team needed each day. Shift times are taken from the client's opening hours automatically (including special hours and closed days), so they can't be wrong.</div>
+            <div id="tpl-rows" style="display:grid;grid-template-columns:1fr 90px;gap:6px 10px;max-width:420px;margin-bottom:10px;align-items:center"></div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-family:Arial;font-size:12px;color:var(--muted);margin-bottom:10px">From <input type="date" id="bld-from" style="padding:6px 8px;border:1px solid var(--border);border-radius:9px;font-size:12px"> to <input type="date" id="bld-to" style="padding:6px 8px;border:1px solid var(--border);border-radius:9px;font-size:12px"></div>
+            <label style="display:flex;gap:6px;align-items:center;font-family:Arial;font-size:12px;margin-bottom:10px"><input type="checkbox" id="bld-replace" style="width:auto"> Replace shifts already in these dates (otherwise existing ones are kept)</label>
+            <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn-save" onclick="shBuildRota()">Build rota</button><button class="btn-sm" onclick="shSaveTemplate()">Save team as default</button></div>
+            <div id="bld-fb" style="margin-top:8px"></div>
+          </div>
+          <div class="card" style="padding:16px 20px;margin-bottom:16px">
+            <div style="font-size:13px;font-weight:600;color:var(--ink);margin-bottom:4px">✏️ Edit or delete many shifts</div>
+            <div style="font-family:Arial;font-size:11.5px;color:var(--muted);margin-bottom:10px">Pick which shifts, then change them all together — or delete them.</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-family:Arial;font-size:12px;color:var(--muted);margin-bottom:8px">Shifts from <input type="date" id="be-from" onchange="shBulkCount()" style="padding:6px 8px;border:1px solid var(--border);border-radius:9px;font-size:12px"> to <input type="date" id="be-to" onchange="shBulkCount()" style="padding:6px 8px;border:1px solid var(--border);border-radius:9px;font-size:12px"> role <select id="be-role" onchange="shBulkCount()" style="padding:6px 8px;border:1px solid var(--border);border-radius:9px;font-size:12px"></select></div>
+            <div id="be-count" style="font-family:Arial;font-size:12.5px;font-weight:600;margin-bottom:10px"></div>
+            <div style="font-family:Arial;font-size:12px;color:var(--muted);margin-bottom:6px">Change to (leave blank to keep as is):</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px"><input type="time" id="be-start" style="padding:6px 8px;border:1px solid var(--border);border-radius:9px;font-size:12px"><input type="time" id="be-end" style="padding:6px 8px;border:1px solid var(--border);border-radius:9px;font-size:12px"><input type="number" id="be-slots" placeholder="People needed" min="1" style="width:130px;padding:6px 8px;border:1px solid var(--border);border-radius:9px;font-size:12px"><input type="text" id="be-name" placeholder="New role name" style="width:150px;padding:6px 8px;border:1px solid var(--border);border-radius:9px;font-size:12px"></div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn-save" onclick="shBulkApply()">Apply changes</button><button class="btn-sm" onclick="shBulkMatchHours()">✨ Match opening hours</button><button class="btn-danger" onclick="shBulkDelete()">🗑 Delete these shifts</button></div>
+            <div id="be-fb" style="margin-top:8px"></div>
+          </div>
+          <details class="setbox" style="margin-bottom:12px"><summary>📥 Older tools — upload a rota file / simple monthly create</summary>
           <div class="card" style="padding:16px 20px;margin-bottom:16px">
             <div style="font-size:13px;font-weight:600;color:var(--ink);margin-bottom:4px">📥 Upload a Rota (Excel / CSV)</div>
             <div style="font-family:Arial;font-size:11.5px;color:var(--muted);margin-bottom:10px">Drop in a spreadsheet with columns <strong>Date, Staff, Shift, Start, End</strong> (one row per person per day). It creates the shifts, assigns the people, and staff see it straight away in their shifts list and team rota calendar. You get a preview before anything is saved.</div>
@@ -2477,7 +2502,7 @@ self.addEventListener('notificationclick',function(e){
             <div><button class="btn-save" onclick="bulkCreateShifts()">📅 Create Shifts For The Month</button></div>
             <div id="bsh-feedback" style="margin-top:8px"></div>
           </div>
-          </details>
+          </details></details>
           <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
             <input type="text" id="sh-name" placeholder="Shift name" style="width:140px;padding:7px 10px;border:1px solid var(--border);border-radius:9px;font-family:Arial;font-size:12px">
             <input type="date" id="sh-date" style="padding:7px 10px;border:1px solid var(--border);border-radius:9px;font-family:Arial;font-size:12px">
@@ -6237,12 +6262,15 @@ async function loadSpAttendance(){
 // ── Work hours: weekday / weekend hours, a start date, and closed days ──
 function whIsWeekend(ds){const d=new Date(ds+'T12:00:00').getDay();return d===0||d===6;}
 function whClosures(client){let c=client&&client.closed_dates;if(typeof c==='string'){try{c=JSON.parse(c);}catch(e){c=[];}}return Array.isArray(c)?c:[];}
+function whOverrides(client){let c=client&&client.hours_overrides;if(typeof c==='string'){try{c=JSON.parse(c);}catch(e){c=[];}}return Array.isArray(c)?c:[];}
 function effectiveHours(client,ds){
   ds=ds||localDateStr();
   const out={open:null,close:null,closed:false,reason:'',notStarted:false};
   if(!client)return out;
   const cl=whClosures(client).find(x=>x.date===ds);
   if(cl){out.closed=true;out.reason=cl.reason||'';return out;}
+  const ov=whOverrides(client).find(x=>x.from&&ds>=x.from&&ds<=(x.to||x.from));
+  if(ov){out.open=ov.open?String(ov.open).slice(0,5):null;out.close=ov.close?String(ov.close).slice(0,5):null;out.special=true;out.reason=ov.reason||'';return out;}
   if(client.work_hours_start&&ds<String(client.work_hours_start).slice(0,10)){out.notStarted=true;return out;}
   const wk=whIsWeekend(ds);
   const o=(wk&&client.weekend_opening_time)?client.weekend_opening_time:client.opening_time;
@@ -6650,7 +6678,7 @@ async function loadSpRotaCalendar(){
   const y=_spRotaMonth.getFullYear(),m=_spRotaMonth.getMonth();
   label.textContent=_spRotaMonth.toLocaleString('default',{month:'long',year:'numeric'});
   const firstDay=new Date(y,m,1),lastDay=new Date(y,m+1,0);
-  const startStr=firstDay.toISOString().slice(0,10),endStr=lastDay.toISOString().slice(0,10);
+  const startStr=localDateStr(firstDay),endStr=localDateStr(lastDay);
   const {data:shiftRows}=await db.from('shifts').select('*').eq('client_id',_spClientId).gte('shift_date',startStr).lte('shift_date',endStr);
   const shiftsList=shiftRows||[];
   const {data:assignRows}=await db.from('shift_assignments').select('*,client_staff(name)').in('shift_id',shiftsList.map(s=>s.id).length?shiftsList.map(s=>s.id):['00000000-0000-0000-0000-000000000000']);
@@ -8939,9 +8967,33 @@ async function loadGeofenceStatus(clientId,scope){
   }
 }
 function renderClosedDays(scope,client){
+  renderSpecialHours(scope,client);
   const el=document.getElementById('wh-closed-'+scope);if(!el)return;
   const list=whClosures(client).slice().sort((a,b)=>a.date.localeCompare(b.date));
   el.innerHTML=list.length?list.map(x=>`<span style="display:inline-flex;align-items:center;gap:6px;background:white;border:1px solid var(--border);border-radius:10px;padding:3px 6px 3px 10px;margin:2px 6px 2px 0;font-family:Arial;font-size:12px">${new Date(x.date+'T12:00:00').toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short',year:'numeric'})}${x.reason?' · '+_esc(x.reason):''} <button onclick="removeClosedDay('${scope}','${x.date}')" style="border:none;background:none;color:var(--danger);cursor:pointer;font-size:14px">×</button></span>`).join(''):'<span style="font-family:Arial;font-size:12px;color:var(--muted)">No closed days set.</span>';
+}
+function renderSpecialHours(scope,client){
+  const el=document.getElementById('wh-special-'+scope);if(!el)return;
+  const list=whOverrides(client);
+  const f=d=>new Date(d+'T12:00:00').toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'});
+  el.innerHTML=list.length?list.map((x,i)=>`<span style="display:inline-flex;align-items:center;gap:6px;background:white;border:1px solid var(--border);border-radius:10px;padding:3px 6px 3px 10px;margin:2px 6px 2px 0;font-family:Arial;font-size:12px">${f(x.from)}${x.to&&x.to!==x.from?' → '+f(x.to):''}: <strong>${x.open}–${x.close}</strong> <button onclick="removeSpecialHours('${scope}',${i})" style="border:none;background:none;color:var(--danger);cursor:pointer;font-size:14px">×</button></span>`).join(''):'<span style="font-family:Arial;font-size:12px;color:var(--muted)">None — every day uses the normal hours.</span>';
+}
+async function _saveSpecial(scope,list){
+  const {error}=await db.from('clients').update({hours_overrides:list}).eq('id',_whClientId(scope));
+  if(error){alert('Could not save — run shift_builder_migration.sql in Supabase first.\n\n'+error.message);return false;}
+  renderSpecialHours(scope,{hours_overrides:list});return true;
+}
+async function addSpecialHours(scope){
+  const g=i=>(document.getElementById(i+'-'+scope)||{}).value;
+  const from=g('wh-sfrom'),to=g('wh-sto')||from,open=g('wh-sopen'),close=g('wh-sclose');
+  if(!from||!open||!close){alert('Pick the first date, and the opening and closing time.');return;}
+  const {data:c}=await db.from('clients').select('*').eq('id',_whClientId(scope)).single();
+  const list=whOverrides(c).concat([{from,to,open,close}]);
+  if(await _saveSpecial(scope,list)){['wh-sfrom','wh-sto','wh-sopen','wh-sclose'].forEach(i=>{const e=document.getElementById(i+'-'+scope);if(e)e.value='';});}
+}
+async function removeSpecialHours(scope,idx){
+  const {data:c}=await db.from('clients').select('*').eq('id',_whClientId(scope)).single();
+  const list=whOverrides(c);list.splice(idx,1);await _saveSpecial(scope,list);
 }
 function _whClientId(scope){return scope==='cv'?_currentViewClientId:currentUser.clientId;}
 async function saveWorkHours(scope){
@@ -11343,12 +11395,12 @@ function shShiftCard(s){
   const {clientId,targetId,canManage,assigns,staffOptions}=_shData;
   const taken=assigns.filter(a=>a.shift_id===s.id);
   const full=taken.length>=(s.slots||1);
-  const namesHtml=taken.length?taken.map(a=>`<span style="display:inline-flex;align-items:center;gap:4px;background:white;border:1px solid var(--border);border-radius:10px;padding:2px 8px 2px 10px;margin:2px 4px 2px 0;font-family:Arial;font-size:11px">${(a.client_staff&&a.client_staff.name)||'—'}${canManage?` <button onclick="unassignShift('${a.id}','${targetId}','${clientId}')" style="border:none;background:none;color:var(--danger);cursor:pointer;font-size:12px;padding:0 2px">×</button>`:''}</span>`).join(''):'<span style="font-family:Arial;font-size:12px;color:var(--muted)">Unassigned</span>';
+  const namesHtml=taken.length?taken.map(a=>`<span style="display:inline-flex;align-items:center;gap:4px;background:white;border:1px solid var(--border);border-radius:10px;padding:2px 8px 2px 10px;margin:2px 4px 2px 0;font-family:Arial;font-size:11px">${(a.client_staff&&a.client_staff.name)||'—'}${canManage?` <button onclick="unassignShift('${a.id}','${targetId}','${clientId}')" style="border:none;background:none;color:var(--danger);cursor:pointer;font-size:12px;padding:0 2px">×</button>`:''}</span>`).join(''):'<span style="font-family:Arial;font-size:12px;color:var(--muted)">Nobody assigned yet</span>';
   return`<div style="border:1px solid var(--border);border-radius:9px;padding:12px 16px;margin-bottom:8px;background:white">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px">
       <div><strong style="font-family:Arial;font-size:13px">${s.shift_name||'Shift'}</strong> · ${s.shift_date||''}<br>
       <span style="font-family:Arial;font-size:12px;color:var(--muted)">${s.start_time||''}–${s.end_time||''} · ${taken.length}/${s.slots||1} filled</span></div>
-      <div style="display:flex;align-items:center;gap:8px"><span class="badge ${full?'badge-red':'badge-green'}">${full?'Full':'Open'}</span>${canManage?`<button class="btn-danger" onclick="deleteShift('${s.id}','${targetId}','${clientId}')">Del Shift</button>`:''}</div>
+      <div style="display:flex;align-items:center;gap:8px"><span class="badge ${full?'badge-green':'badge-gold'}">${full?'Full':'Needs '+((s.slots||1)-taken.length)+' more'}</span>${canManage?`<button class="btn-danger" onclick="deleteShift('${s.id}','${targetId}','${clientId}')">Del Shift</button>`:''}</div>
     </div>
     <div style="margin-top:8px">${namesHtml}</div>
     ${canManage?`<div style="margin-top:8px;display:flex;gap:6px;align-items:center">
@@ -11380,19 +11432,25 @@ function renderShifts(){
   for(let d=1;d<=days;d++){
     const ds=`${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
     const list=(byDate[ds]||[]).slice().sort((a,b)=>String(a.start_time||'').localeCompare(String(b.start_time||'')));
-    const chips=list.slice(0,3).map(s=>{
-      const names=assigns.filter(a=>a.shift_id===s.id).map(a=>((a.client_staff&&a.client_staff.name)||'—').split(' ')[0]);
-      const full=names.length>=(s.slots||1);
-      return `<div title="${(s.shift_name||'Shift')} ${s.start_time||''}-${s.end_time||''}: ${names.join(', ')||'Unassigned'}" style="font-family:Arial;font-size:9.5px;line-height:1.25;margin-top:2px;padding:2px 4px;border-radius:4px;background:${full?'#DDEFE3':'#F6EAC8'};color:#28395e;overflow:hidden;white-space:nowrap;text-overflow:ellipsis"><strong>${String(s.start_time||'').slice(0,5)}</strong> ${names.join(', ')||'Open'}</div>`;
-    }).join('');
-    const more=list.length>3?`<div style="font-family:Arial;font-size:9.5px;color:var(--muted);margin-top:2px">+${list.length-3} more</div>`:'';
+    const eff=_shData.client?effectiveHours(_shData.client,ds):null;
+    const hh=t=>{t=String(t||'').slice(0,5);return t.endsWith(':00')?String(parseInt(t)):t;};
+    const groups={};
+    list.forEach(s2=>{const k=(s2.shift_name||'Shift');const g=groups[k]=groups[k]||{slots:0,filled:0,names:[]};g.slots+=(s2.slots||1);const nm=assigns.filter(a=>a.shift_id===s2.id).map(a=>((a.client_staff&&a.client_staff.name)||'—').split(' ')[0]);g.filled+=nm.length;g.names=g.names.concat(nm);});
+    const keys=Object.keys(groups);
+    const chips=keys.slice(0,5).map(k=>{const g=groups[k];const ok=g.filled>=g.slots;
+      return `<div title="${k}: ${g.names.join(', ')||'nobody assigned yet'}" style="font-family:Arial;font-size:9.5px;line-height:1.25;margin-top:2px;padding:2px 4px;border-radius:4px;background:${ok?'#DDEFE3':'#F6EAC8'};color:#28395e;overflow:hidden;white-space:nowrap;text-overflow:ellipsis"><strong>${k}</strong> ${g.filled}/${g.slots}</div>`;}).join('');
+    const more=keys.length>5?`<div style="font-family:Arial;font-size:9.5px;color:var(--muted);margin-top:2px">+${keys.length-5} more</div>`:'';
+    const mism=eff&&!eff.closed&&eff.open&&list.some(s2=>String(s2.start_time||'').slice(0,5)!==eff.open||String(s2.end_time||'').slice(0,5)!==eff.close);
+    const hoursTag=eff?(eff.closed?'<span style="color:#b00020;font-weight:600">Closed</span>':(eff.open?`<span title="${mism?'Shift times differ from opening hours — use Match opening hours':'Opening hours'}" style="color:${mism?'#b00020':(eff.special?'#8a6d00':'var(--muted)')};font-weight:${(mism||eff.special)?'700':'400'}">${hh(eff.open)}–${hh(eff.close)}${mism?' ⚠':''}</span>`:'')):'';
     const sel=_shCal.sel===ds;
-    grid+=`<div onclick="shSelectDay('${ds}')" style="cursor:pointer;min-height:72px;border:${sel?'2px solid var(--gold)':'1px solid var(--border)'};border-radius:7px;padding:4px;background:${ds===today?'var(--gold-light)':'white'};min-width:0"><div style="font-family:Arial;font-size:11px;color:${ds===today?'var(--ink)':'var(--muted)'};font-weight:${ds===today?'700':'400'}">${d}</div>${chips}${more}</div>`;
+    grid+=`<div onclick="shSelectDay('${ds}')" style="cursor:pointer;min-height:84px;border:${sel?'2px solid var(--gold)':'1px solid var(--border)'};border-radius:7px;padding:4px;background:${ds===today?'var(--gold-light)':'white'};min-width:0"><div style="display:flex;justify-content:space-between;gap:2px;font-family:Arial;font-size:10px;color:${ds===today?'var(--ink)':'var(--muted)'};font-weight:${ds===today?'700':'400'}"><span style="font-size:11px">${d}</span>${hoursTag}</div>${chips}${more}</div>`;
   }
-  let detail='<div style="font-family:Arial;font-size:12px;color:var(--muted);margin-top:12px">Tap a day to see its shifts and make changes. <span style="display:inline-block;width:10px;height:10px;background:#DDEFE3;border-radius:2px;vertical-align:middle"></span> fully staffed · <span style="display:inline-block;width:10px;height:10px;background:#F6EAC8;border-radius:2px;vertical-align:middle"></span> still needs staff</div>';
+  let detail='<div style="font-family:Arial;font-size:12px;color:var(--muted);margin-top:12px">Tap a day to see its shifts and make changes. <span style="display:inline-block;width:10px;height:10px;background:#DDEFE3;border-radius:2px;vertical-align:middle"></span> team complete · <span style="display:inline-block;width:10px;height:10px;background:#F6EAC8;border-radius:2px;vertical-align:middle"></span> still needs people (e.g. Chef 1/2 = one of two chefs assigned) · the hours in each day are opening hours</div>';
   if(_shCal.sel){
     const list=byDate[_shCal.sel]||[];
-    detail=`<div style="margin-top:14px"><div style="font-family:Arial;font-size:13px;font-weight:600;margin-bottom:8px">${new Date(_shCal.sel+'T12:00:00').toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'})}</div>${list.length?list.map(shShiftCard).join(''):'<p style="font-family:Arial;font-size:12.5px;color:var(--muted)">No shifts this day.</p>'}</div>`;
+    const ef=_shData.client?effectiveHours(_shData.client,_shCal.sel):null;
+    const efTxt=ef?(ef.closed?` — <span style="color:#b00020">Closed${ef.reason?' ('+_esc(ef.reason)+')':''}</span>`:(ef.open?` — open ${ef.open}–${ef.close}${ef.special?' <span style="color:#8a6d00">(special hours)</span>':''}`:'')):'';
+    detail=`<div style="margin-top:14px"><div style="font-family:Arial;font-size:13px;font-weight:600;margin-bottom:8px">${new Date(_shCal.sel+'T12:00:00').toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'})}${efTxt}</div>${list.length?list.map(shShiftCard).join(''):'<p style="font-family:Arial;font-size:12.5px;color:var(--muted)">No shifts this day.</p>'}</div>`;
   }
   el.innerHTML=bar+`<div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px">${grid}</div>`+detail;
 }
@@ -11410,8 +11468,120 @@ async function loadShifts(clientId,targetId,canManage){
     const today=localDateStr();const next=shifts.find(s=>s.shift_date>=today);
     _shCal.month=next?new Date(next.shift_date+'T12:00:00'):new Date();
   }
-  _shData={clientId,targetId,canManage,shifts,assigns:assignRows||[],staffOptions};
+  const {data:clRow}=await db.from('clients').select('*').eq('id',clientId).maybeSingle();
+  _shData={clientId,targetId,canManage,shifts,assigns:assignRows||[],staffOptions,client:clRow||null};
   renderShifts();
+  if(canManage)shInitTools();
+}
+
+// ══ ROTA BUILDER + BULK EDIT ══
+function shTemplate(){
+  let t=_shData&&_shData.client&&_shData.client.shift_template;
+  if(typeof t==='string'){try{t=JSON.parse(t);}catch(e){t=null;}}
+  return Array.isArray(t)&&t.length?t:[{name:'Chef',n:2},{name:'Admin',n:1},{name:'Waiter',n:1}];
+}
+function shInitTools(){
+  const rows=document.getElementById('tpl-rows');if(!rows)return;
+  const t=shTemplate();
+  let h='<div style="font-size:11px;color:var(--muted);text-transform:uppercase">Role</div><div style="font-size:11px;color:var(--muted);text-transform:uppercase">How many</div>';
+  for(let i=0;i<6;i++){const r=t[i]||{name:'',n:''};
+    h+=`<input type="text" id="tpl-name-${i}" value="${_esc(r.name)}" placeholder="${i<3?'':'Another role (optional)'}" style="padding:6px 8px;border:1px solid var(--border);border-radius:9px;font-size:12px"><input type="number" min="0" id="tpl-n-${i}" value="${r.n}" style="padding:6px 8px;border:1px solid var(--border);border-radius:9px;font-size:12px">`;}
+  rows.innerHTML=h;
+  const f=document.getElementById('bld-from'),to=document.getElementById('bld-to');
+  if(f&&!f.value){const d=new Date();f.value=localDateStr(d);to.value=localDateStr(new Date(d.getFullYear(),d.getMonth()+1,0));}
+  const sel=document.getElementById('be-role');
+  if(sel){const keep=sel.value;const names=[...new Set(_shData.shifts.map(s=>s.shift_name||'Shift'))].sort();
+    sel.innerHTML='<option value="">All roles</option>'+names.map(n=>`<option>${_esc(n)}</option>`).join('');sel.value=keep;}
+  const bf=document.getElementById('be-from'),bt=document.getElementById('be-to');
+  if(bf&&!bf.value&&_shData.shifts.length){const ds=_shData.shifts.map(s=>s.shift_date).sort();bf.value=ds[0];bt.value=ds[ds.length-1];}
+  shBulkCount();
+}
+function shReadTemplate(){
+  const out=[];
+  for(let i=0;i<6;i++){const n=(document.getElementById('tpl-name-'+i)||{}).value||'';const c=parseInt((document.getElementById('tpl-n-'+i)||{}).value);
+    if(n.trim()&&c>0)out.push({name:n.trim(),n:c});}
+  return out;
+}
+async function shSaveTemplate(){
+  const t=shReadTemplate();const fb=document.getElementById('bld-fb');
+  if(!t.length){fb.innerHTML='<div class="error-msg">Add at least one role.</div>';return;}
+  const {error}=await db.from('clients').update({shift_template:t}).eq('id',_shClientId);
+  if(error){fb.innerHTML='<div class="error-msg">Run shift_builder_migration.sql in Supabase first. ('+error.message+')</div>';return;}
+  if(_shData&&_shData.client)_shData.client.shift_template=t;
+  fb.innerHTML='<div class="success-msg">✓ Saved as the default team.</div>';
+}
+function _datesBetween(a,b){const out=[];let d=new Date(a+'T12:00:00');const e=new Date(b+'T12:00:00');while(d<=e){out.push(localDateStr(d));d=new Date(d.getFullYear(),d.getMonth(),d.getDate()+1,12);}return out;}
+async function shBuildRota(){
+  const fb=document.getElementById('bld-fb');
+  const from=document.getElementById('bld-from').value,to=document.getElementById('bld-to').value;
+  const tpl=shReadTemplate();
+  if(!from||!to||to<from){fb.innerHTML='<div class="error-msg">Pick a from and to date.</div>';return;}
+  if(!tpl.length){fb.innerHTML='<div class="error-msg">Add the roles you need each day (e.g. Chef 2).</div>';return;}
+  const client=_shData.client;
+  const replace=document.getElementById('bld-replace').checked;
+  const existing=new Set(_shData.shifts.map(s=>s.shift_date+'|'+(s.shift_name||'')));
+  const rows=[];const closed=[];const noHours=[];
+  _datesBetween(from,to).forEach(ds=>{
+    const e=effectiveHours(client,ds);
+    if(e.closed){closed.push(ds);return;}
+    if(e.notStarted)return;
+    if(!e.open||!e.close){noHours.push(ds);return;}
+    tpl.forEach(r=>{if(!replace&&existing.has(ds+'|'+r.name))return;rows.push({client_id:_shClientId,shift_name:r.name,shift_date:ds,start_time:e.open,end_time:e.close,slots:r.n});});
+  });
+  if(!rows.length){fb.innerHTML='<div class="error-msg">Nothing to create'+(noHours.length?' — this client has no opening hours set (Attendance → settings).':' — those dates already have shifts, or are closed.')+'</div>';return;}
+  const days=new Set(rows.map(r=>r.shift_date)).size;
+  if(!confirm(`Create ${rows.length} shifts across ${days} days (${tpl.map(r=>r.n+' '+r.name).join(', ')} each day)?${closed.length?'\n\nSkipping '+closed.length+' closed day(s).':''}${replace?'\n\nExisting shifts in these dates will be REPLACED.':''}`))return;
+  if(replace){const ids=_shData.shifts.filter(s=>s.shift_date>=from&&s.shift_date<=to).map(s=>s.id);if(ids.length)await _bulkDeleteIds(ids);}
+  for(let i=0;i<rows.length;i+=200){const {error}=await db.from('shifts').insert(rows.slice(i,i+200));if(error){fb.innerHTML='<div class="error-msg">'+error.message+'</div>';return;}}
+  await logActivity('Built rota',`${rows.length} shifts ${from} → ${to}`,_shClientId);
+  fb.innerHTML=`<div class="success-msg">✓ Created ${rows.length} shifts across ${days} days.</div>`;
+  loadShifts(_shClientId,_shData.targetId,true);
+}
+function shBulkFiltered(){
+  const f=(document.getElementById('be-from')||{}).value,t=(document.getElementById('be-to')||{}).value,r=(document.getElementById('be-role')||{}).value;
+  return (_shData?_shData.shifts:[]).filter(s=>(!f||s.shift_date>=f)&&(!t||s.shift_date<=t)&&(!r||(s.shift_name||'Shift')===r));
+}
+function shBulkCount(){const el=document.getElementById('be-count');if(!el)return;const n=shBulkFiltered().length;el.textContent=n+' shift'+(n===1?'':'s')+' selected';}
+async function _bulkDeleteIds(ids){
+  for(let i=0;i<ids.length;i+=100){const part=ids.slice(i,i+100);
+    await db.from('shift_assignments').delete().in('shift_id',part);
+    const {error}=await db.from('shifts').delete().in('id',part);if(error)throw error;}
+}
+async function shBulkDelete(){
+  const list=shBulkFiltered();const fb=document.getElementById('be-fb');
+  if(!list.length){fb.innerHTML='<div class="error-msg">No shifts match.</div>';return;}
+  if(!confirm(`Delete ${list.length} shifts (and anyone assigned to them)? This cannot be undone.`))return;
+  try{await _bulkDeleteIds(list.map(s=>s.id));}catch(e){fb.innerHTML='<div class="error-msg">'+e.message+'</div>';return;}
+  await logActivity('Bulk deleted shifts',`${list.length} shifts`,_shClientId);
+  fb.innerHTML=`<div class="success-msg">✓ Deleted ${list.length} shifts.</div>`;
+  loadShifts(_shClientId,_shData.targetId,true);
+}
+async function shBulkApply(){
+  const list=shBulkFiltered();const fb=document.getElementById('be-fb');
+  const upd={};const st=document.getElementById('be-start').value,en=document.getElementById('be-end').value,sl=parseInt(document.getElementById('be-slots').value),nm=document.getElementById('be-name').value.trim();
+  if(st)upd.start_time=st;if(en)upd.end_time=en;if(sl>0)upd.slots=sl;if(nm)upd.shift_name=nm;
+  if(!list.length){fb.innerHTML='<div class="error-msg">No shifts match.</div>';return;}
+  if(!Object.keys(upd).length){fb.innerHTML='<div class="error-msg">Fill in at least one thing to change.</div>';return;}
+  if(!confirm(`Change ${list.length} shifts?`))return;
+  const ids=list.map(s=>s.id);
+  for(let i=0;i<ids.length;i+=100){const {error}=await db.from('shifts').update(upd).in('id',ids.slice(i,i+100));if(error){fb.innerHTML='<div class="error-msg">'+error.message+'</div>';return;}}
+  fb.innerHTML=`<div class="success-msg">✓ Updated ${list.length} shifts.</div>`;
+  ['be-start','be-end','be-slots','be-name'].forEach(i=>document.getElementById(i).value='');
+  loadShifts(_shClientId,_shData.targetId,true);
+}
+async function shBulkMatchHours(){
+  const list=shBulkFiltered();const fb=document.getElementById('be-fb');
+  if(!list.length){fb.innerHTML='<div class="error-msg">No shifts match.</div>';return;}
+  const groups={};let skipped=0;
+  list.forEach(s=>{const e=effectiveHours(_shData.client,s.shift_date);if(e.closed||!e.open||!e.close){skipped++;return;}
+    const k=e.open+'|'+e.close;(groups[k]=groups[k]||[]).push(s.id);});
+  const n=Object.values(groups).reduce((a,b)=>a+b.length,0);
+  if(!n){fb.innerHTML='<div class="error-msg">Nothing to change — set the client\'s opening hours first (Attendance → settings).</div>';return;}
+  if(!confirm(`Set the start and end time of ${n} shifts to the client's opening hours for each day?${skipped?'\n\n'+skipped+' on closed days will be left alone (delete them if not needed).':''}`))return;
+  for(const k of Object.keys(groups)){const [o,c]=k.split('|');const ids=groups[k];
+    for(let i=0;i<ids.length;i+=100){const {error}=await db.from('shifts').update({start_time:o,end_time:c}).in('id',ids.slice(i,i+100));if(error){fb.innerHTML='<div class="error-msg">'+error.message+'</div>';return;}}}
+  fb.innerHTML=`<div class="success-msg">✓ ${n} shifts now match the opening hours.</div>`;
+  loadShifts(_shClientId,_shData.targetId,true);
 }
 
 // ══ AUDIT CHECKLISTS — Pass / Fail / N/A, done by staff (daily checks) or Operations (deeper audits) ══
@@ -12000,7 +12170,7 @@ async function bulkCreateShifts(){
   const rows=[];
   for(let d=1;d<=lastDay;d++){
     const dateObj=new Date(year,month-1,d);
-    const dateStr=dateObj.toISOString().slice(0,10);
+    const dateStr=localDateStr(dateObj);
     if(wantedDays.includes(dateObj.getDay())&&!skipDates.has(dateStr)){
       rows.push({client_id:_shClientId,shift_name:name,shift_date:dateStr,start_time:start,end_time:end,slots});
     }
