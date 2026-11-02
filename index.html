@@ -8381,7 +8381,9 @@ function renderReportList(reports){
   const labelMap=buildFieldLabelMap();
   const isAdmin=currentUser&&(currentUser.isOwner||currentUser.role==='admin');
   let html='';
+  var REP_LIM=5;
   reports.forEach(function(r,i){
+    if(i===REP_LIM)html+='<div class="rep-more" style="display:none">';
     var td=r.type_data||{};
     if(typeof td==='string'){try{td=JSON.parse(td);}catch(e){td={};}}
     if(typeof td!=='object'||Array.isArray(td)){td={};}
@@ -8436,6 +8438,7 @@ function renderReportList(reports){
     html+=kpiHtml+summaryHtml+fieldsHtml+actionHtml+recoHtml+ownerNoteHtml+delBtn;
     html+='</div></div>';
   });
+  if(reports.length>REP_LIM)html+='</div><button class="btn-sm" onclick="this.previousElementSibling.style.display=\'block\';this.remove()">Show '+(reports.length-REP_LIM)+' older report'+(reports.length-REP_LIM===1?'':'s')+'</button>';
   return html;
 }
 
@@ -11353,30 +11356,48 @@ async function checkShiftConflict(staffId,shiftDate,startTime,endTime,excludeShi
   return null;
 }
 
+const _attDays={};
+function attMore(targetId,clientId){_attDays[targetId]=(_attDays[targetId]||2)+7;loadAttendance(clientId,targetId);}
 async function loadAttendance(clientId,targetId){
-  const {data}=await db.from('staff_attendance').select('*,client_staff(name)').eq('client_id',clientId).order('work_date',{ascending:false}).limit(60);
-  const rows=data||[];const el=document.getElementById(targetId);if(!el)return;
-  if(!rows.length){el.innerHTML='<p style="font-family:Arial;font-size:13px;color:var(--muted)">No attendance logged yet.</p>';return;}
-  const isClient=currentUser&&currentUser.role==='client';
+  const {data}=await db.from('staff_attendance').select('*,client_staff(name)').eq('client_id',clientId).order('work_date',{ascending:false}).limit(400);
+  const all=data||[];const el=document.getElementById(targetId);if(!el)return;
+  const days=_attDays[targetId]||2; // today + yesterday by default
   const todayS=localDateStr();
-  el.innerHTML=`<div style="overflow-x:auto"><table class="data-table"><thead><tr><th>Staff</th><th>Date</th><th>Clock In</th><th>Clock Out</th><th>Hours</th><th>Status</th></tr></thead><tbody>`+
+  const cut=new Date(todayS+'T12:00:00');cut.setDate(cut.getDate()-(days-1));
+  const cutS=localDateStr(cut);
+  const rows=all.filter(r=>r.work_date>=cutS).sort((a,b)=>(b.work_date+(b.clock_in||'')).localeCompare(a.work_date+(a.clock_in||'')));
+  const older=all.length-rows.length;
+  const isClient=currentUser&&currentUser.role==='client';
+  const t=(x)=>x?new Date(x).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}):'—';
+  const dayLbl=ds=>{const y=new Date(todayS+'T12:00:00');y.setDate(y.getDate()-1);return ds===todayS?'Today':ds===localDateStr(y)?'Yesterday':new Date(ds+'T12:00:00').toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'});};
+  const lateN=rows.filter(r=>r.is_late).length,openN=rows.filter(r=>r.clock_in&&!r.clock_out).length;
+  const summary=`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;font-family:Arial;font-size:12.5px"><span class="badge badge-gray">${rows.length} sign-in${rows.length===1?'':'s'}</span>${lateN?`<span class="badge badge-red">🔴 ${lateN} late</span>`:'<span class="badge badge-green">No one late</span>'}${openN?`<span class="badge badge-gold">${openN} still in</span>`:''}</div>`;
+  const moreBtn=older>0?`<div style="margin-top:12px"><button class="btn-sm" onclick="attMore('${targetId}','${clientId}')">Show 7 more days</button> <span style="font-family:Arial;font-size:11.5px;color:var(--muted)">showing the last ${days} day${days===1?'':'s'}</span></div>`:'';
+  if(!rows.length){el.innerHTML=summary.replace(/<span class="badge badge-gray">0 sign-ins<\/span>/,'')+`<p style="font-family:Arial;font-size:13px;color:var(--muted)">No sign-ins for ${days<=2?'today or yesterday':'the last '+days+' days'}.</p>`+moreBtn;return;}
+  let lastDay='';
+  el.innerHTML=summary+`<div style="overflow-x:auto"><table class="data-table"><thead><tr><th>Staff</th><th>In</th><th>Out</th><th>Hours</th><th>Status</th></tr></thead><tbody>`+
     rows.map(r=>{
-      const hrs=(r.clock_in&&r.clock_out)?((new Date(r.clock_out)-new Date(r.clock_in))/3600000).toFixed(1):'—';
-      let st='<span style="color:var(--muted);font-size:12px">Done</span>';
+      const hrs=(r.clock_in&&r.clock_out)?((new Date(r.clock_out)-new Date(r.clock_in))/3600000).toFixed(1)+'h':'—';
+      const flags=[];
+      if(r.is_late)flags.push(`<span class="badge badge-red">🔴 Late ${r.late_minutes}m</span>`);
+      if(r.is_early_leave)flags.push(`<span class="badge badge-gold">Left early ${r.early_minutes}m</span>`);
       if(r.clock_in&&!r.clock_out){
         const el2=(Date.now()-new Date(r.clock_in).getTime())/3600000;
-        st=(r.work_date===todayS&&el2<16)?'<span class="badge badge-green">🟢 Working now</span>':`<span class="badge badge-red">⚠ Never clocked out</span>${isClient?'':` <button class="btn-sm" onclick="adminCloseAttendance('${r.id}','${clientId}','${targetId}')">Clock out</button>`}`;
-        if(r.work_date===todayS&&el2<16&&!isClient)st+=` <button class="btn-sm" onclick="adminCloseAttendance('${r.id}','${clientId}','${targetId}')">Clock out</button>`;
+        if(r.work_date===todayS&&el2<16)flags.push('<span class="badge badge-green">🟢 Working now</span>');
+        else flags.push('<span class="badge badge-red">⚠ Never clocked out</span>');
+        if(!isClient)flags.push(`<button class="btn-sm" onclick="adminCloseAttendance('${r.id}','${clientId}','${targetId}')">Clock out</button>`);
       }
-      return`<tr>
-        <td style="font-family:Arial;font-size:13px">${(r.client_staff&&r.client_staff.name)||'—'}</td>
-        <td style="font-family:Arial;font-size:12px;color:var(--muted)">${r.work_date}</td>
-        <td style="font-family:Arial;font-size:12px">${r.clock_in?new Date(r.clock_in).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}):'—'}</td>
-        <td style="font-family:Arial;font-size:12px">${r.clock_out?new Date(r.clock_out).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}):'—'}</td>
-        <td style="font-family:Arial;font-size:12px">${hrs}</td>
-        <td>${st}</td>
+      if(!flags.length)flags.push('<span style="color:var(--success);font-size:12px">✓ On time</span>');
+      const head=r.work_date!==lastDay?`<tr><td colspan="5" style="background:var(--surface2);font-family:Arial;font-size:12px;font-weight:700;padding:8px 10px;color:var(--ink)">${dayLbl(r.work_date)}</td></tr>`:'';
+      lastDay=r.work_date;
+      return head+`<tr style="${r.is_late?'background:#fdecea':''}">
+        <td style="font-family:Arial;font-size:13px;font-weight:600">${_esc((r.client_staff&&r.client_staff.name)||'—')}</td>
+        <td style="font-family:Arial;font-size:12.5px;${r.is_late?'color:#b00020;font-weight:700':''}">${t(r.clock_in)}</td>
+        <td style="font-family:Arial;font-size:12.5px">${t(r.clock_out)}</td>
+        <td style="font-family:Arial;font-size:12.5px">${hrs}</td>
+        <td>${flags.join(' ')}</td>
       </tr>`;
-    }).join('')+`</tbody></table></div>`;
+    }).join('')+`</tbody></table></div>`+moreBtn;
 }
 async function adminCloseAttendance(id,clientId,targetId){
   const {data:rec}=await db.from('staff_attendance').select('*').eq('id',id).maybeSingle();
