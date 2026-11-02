@@ -3668,7 +3668,7 @@ self.addEventListener('notificationclick',function(e){
       <div class="form-grid" style="margin-top:10px">
         <div class="form-field"><label>How often</label><select id="au-ed-freq"><option>Daily</option><option>Weekly</option><option>Monthly</option><option>As needed</option></select></div>
         <div class="form-field"><label>Who does it</label><select id="au-ed-who" onchange="auEdToggle()"><option value="Staff">Staff (in their portal)</option><option value="Operations">Operations</option><option value="Both">Either</option></select></div>
-        <div class="form-field"><label>When</label><select id="au-ed-phase"><option value="Opening">When they arrive (opening)</option><option value="Closing">When they close (closing)</option><option value="Audit">Audit / other</option></select></div>
+        <div class="form-field"><label>When</label><select id="au-ed-phase"><option value="Opening">When they arrive (opening)</option><option value="Closing">When they close (closing)</option><option value="During shift">During the shift (housekeeping)</option><option value="Audit">Audit / other</option></select></div>
       </div>
       <div class="form-field" id="au-ed-aud-wrap" style="margin-top:10px"><label>Which staff see it in their portal</label>
         <select id="au-ed-aud" onchange="auEdToggle()"><option value="">Everyone (all staff)</option><option value="chef,cook,kitchen,sous">Chefs &amp; kitchen team</option><option value="bartender,barista,bar,mixolog">Bartenders &amp; bar team</option><option value="manager,admin,supervisor">Manager / Admin of the business</option><option value="custom">Other job title…</option></select>
@@ -6778,6 +6778,7 @@ async function loadClients(){
   const all=data||[];
   allClients=all.filter(c=>c.status!=='Inactive');
   archivedClients=all.filter(c=>c.status==='Inactive');
+  setTimeout(()=>{if(typeof auAutoSyncAll==='function')auAutoSyncAll();},2500);
   renderClientsTable();if(_clientsView==='cards')renderClientsCards();populateAllDropdowns();
   const b=document.getElementById('clients-archived-btn');
   if(b)b.textContent=_showArchived?'← Back to active clients':`🗄 Archived clients${archivedClients.length?' ('+archivedClients.length+')':''}`;
@@ -11666,147 +11667,456 @@ async function shBulkMatchHours(listOverride){
 
 // ══ AUDIT CHECKLISTS — Pass / Fail / N/A, done by staff (daily checks) or Operations (deeper audits) ══
 const AUDIT_LIBRARY=[
-{key:'all_open',name:'Opening Check — All Staff',frequency:'Daily',who:'Staff',phase:'Opening',roles:'',items:`## Yourself
-I arrived on time and signed in
-I am in full, clean uniform with hair covered and no jewellery
-I am well and fit to work (no vomiting, diarrhoea, fever or open wounds)
-I have washed my hands properly
-## Your area
-My work area is clean, tidy and ready for service
-I have read the handover note from the last shift
-I know today's specials, out-of-stock items and any allergen alerts
-## Safety
-I know where the fire exits, extinguisher and first-aid kit are
-There are no spills, hazards or broken items in my area`},
-{key:'all_close',name:'Closing Check — All Staff',frequency:'Daily',who:'Staff',phase:'Closing',roles:'',items:`## Your area
-My station / area is cleaned and sanitised
-Food, drinks and supplies in my area are put away, covered and labelled
-My waste is disposed of in the right bins
-## Reporting
-Anything broken, missing or low in stock has been reported
-I have written anything the next shift must know in the handover note
-## Leaving
-My personal belongings are collected and I have clocked out
-I have not left any equipment on`},
-{key:'chef_open',name:'Opening Check — Kitchen (Chef)',frequency:'Daily',who:'Staff',phase:'Opening',roles:'chef,cook,kitchen,sous',items:`## Food safety
-Fridge and freezer temperatures checked and logged (fridge 0–5°C, freezer -18°C or colder)
-Probe thermometer is clean, working and calibrated
-All stored food is covered, labelled, dated and in date
-Raw meat and fish are stored below ready-to-eat food
-No expired, damaged or unlabelled food is in use
-Allergen matrix is up to date and visible in the kitchen
-## Preparation
-Prep list for today is written and assigned
-Mise en place is done and stored correctly
-Chopping boards and knives are colour-coded and clean
-Sanitiser is mixed at the right strength (test strip used)
-## Equipment & safety
-Gas, cooker, oven, grill and fryer are working safely
-Extraction fan / hood is on and clean
-Handwash sink has soap, hot water and paper towels
-First-aid kit, fire blanket and extinguisher are in place
-## Stock
-Deliveries received were checked and signed for
-Key ingredients are enough for today's menu`},
-{key:'chef_close',name:'Closing Check — Kitchen (Chef)',frequency:'Daily',who:'Staff',phase:'Closing',roles:'chef,cook,kitchen,sous',items:`## Food
-All leftover food is cooled quickly, covered, labelled and dated, or thrown away
-Raw and cooked food are stored separately
-Fridge and freezer temperatures logged and doors fully closed
-Tomorrow's prep list and order list are written
-## Cleaning
-Cooking equipment, surfaces, boards and knives are cleaned and sanitised
-Floors are swept and mopped, drains are clear
-Bins are emptied and taken out
-## Shutdown
-Gas, fryers, ovens, grills and extraction are switched off
-Back door and kitchen store are locked
-Any breakages or faults are reported to the manager`},
-{key:'bar_open',name:'Opening Check — Bar (Bartender)',frequency:'Daily',who:'Staff',phase:'Opening',roles:'bartender,barista,bar,mixolog',items:`## Bar set-up
-Bar top, shelves and equipment are clean and sanitised
-Glassware is clean, polished and stocked
-Ice machine / ice supply is clean and full
-Fruit, garnish, milk and syrups are fresh and in date
-## Stock & drinks
-Spirits, mixers, beer and wine are stocked and counted against the stock sheet
-Fridge temperature checked and logged
-Taps / kegs / coffee machine are working and flushed
-Menu, prices and today's specials are correct
-## Till & compliance
-Till float is counted and matches the record
-POS and card machine are working
-Age-check rule is understood (no sales to under-18s)
-## Hygiene & safety
-Handwash and bar sink have soap and clean towels
-No broken glass or wet floors behind or in front of the bar`},
-{key:'bar_close',name:'Closing Check — Bar (Bartender)',frequency:'Daily',who:'Staff',phase:'Closing',roles:'bartender,barista,bar,mixolog',items:`## Stock & cash
-Closing stock counted and recorded; variances explained
-Perishables (milk, fruit, juice) stored covered and labelled
-Till is cashed up and matches sales; cash handed over
-Spirits cabinet / bar store is locked
-## Cleaning
-Bar top, sinks, taps / machines and drip trays are cleaned
-Glassware is washed and put away; broken glass disposed of safely
-Floor behind the bar is cleaned; bins emptied
-## Shutdown
-Ice machine, coffee machine and lights switched off as required
+{key:'all_open',name:'Opening Check — All Staff',frequency:'Daily',who:'Staff',phase:'Opening',roles:'',items:`## 1. Arrival & sign-in
+I arrived on time and clocked in on the portal (photo and location confirmed)
+I am wearing the correct uniform: clean, ironed, no stains, no tears, name tag on
+My shoes are clean, closed-toe, non-slip and in good condition
+My hair is neat and fully covered / tied back; no loose strands near food
+My nails are short, clean and unpolished (no artificial nails)
+I am not wearing rings (except a plain band), bracelets, watches, dangling earrings or necklaces while handling food or drinks
+My perfume is light (nothing strong near food) and I have good personal hygiene
+I have no cuts or sores, or any cut is covered with a blue waterproof plaster and a glove
+## 2. Health declaration
+I do not have vomiting, diarrhoea, fever, a sore throat with fever, jaundice, or a skin infection
+No one in my household has had vomiting or diarrhoea in the last 48 hours
+If I am unwell I have told the manager BEFORE starting work
+## 3. Hand washing
+I washed my hands for at least 20 seconds with soap and warm water: palms, backs, between fingers, thumbs, nails and wrists
+I dried my hands with a clean paper towel (not my apron or cloth)
+I know when to wash again: after toilet, touching face/hair/phone, handling raw food, handling money, taking out bins, eating or drinking, cleaning
+My phone is kept in my locker / away from food areas
+## 4. My work area
+My station is clean, dry, tidy and free from clutter and personal items
+Surfaces were wiped with sanitiser and left to air dry
+The floor in my area is clean, dry and clear of trip hazards
+My tools and equipment for the day are in place, clean and working
+Stock I need for service is in place and I know what is running low
+## 5. Handover & information
+I read the last shift's handover note in full
+I know today's specials, prices, sold-out items and any changes to the menu
+I know about any allergen alerts, customer complaints or special bookings and events today
+I know who my manager / team lead is today and how to reach them
+I know my assigned tasks and section for today
+## 6. Safety & emergencies
+I know where the fire exits, fire extinguisher, fire blanket and first-aid kit are
+The first-aid kit is stocked and in date (I will report if not)
+Walkways, exits and doors are not blocked
+Wet floor signs are available and in use when needed
+I know the manager's phone number and what to do in an emergency, fire, injury or power failure`},
+{key:'all_close',name:'Closing Check — All Staff',frequency:'Daily',who:'Staff',phase:'Closing',roles:'',items:`## 1. My area
+All food in my area is covered, labelled with name and date, and stored in the correct place
+All surfaces, counters and equipment in my area are cleaned with detergent, rinsed and sanitised
+Floor in my area is swept and mopped; spills and crumbs removed from corners and under equipment
+Bins in my area are emptied, wiped, lined with a new bag and the lid is closed
+Sinks are empty, scrubbed and drains are clear
+## 2. Equipment & utilities
+Equipment I used is switched off properly and cleaned (nothing left on that should be off)
+Taps are fully turned off and nothing is dripping or leaking
+Gas is turned off at the cylinder / valve where I used it
+## 3. Stock & reporting
+Anything broken, damaged, missing or running low is written down and reported to the manager
+Any customer complaint, accident, injury, near miss or incident is written in the handover note
+Any food waste, spillage or breakage is recorded
+## 4. Handover
+I wrote a clear handover note: what was done, what is unfinished, what the next shift must know
+I told the next person / manager anything urgent in person
+## 5. Leaving
+My personal belongings are collected from the locker and nothing is left behind
+My uniform is placed in the correct place / taken home for washing
+I washed my hands before leaving
+I clocked out on the portal at the correct time
+I told the manager I am leaving and they have no more tasks for me`},
+{key:'clean_all',name:'Cleaning & Space Check — All Staff (during the shift)',frequency:'Daily',who:'Staff',phase:'During shift',roles:'',items:`## 1. Toilets (check every 1 to 2 hours and sign each time)
+Floor is clean and dry; no puddles, hair or tissue on the floor
+Toilet bowl, seat, lid, flush handle, cubicle door and handles are cleaned and disinfected
+Sink, taps, counter and mirror are wiped clean and shining
+Soap dispenser is full and working
+Tissue and paper towels are stocked; hand sanitiser is available
+Bin is not overflowing, has a lid and is lined; no bad smell
+Toilet flushes properly, water runs, door locks, light works; any fault is reported at once
+## 2. Fridges & freezers
+Each fridge and freezer is checked: working, doors closing, no leaks, no ice build-up, no bad smell
+Temperature read and written down (fridge 0 to 5°C, freezer -18°C or colder); if outside range, told the manager immediately
+Fridge is rearranged neatly: raw at the bottom, cooked and ready-to-eat on top, oldest at the front, nothing blocking air vents
+All items are covered, labelled with name and date, and nothing is expired or spoiled
+Fridge shelves, handles, door seals and the outside are wiped clean
+## 3. Storage & store room
+Shelves are organised, labelled and tidy; heavy items low down
+Nothing is stored on the floor; boxes are flattened and removed
+Dry goods are in sealed containers; no sign of insects, rats or damp
+Cleaning products are stored away from food, with labels
+## 4. Utensils, crockery, trays & equipment
+All utensils, plates, cups, glasses and cutlery are washed in the correct order: scrape, wash with detergent, rinse, sanitise, air dry
+Items are dry, spotless and free from grease, lipstick marks, chips or cracks; damaged items are thrown away
+Serving trays, boards, tongs, jugs and containers are washed, sanitised and dried
+Items are stored clean: cups and glasses upside down or covered, cutlery handle-up, plates stacked neatly
+Cloths and sponges are clean; replaced if smelly or dirty; separate cloths for tables, floors and toilets
+Machines and appliances (coffee machine, blender, toaster, microwave, oven, fryer, ice machine) are clean inside and outside and working properly
+## 5. Dining area, counter & work stations
+Tables are cleared immediately, wiped, sanitised and dry before the next guest
+Counters, work stations and shelves are tidy, wiped and clutter-free
+Chairs, stools and furniture are in the correct place, clean and not wobbly
+Menus, condiments and napkin holders are clean, full and arranged neatly
+Floor is clean and dry, with spills cleaned up at once and a wet floor sign used
+Windows, glass doors and mirrors are free from fingerprints and smudges
+## 6. Waste & bins
+Bins are emptied before they are full; lids closed
+Bins are washed and re-lined when emptied
+Recycling and food waste are separated and removed to the correct place
+## 7. Fixes, repairs & reporting
+Anything broken, loose, leaking, flickering, jammed or not working is reported to the manager the same hour
+Small fixes within my role are done (tighten, replace bulb or battery, re-hang sign, refill)
+Nothing unsafe is left in use; unsafe items are taped off and reported
+Items to replace or restock are written down on the list for the manager
+## 8. Sign-off
+I checked each point myself, not someone else; I wrote the time of each check
+Any problem I could not fix is written down with the time I reported it and to whom`},
+{key:'clean_open',name:'Opening Check — Cleaner / Hygiene',frequency:'Daily',who:'Staff',phase:'Opening',roles:'cleaner,cleaning,janitor,hygiene,housekeep',items:`## 1. Personal & supplies
+I arrived on time and clocked in; uniform is clean, hair tied back, closed non-slip shoes
+I am wearing gloves and the right protective clothing; hands washed before starting
+Cleaning supplies are set out: detergent, disinfectant, sanitiser, cloths (colour-coded), mops, brooms, buckets, bin liners
+Chemicals are mixed at the correct strength, labelled, and NEVER mixed together (for example bleach with other cleaners)
+"Wet floor" signs are placed wherever floors are being cleaned
+## 2. Dining area & entrance
+Dining area, entrance and walkways are swept and mopped; floor left clean and dry
+Windows, glass doors, front entrance and steps are cleaned and free from smears
+Tables and chairs are wiped (checked with the waitresses) and no sticky areas remain
+Corners, skirting boards and under furniture are checked for dust, crumbs and dirt
+## 3. Toilets
+Bowls, seats, urinals, sinks, taps, floors, mirrors and door handles are cleaned and disinfected
+Toilet paper, hand soap, paper towels and air freshener are refilled
+Bins in the toilets are emptied and re-lined; no smell
+## 4. High-touch points
+Door handles, light switches, counters, tills / POS, menu holders and handrails are sanitised
+## 5. Kitchen (with the chef's guidance)
+Kitchen floor is mopped and dry; drains are clean and flowing
+Nothing in the kitchen is moved or touched without the chef's permission
+## 6. Waste
+All bins are emptied, liners replaced and rubbish taken to the disposal area
+Bin area is clean and tidy; lids closed
+## 7. Pests, spills & reporting
+I checked for pests (droppings, insects, damage), leaks, spills and bad smells, and reported anything to the Admin immediately
+Broken items, blocked drains or faults are reported
+## 8. Storage
+Cleaning equipment and chemicals are returned to labelled storage, away from food
+Mops and cloths are rinsed and hung up to dry; buckets emptied and clean`},
+{key:'clean_close',name:'Closing Check — Cleaner / Hygiene',frequency:'Daily',who:'Staff',phase:'Closing',roles:'cleaner,cleaning,janitor,hygiene,housekeep',items:`## 1. Deep clean
+Dining area floor is swept, scrubbed and mopped, including under tables, corners and the entrance
+Toilets are fully cleaned and disinfected one last time; supplies refilled
+Kitchen floor is swept, scrubbed and mopped; drains are cleaned
+Windows, glass doors and mirrors are wiped
+High-touch points are sanitised again
+## 2. Waste
+All bins in every area are emptied, washed if dirty, re-lined, and rubbish is taken to the disposal area
+Recycling and food waste are separated and removed
+## 3. Equipment & storage
+Mops, buckets, brooms, cloths and brushes are washed, rinsed and hung up to dry
+Chemicals are closed, labelled and stored away from food; nothing left on the floor
+Cleaning supplies running low are written down for the Admin
+## 4. Handover
+Pests, leaks, damage, bad smells or anything unsafe are reported to the Admin and written in the handover note
+I washed my hands, collected my belongings, and clocked out on the portal`},
+{key:'chef_open',name:'Opening Check — Kitchen (Chef)',frequency:'Daily',who:'Staff',phase:'Opening',roles:'chef,cook,kitchen,sous',items:`## 1. Personal hygiene (kitchen)
+Clean chef jacket or apron, hair net / cap covering all hair, beard net if needed, clean gloves ready for ready-to-eat food
+Clean closed non-slip kitchen shoes
+Hands washed properly (20 seconds) and dried with a paper towel
+No jewellery, watch or loose items; nails short and clean
+I am fit for work: no vomiting, diarrhoea, fever or open wounds
+## 2. Fridges & freezers (record every one)
+Each fridge temperature is read and logged: must be 0 to 5°C (write the number)
+Each freezer temperature is read and logged: must be -18°C or colder (write the number)
+Hot-holding equipment is at 63°C or above (if in use)
+Fridge and freezer doors seal properly, no ice build-up, no strange smells, no leaking
+Fridges are not overloaded; air can move between items
+Raw meat, poultry and fish are on the bottom shelves, sealed, away from cooked and ready-to-eat food
+Cooked and ready-to-eat food are on upper shelves, covered
+Every item is labelled with name and date, and the oldest is at the front (first in, first out)
+Nothing is out of date, damaged, bloated, leaking or smells off; anything bad has been thrown away and recorded
+Opened sauces, dairy, eggs and prepared items are within their use-by time
+## 3. Dry store & deliveries
+Dry store is tidy, off the floor, dry, cool and free of pests (no droppings, gnawed packaging or insects)
+Flour, rice, sugar, oil and grains are in sealed, labelled containers
+Deliveries received were checked: correct items, quantities, quality, temperature (chilled 5°C or below, frozen -18°C or below), best-before dates
+Delivery note is signed and any shortage or poor-quality item is reported to the manager
+## 4. Equipment check
+Cooker, burners, oven, grill, fryer, microwave, toaster and blenders all work properly
+Gas connections and hoses are secure; no smell of gas (if gas smell: do NOT switch anything on, open windows, tell the manager)
+Extraction fan / hood is on and filters are clean
+Oil in the fryer is clean, at the right level and temperature, and is changed when dark or smelling
+Generator / power backup fuel level is checked (if used) and the manager knows
+Knives are sharp, clean and stored safely; chopping boards are the right colour for each food type and not damaged
+Probe thermometer is clean, working and checked (ice water 0°C / boiling water 100°C) with spare batteries available
+## 5. Cleaning & sanitising
+All surfaces, boards, knives and equipment are sanitised before use (sanitiser mixed at the right strength and checked with a test strip)
+Handwash sink has working hot water, soap and paper towels, and is used ONLY for hands
+Cloths are clean; separate cloths for raw and cooked areas
+Floor is clean, dry and not slippery; drains are not blocked
+Bins are clean, lined and have lids
+## 6. Allergens & labelling
+Allergen information is up to date and visible: milk, eggs, fish, shellfish, nuts, peanuts, gluten, soy, sesame
+I know which of today's dishes contain allergens and how to avoid cross-contact
+Nut and other allergen items are stored separately and labelled
+## 7. Preparation for service
+Today's prep list is written, divided and assigned
+Mise en place is prepared, covered, labelled and stored at the right temperature
+Portions, sauces, garnish and packaging are ready and match the menu standard
+I checked stock levels against today's menu and told the manager of anything short or sold out
+Staff meals and tasting of key dishes done to check seasoning, taste and presentation
+## 8. Safety
+Fire extinguisher, fire blanket and first-aid kit are in place and accessible
+Floor mats are in place; no cables or hazards across walkways
+Everyone in the kitchen knows their station and the emergency exit`},
+{key:'chef_close',name:'Closing Check — Kitchen (Chef)',frequency:'Daily',who:'Staff',phase:'Closing',roles:'chef,cook,kitchen,sous',items:`## 1. Food storage
+All leftover food is cooled quickly (within 2 hours), covered, labelled with name and date, and refrigerated; anything that cannot be kept is thrown away
+Raw and cooked foods are stored separately; raw meat, poultry and fish on the bottom shelf
+Everything has a label with date; oldest at the front
+All fridge and freezer doors are fully closed
+Final fridge and freezer temperatures are read and logged (fridge 0 to 5°C, freezer -18°C or colder)
+Dry store is closed, tidy, containers sealed, nothing on the floor
+Opened packs are re-sealed (clips / containers); lids on all oils, sauces and dry goods
+## 2. Cleaning
+Cooker, burners, grill and oven are cleaned of grease and food debris
+Fryer: oil filtered or changed, fryer cleaned and covered
+Extraction hood and filters wiped; grease trays emptied
+Work surfaces, chopping boards, knives and utensils are washed, rinsed and sanitised and put away
+Fridge and freezer handles, shelves and door seals are wiped
+Sinks are scrubbed and drains cleared of food
+Floors are swept, scrubbed with detergent and mopped; under and behind equipment is checked
+Walls, splashbacks and shelves near cooking areas are wiped
+Cloths, mops and brushes are washed or replaced and left to dry; mop bucket emptied and cleaned
+## 3. Waste
+All kitchen bins are emptied, washed, dried and re-lined
+Waste and used oil are taken to the correct place and stored properly
+Food waste for the day is recorded (what and why)
+## 4. Stock & ordering
+Tomorrow's prep list is written
+Stock counted for key items; anything low or finished is written on the order list for the manager
+Any delivery due tomorrow is noted
+## 5. Shutdown & safety
+All burners, ovens, grill, fryer and appliances are switched off
+Gas is turned off at the cylinder / valve
+Extractor, lights and unnecessary equipment are switched off
+Water taps are fully closed and nothing is leaking
+Back door and storeroom are locked; windows closed
+Any damaged or faulty equipment is reported
+## 6. Handover
+Handover note is written (what was prepared, what is low, what needs fixing, any incident)
+Uniform and apron are placed in the laundry; locker is cleared`},
+{key:'bar_open',name:'Opening Check — Bar (Bartender)',frequency:'Daily',who:'Staff',phase:'Opening',roles:'bartender,barista,bar,mixolog',items:`## 1. Personal readiness
+Clean uniform, hair tied back/covered, clean nails, no hanging jewellery
+Hands washed properly (20 seconds) and dried with a paper towel
+I am fit for work: no vomiting, diarrhoea, fever or open wounds
+## 2. Fridges, ice & stock
+Bar fridges and freezers are working; temperature read and logged (fridge 0 to 5°C, freezer -18°C or colder)
+Milk, cream, syrups, juices and fresh ingredients are in date, correctly labelled and stored (opened items dated)
+Ice machine / ice supply is clean and ice is fresh and enough for the day; the ice scoop is clean and kept outside the ice
+Fruit, garnish and fresh items are fresh, washed, cut and covered; anything wilted is thrown away
+Bottles, cans and drinks stock is counted against the par level; anything low is written down
+Stock is arranged neatly; labels face forward; oldest stock in front
+## 3. Equipment
+Coffee machine, grinder, blenders, juicers, kettles and milk frothers are switched on and working
+Coffee machine is flushed; a test shot/drink is made and tastes right (grind, temperature, extraction)
+Steam wand is purged and wiped; milk jugs are clean
+Water filters and water supply are fine; no leaks or drips
+Taps, drip trays, dispensers and draught lines (if any) are clean and working
+Blender and juicer blades are clean and safe
+POS / till is working, printer has paper, card machine is charged and connected
+Cash float is counted with a second person and recorded
+## 4. Cleanliness
+Bar top, counters, sinks and shelves are clean and sanitised
+Glasses, cups, mugs, straws, stirrers and lids are clean, dry, polished and stored upside down or covered
+Drip trays are emptied and cleaned; rubber mats washed
+Bins are clean, lined and not full; floor is clean and dry
+## 5. Menu & service readiness
+I know today's drinks menu, specials, prices and which items are sold out
+I know the allergen information for drinks (milk, nuts, soy, gluten, sulphites)
+Recipes / specs are available and I follow the standard measures
+Sugar, sweeteners, napkins, lids, sleeves and takeaway cups are stocked
+## 6. Safety & age checks
+Floor is not slippery; wet floor sign available
+Broken or chipped glass is thrown away and never left in the ice
+Alcohol (if sold) is stored properly and I will not serve anyone under age or visibly drunk`},
+{key:'bar_close',name:'Closing Check — Bar (Bartender)',frequency:'Daily',who:'Staff',phase:'Closing',roles:'bartender,barista,bar,mixolog',items:`## 1. Stock
+Stock counted for milk, syrups, beans, juices, bottles and cans; counts written down
+Anything low or finished is written on the order list
+Open bottles, milk, cream and fresh ingredients are covered, labelled with date and refrigerated
+Spoiled, expired or damaged items are thrown away and recorded
+Fridge and freezer temperature read and logged; doors fully closed
+## 2. Equipment cleaning
+Coffee machine: group heads backflushed with cleaner, portafilters and baskets soaked and rinsed, steam wand cleaned, drip tray and grate washed
+Grinder hopper wiped, beans covered, grounds emptied
+Blenders, juicers, shakers, jugs, strainers and tools are washed, sanitised and left to air dry
+Ice machine / ice bin: ice discarded or covered; scoops washed and stored clean
+Milk frothing jugs, pitchers and thermometers washed
+Taps, dispensers and syrup pumps wiped; nozzles cleaned
+## 3. Surfaces & glassware
+All glasses, cups and mugs are washed, rinsed, sanitised and dried; none left in the sink
+Bar top, counters, shelves and sinks are cleaned and sanitised
+Floor and mats are swept, scrubbed and mopped
+Bins emptied, washed and re-lined; recycling sorted
+## 4. Money
+Till counted: cash, card, transfers and POS totals match the sales record; any difference is written down and reported
+Cash is secured in the safe / handed to the manager as instructed; nothing is left in the till drawer
+POS is closed out; end-of-day report printed or saved
+## 5. Shutdown & handover
+Machines, blenders and appliances are switched off and unplugged where required
+Lights and music at the bar are switched off
+Handover note is written: what is low, what is broken, what happened
 Bar is left ready for the next shift`},
-{key:'foh_open',name:'Opening Check — Waiter / Waitress (Front of House)',frequency:'Daily',who:'Staff',phase:'Opening',roles:'waiter,waitress,server,host,front,cashier,steward',items:`## Dining area
-Tables, chairs and floor are clean, dry and set correctly
-Menus are clean, complete and undamaged
-Condiments, napkins, cutlery and glassware are clean and stocked
-Lights, music and air conditioning are set properly
-Toilets are clean and stocked with soap, tissue and paper towels
-## Service readiness
-I know today's specials, unavailable items and allergen alerts
-POS / order system is on and working
-Float / change is available and counted (if I handle cash)
-Takeaway packaging and bags are stocked
-## Safety
-No spills, wobbly furniture or trip hazards in the dining area
-Entrances and exits are clear`},
-{key:'foh_close',name:'Closing Check — Waiter / Waitress (Front of House)',frequency:'Daily',who:'Staff',phase:'Closing',roles:'waiter,waitress,server,host,front,cashier,steward',items:`## Dining area
-All tables are cleared, wiped and sanitised
-Chairs are tidied and the floor is swept and mopped
-Menus, condiments and cutlery are collected, cleaned and stored
-Toilets are cleaned and checked
-## Money & orders
-All open orders are settled and the POS is closed out
-Cash and card totals match the sales record (if I handle cash)
-Any unpaid bill, complaint or refund is reported
-## Leaving
-Lost property is handed in
-Lights, music and air conditioning are switched off in my area
-Anything the next shift must know is in the handover note`},
-{key:'mgr_open',name:'Opening Check — Manager / Admin',frequency:'Daily',who:'Staff',phase:'Opening',roles:'manager,admin,supervisor',items:`## Premises & security
-Alarm / CCTV are working; the premises were found secure
-Walk-through done: front, kitchen, bar, toilets, store
-Fire exits are clear; extinguishers and first-aid kit are in place
-Lights, AC, water and power are working
-## People
-All rostered staff have arrived and are in uniform
-Shortfalls are covered or reported to Haida
-Daily briefing given (targets, specials, allergens, reservations)
-## Money & stock
-Safe and float counted and recorded
-POS and card machines are working
-Stock deliveries expected today are noted; nothing critical is out of stock
-## Records
-Yesterday's closing check and handover note were reviewed
-Fridge / freezer temperature logs for yesterday are complete`},
-{key:'mgr_close',name:'Closing Check — Manager / Admin',frequency:'Daily',who:'Staff',phase:'Closing',roles:'manager,admin,supervisor',items:`## People & records
-All staff have completed their closing checks and clocked out
-Daily report and handover note are written
-Incidents, complaints and accidents are logged
-## Money
-Cash up is done and matches sales; takings banked or locked in the safe
-Discounts, voids and refunds are reviewed and signed
-## Premises
-Kitchen, bar and dining area are clean and equipment is off
-Gas is off; windows and doors are locked
-Alarm set and CCTV is running
-## Tomorrow
-Rota for tomorrow is confirmed
-Orders for low stock have been placed`},
+{key:'foh_open',name:'Opening Check — Waiter / Waitress (Front of House)',frequency:'Daily',who:'Staff',phase:'Opening',roles:'waiter,waitress,server,host,front,cashier,steward',items:`## 1. Personal readiness
+Clean uniform, name tag, neat hair, clean nails, minimal jewellery
+Hands washed properly (20 seconds) and dried with a paper towel
+I am fit for work: no vomiting, diarrhoea, fever or open wounds
+## 2. Entrance & outside
+Entrance, steps, door glass and signage are clean and tidy
+Open / closed sign, menu board and opening hours are correct and visible
+Outdoor seating (if any) is wiped, arranged and safe
+## 3. Dining area
+Floor is swept and mopped, dry, with no spills or trip hazards
+High-touch points are sanitised: door handles, light switches, counters, menus and the POS screen
+Every table is wiped, sanitised and dry; table numbers are in place and visible
+Chairs, sofas and stools are clean, not sticky, not wobbly; any damaged furniture is reported
+Table tops are set: condiments full and clean, napkin holders stocked, cutlery set correctly (if used), menus clean
+Menus are clean, complete, undamaged, with correct prices and no old or crossed-out items
+Windows, mirrors and glass partitions are clean
+Decor, plants and displays are neat and dust-free
+Lighting, music volume and air conditioning are set at the right level and temperature
+Air smells fresh (no odour from bins, drains or toilets)
+## 4. Toilets (check every 1 to 2 hours too)
+Floor, toilet, seat, sink, tap and mirror are clean and dry
+Soap, tissue, paper towels and hand sanitiser are stocked
+Bin is empty and has a lid; no bad smell; air freshener working
+Water is running, toilet flushes and door locks properly
+## 5. Service stations
+Display cabinets and counters are clean, stocked and presented properly (labels and prices correct)
+Drinks area, coffee machine and water dispenser are clean and working
+Cutlery, plates, glasses, cups and trays are clean, polished and stocked
+Napkins, straws, takeaway boxes, bags and sachets are stocked
+Water jugs / dispensers are clean and filled
+Condiments (salt, pepper, sauces, sugar) are topped up, clean and not sticky
+Cloths for wiping tables are clean and sanitiser spray is filled
+## 6. POS, money & orders
+POS system, printer, card machine and internet are working; printer has paper
+Cash float is counted and recorded; change available
+Payment methods (cash, card, transfer) and account details are correct and visible
+Reservations / bookings for today are checked and tables are marked
+## 7. Menu knowledge & teamwork
+I know today's specials, sold-out items, prices and allergen information
+I have read the handover note and know about complaints, events and VIP guests
+I know my section, table numbers and who is covering breaks
+## 8. Safety
+Walkways and exits are clear; no bags or boxes in the way
+Wet floor sign available; fire exit not blocked
+First-aid kit location known`},
+{key:'foh_close',name:'Closing Check — Waiter / Waitress (Front of House)',frequency:'Daily',who:'Staff',phase:'Closing',roles:'waiter,waitress,server,host,front,cashier,steward',items:`## 1. Dining area
+All tables are cleared completely; plates, cups, cutlery and rubbish removed
+Tables, chairs, sofas and counters are wiped, sanitised and dry
+Menus are collected, wiped and stacked neatly; torn or sticky menus are replaced
+Condiments and napkin holders are collected, wiped, refilled and returned
+Floor is swept and mopped, including under tables and corners
+Windows, glass and mirrors are wiped
+Cushions and furniture are arranged in their correct positions
+Decor and display items are tidy
+## 2. Toilets
+Toilets fully cleaned: toilet, seat, floor, sink, tap, mirror, door handles
+Soap, tissue and paper towels are refilled; bin emptied and lined
+Final check: nothing left behind and no bad smell
+## 3. Service area & utensils
+Cutlery, plates, cups, glasses, trays and jugs are washed and dried and put in their right places
+Trays and serving boards are cleaned and sanitised
+Water jugs and dispensers are emptied, cleaned and refilled or covered
+Cloths are washed or placed in the laundry; spray bottles are refilled
+Napkins, straws, takeaway items and packaging are restocked for tomorrow
+## 4. Money & orders
+All open orders and bills are settled and the POS is closed out
+Cash, card and transfer totals match the sales record (counted with a second person); any difference is reported immediately
+Cash is secured in the safe or handed to the manager as instructed; the till drawer is left empty and open
+Any unpaid bill, refund, discount or complaint is written in the handover note
+## 5. Lost property & customers
+Lost property is collected, labelled and given to the manager
+Any customer complaint, compliment or special request is recorded
+## 6. Shutdown
+Music, lights, air conditioning, fans and TVs are switched off (except security lights)
+Doors and windows are locked; chairs are positioned as required
+Bins are emptied and taken out
+## 7. Handover
+Handover note is written: stock running low, items sold out, broken furniture, complaints, bookings for tomorrow`},
+{key:'mgr_open',name:'Opening Check — Manager / Admin',frequency:'Daily',who:'Staff',phase:'Opening',roles:'manager,admin,supervisor',items:`## 1. Premises & security
+I arrived before opening and the building is safe: no break-in, damage, flooding, strange smell or unauthorised access
+Locks, alarm, CCTV and lights are working; I unlocked and secured the entrance correctly
+The outside area, car park, signage and entrance are clean and safe
+Lights and power are switched on; generator / inverter and fuel level are checked (backup ready if there is a cut)
+Water supply, gas and internet are working
+## 2. Staff
+Roster is checked: everyone who should be here is here; any absence or lateness is recorded and cover arranged
+Every staff member has clocked in on the portal (photo and location) at the right time
+Uniform, hygiene and health of every staff member are checked; unwell staff are sent home / not allowed to handle food
+Each staff member has completed their own opening checklist
+Tasks and sections are allocated; breaks are planned so the floor is always covered
+Briefing done: specials, sold-out items, targets, events, VIPs, allergen alerts and standards
+## 3. Kitchen, bar & dining area spot-check
+Fridge and freezer logs are completed for the morning (0 to 5°C and -18°C or colder) and any fault is acted on
+Food is labelled, in date and stored properly; nothing expired
+Kitchen and bar are clean and ready; handwash sinks have soap and paper towels
+Dining area, tables and toilets are clean, stocked and presentable
+Menus, prices and signage are correct
+Music, lights and air conditioning are at the right level
+## 4. Stock & suppliers
+Deliveries are received, checked and signed; shortages and poor quality are reported to the supplier
+Stock levels for today are enough; low items are ordered
+Key supplies are available: packaging, cleaning products, gas, ice, water
+## 5. Money & systems
+Cash float is counted, recorded and signed with a second person
+POS, printer, card machine and internet are working
+Reservations and events for the day are reviewed
+## 6. Safety & compliance
+First-aid kit stocked; fire extinguishers in place and in date; exits clear; emergency numbers displayed
+Pest check: no sign of rats, cockroaches, flies or ants
+Incident book and temperature logs are available and up to date
+Licences, certificates and notices are displayed
+## 7. Menu, bookings & readiness to open
+I reviewed today's bookings, orders, specials and expected deliveries
+Menu board and prices are correct; out-of-stock items are marked
+Wi-Fi, music and TV are working
+I walked through the cafe with the chef, waitresses and cleaner and confirmed it is ready to open
+All four sections (Admin, Chef, Waitresses, Cleaner) are completed and I checked and approved each one BEFORE opening the cafe
+## 8. Handover review
+I read the previous day's handover note and followed up every issue
+Maintenance issues are logged and someone is assigned to fix them`},
+{key:'mgr_close',name:'Closing Check — Manager / Admin',frequency:'Daily',who:'Staff',phase:'Closing',roles:'manager,admin,supervisor',items:`## 1. Staff & sign-out
+Every staff member has completed their closing checklist (photo or notes checked for any Fail)
+All staff have clocked out on the portal at the right time; anyone who forgot is corrected
+Overtime, lateness, absence, injuries or disciplinary issues are recorded
+Staff have collected their belongings; no one is left in the building
+## 2. Kitchen, bar & dining walk-through (look yourself, do not just trust the tick)
+Kitchen: food covered, labelled and stored; cooking equipment off and clean; floors clean; bins out
+Bar: machines cleaned and off; glassware washed and put away; stock stored
+Dining area: tables and chairs clean and arranged; floor mopped; toilets clean and stocked
+Storeroom: tidy, locked, nothing on the floor, no signs of pests
+Fridge and freezer final temperatures logged (0 to 5°C and -18°C or colder)
+## 3. Money
+Cash, card and transfer totals for the day match the POS and the sales record
+Any difference is investigated and written down with the reason
+Cash is counted with a second person, bagged, signed and put in the safe or banked as per policy
+Float is prepared for tomorrow; till drawer left empty and open
+Today's sales report is saved or sent
+Expenses and receipts for the day are recorded and filed
+## 4. Stock & orders
+Stock counts for key items are done and recorded
+Orders for tomorrow are sent to suppliers; deliveries for tomorrow are noted
+Waste and breakages for the day are recorded
+## 5. Reports & follow-up
+Complaints, incidents, accidents and near misses are recorded; Haida Consulting is informed of anything serious
+Maintenance issues are logged and assigned
+Handover note is written for tomorrow's manager: staffing, bookings, events, stock, issues
+Tomorrow's roster is confirmed; any gap is covered
+## 6. Security shutdown
+All appliances, gas, extractor, lights, music, air conditioning and fans are switched off
+Generator is turned off and fuel level noted
+Taps are off; no leaks; windows and doors are locked
+CCTV and alarm are on and working
+I checked every room before locking up and I was the last person to leave
+Keys are secured and the key log is updated`},
 {key:'kitchen',name:'Kitchen Hygiene & Food Safety Audit',frequency:'Weekly',who:'Operations',phase:'Audit',roles:'',items:`## Personal hygiene
 Staff wash hands correctly and at the right times
 Clean uniform, hair covered, nails short, no jewellery
@@ -12021,11 +12331,13 @@ async function renderAuditHub(ctx,clientId,elId){
     html=banner+`<div style="font-size:11.5px;color:var(--muted);margin-bottom:4px">Tap Start, mark each line Pass, Fail or N/A, and submit. Your manager sees it straight away.</div>`+
       grp('🌅 When you arrive — before you start work',chks.filter(c=>c.phase==='Opening'))+
       grp('🌙 When you close — before you leave',chks.filter(c=>c.phase==='Closing'))+
-      grp('Other checklists',chks.filter(c=>c.phase!=='Opening'&&c.phase!=='Closing'))+
+      grp('🧹 During your shift — cleaning & housekeeping',chks.filter(c=>c.phase==='During shift'))+
+      grp('Other checklists',chks.filter(c=>c.phase!=='Opening'&&c.phase!=='Closing'&&c.phase!=='During shift'))+
       (mine.length?`<div style="font-size:11px;text-transform:uppercase;color:var(--muted);margin:14px 0 6px">Your recent checklists</div>`+mine.map(subRow).join(''):'');
   } else {
     if(openFails.length&&ctx!=='ops')html+=`<div style="background:var(--danger-light);border:1.5px solid var(--danger);border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:13px;color:var(--danger)"><strong>${openFails.length} audit${openFails.length===1?'':'s'}</strong> with failed items still waiting for follow-up.</div>`;
     html+=`<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px"><div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)">Checklists for this client</div>${canManage?`<button class="btn-add" onclick="auOpenEditor(null)">+ Create your own</button>`:''}</div>`;
+    if(canManage&&chks.length)html+=`<div style="background:var(--gold-light);border:1px solid var(--gold);border-radius:9px;padding:10px 14px;margin-bottom:12px;font-size:12.5px;display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap"><span>New: the checklists are now <strong>very detailed</strong>. Tap to bring this client up to date.</span><button class="btn-save" style="padding:7px 14px;font-size:12px" onclick="auSyncLibrary()">🔄 Update to the detailed pack</button></div>`;
     html+=chks.length?chks.map(card).join(''):`<p style="font-size:13px;color:var(--muted)">${canManage?'No checklists yet — add the ready-made ones below.':'No checklists set up for this client yet.'}</p>`;
     if(canManage&&lib.length)html+=`<div style="margin:16px 0 6px;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)">Add a ready-made checklist</div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px">${lib.map(l=>`<button class="btn-sm" onclick="auAddFromLibrary('${l.key}')">+ ${l.name} <span style="color:var(--muted)">(${l.who}, ${l.frequency.toLowerCase()})</span></button>`).join('')}</div>
@@ -12113,6 +12425,38 @@ async function auAddFromLibrary(key){
   const l=AUDIT_LIBRARY.find(x=>x.key===key);if(!l)return;
   const {error}=await db.from('audit_checklists').insert({client_id:_auCtx.clientId,name:l.name,frequency:l.frequency,who:l.who,phase:l.phase||'Audit',for_roles:l.roles||null,items:auParseItems(l.items),active:true});
   if(error){alert(error.message);return;}
+  auRefresh();
+}
+const AU_LIB_VERSION='2026-11-02-detailed-v4';
+async function auSyncClient(clientId){
+  const {data,error:e0}=await db.from('audit_checklists').select('id,name').eq('client_id',clientId);
+  if(e0)return false;
+  const have={};(data||[]).forEach(x=>{have[x.name]=x.id;});
+  for(const l of AUDIT_LIBRARY.filter(l=>have[l.name])){const {error}=await db.from('audit_checklists').update({frequency:l.frequency,who:l.who,phase:l.phase||'Audit',for_roles:l.roles||null,items:auParseItems(l.items)}).eq('id',have[l.name]);if(error)return false;}
+  const add=AUDIT_LIBRARY.filter(l=>!have[l.name]);
+  if(add.length){const {error}=await db.from('audit_checklists').insert(add.map(l=>({client_id:clientId,name:l.name,frequency:l.frequency,who:l.who,phase:l.phase||'Audit',for_roles:l.roles||null,items:auParseItems(l.items),active:true})));if(error)return false;}
+  return true;
+}
+// Runs by itself when the owner opens the portal — keeps every café / restaurant client's checklists on the latest pack
+async function auAutoSyncAll(){
+  try{
+    if(!currentUser||!currentUser.isOwner)return;
+    for(const c of (allClients||[])){
+      if(!clientHas(c,'operations'))continue;
+      const key='au_sync_'+c.id;
+      let done=null;try{done=localStorage.getItem(key);}catch(e){}
+      if(done===AU_LIB_VERSION)continue;
+      if(await auSyncClient(c.id)){try{localStorage.setItem(key,AU_LIB_VERSION);}catch(e){}}
+    }
+  }catch(e){console.warn('audit auto-sync',e);}
+}
+async function auSyncLibrary(){
+  const {data}=await db.from('audit_checklists').select('id,name').eq('client_id',_auCtx.clientId);
+  const have={};(data||[]).forEach(x=>{have[x.name]=x.id;});
+  const upd=AUDIT_LIBRARY.filter(l=>have[l.name]),add=AUDIT_LIBRARY.filter(l=>!have[l.name]);
+  if(!confirm(`Update ${upd.length} checklist${upd.length===1?'':'s'} to the latest very detailed wording and add ${add.length} new one${add.length===1?'':'s'}?\n\nAny edits you made to those checklists will be replaced.`))return;
+  for(const l of upd){const {error}=await db.from('audit_checklists').update({frequency:l.frequency,who:l.who,phase:l.phase||'Audit',for_roles:l.roles||null,items:auParseItems(l.items)}).eq('id',have[l.name]);if(error){alert(error.message);return;}}
+  if(add.length){const {error}=await db.from('audit_checklists').insert(add.map(l=>({client_id:_auCtx.clientId,name:l.name,frequency:l.frequency,who:l.who,phase:l.phase||'Audit',for_roles:l.roles||null,items:auParseItems(l.items),active:true})));if(error){alert(error.message);return;}}
   auRefresh();
 }
 async function auAddAllLibrary(){
