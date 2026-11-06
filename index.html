@@ -1284,11 +1284,11 @@ self.addEventListener('notificationclick',function(e){
               <option value="">All Clients</option>
             </select>
             <select id="staff-status-filter" onchange="filterStaffByClient()" style="padding:7px 12px;border:1px solid var(--border);border-radius:9px;font-family:Arial;font-size:13px;color:var(--ink)">
-              <option value="">All Statuses</option>
+              <option value="">Current staff</option>
               <option value="Active">Active</option>
               <option value="Probation">Probation</option>
               <option value="Flagged">Flagged</option>
-              <option value="Terminated">Terminated</option>
+              <option value="Terminated">Terminated / left</option>
             </select>
           </div>
           <button class="btn-add" onclick="openModal('modal-add-staff')">+ Add Staff Member</button>
@@ -7562,7 +7562,7 @@ let _allStaff = [];
 async function loadStaff(){
   const {data}=await db.from('client_staff').select('*,clients(business_name,status)').order('created_at',{ascending:false});
   // staff of archived (Inactive) clients are hidden from this list
-  _allStaff = (data||[]).filter(s=>!(s.clients&&s.clients.status==='Inactive'));
+  _allStaff = (data||[]).filter(s=>!(s.clients&&String(s.clients.status||'').toLowerCase()==='inactive'));
   // Populate client filter dropdown
   const sel = document.getElementById('staff-client-filter');
   if(sel){
@@ -7578,7 +7578,7 @@ function filterStaffByClient(){
   const statusFilter = document.getElementById('staff-status-filter')?.value || '';
   const filtered = _allStaff.filter(s => {
     const nameMatch = !clientFilter || (s.clients?.business_name === clientFilter);
-    const statusMatch = !statusFilter || s.status === statusFilter;
+    const statusMatch = statusFilter ? s.status === statusFilter : s.status !== 'Terminated';
     return nameMatch && statusMatch;
   });
   renderStaffTable(filtered);
@@ -16766,5 +16766,6 @@ document.getElementById('rf-client').addEventListener('change',()=>renderTypeFie
     </div>
   </div>
 </div>
+<div style="position:fixed;left:8px;bottom:4px;font:10px Arial;color:#9a9a9a;z-index:5;pointer-events:none">version 6 Nov · 23:35</div>
 </body>
 </html>
