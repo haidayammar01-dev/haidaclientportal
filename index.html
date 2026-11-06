@@ -754,6 +754,7 @@ self.addEventListener('notificationclick',function(e){
     <div style="background:white;border:1px solid var(--border);border-radius:12px;padding:24px;margin-bottom:16px">
       <div style="font-family:Arial;font-size:11px;text-transform:uppercase;color:var(--muted);margin-bottom:10px">📝 Daily Report</div>
       <textarea id="sp-report-content" rows="3" placeholder="What did you work on today?" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:9px;font-family:Arial;font-size:13px;margin-bottom:8px"></textarea>
+      <input id="sp-report-request" placeholder="🙋 Need something or have a request? Write it here (optional) — keeps it from getting lost in your report" style="width:100%;padding:9px 12px;border:1.5px dashed #d6a900;border-radius:9px;font-family:Arial;font-size:13px;margin-bottom:10px;background:#fffaf0">
       <div id="sp-fig-wrap" style="display:none;margin-bottom:10px">
         <details id="sp-fig-det" style="border:1px dashed var(--border);border-radius:10px;padding:10px 14px;background:var(--surface2)">
           <summary style="cursor:pointer;font-family:Arial;font-size:13px;font-weight:700;color:var(--ink2)">💰 Today's figures — only fill if needed (optional)</summary>
@@ -2479,6 +2480,9 @@ self.addEventListener('notificationclick',function(e){
             </div>
             <div style="border-top:1px solid var(--border);margin-top:14px;padding-top:12px">
               <div style="font-family:Arial;font-size:11px;text-transform:uppercase;color:var(--muted);margin-bottom:8px">🔒 Closed days (rest &amp; reset — no clock-in, nobody marked absent)</div>
+              <div style="font-family:Arial;font-size:11px;text-transform:uppercase;color:var(--muted);margin:4px 0 6px">📅 Closed every week on</div>
+              <div id="wh-weekdays-cv" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;font-family:Arial;font-size:12.5px"><label style="display:inline-flex;gap:4px;align-items:center;background:white;border:1px solid var(--border);border-radius:9px;padding:4px 10px"><input type="checkbox" id="wh-cw1-cv"> Mon</label><label style="display:inline-flex;gap:4px;align-items:center;background:white;border:1px solid var(--border);border-radius:9px;padding:4px 10px"><input type="checkbox" id="wh-cw2-cv"> Tue</label><label style="display:inline-flex;gap:4px;align-items:center;background:white;border:1px solid var(--border);border-radius:9px;padding:4px 10px"><input type="checkbox" id="wh-cw3-cv"> Wed</label><label style="display:inline-flex;gap:4px;align-items:center;background:white;border:1px solid var(--border);border-radius:9px;padding:4px 10px"><input type="checkbox" id="wh-cw4-cv"> Thu</label><label style="display:inline-flex;gap:4px;align-items:center;background:white;border:1px solid var(--border);border-radius:9px;padding:4px 10px"><input type="checkbox" id="wh-cw5-cv"> Fri</label><label style="display:inline-flex;gap:4px;align-items:center;background:white;border:1px solid var(--border);border-radius:9px;padding:4px 10px"><input type="checkbox" id="wh-cw6-cv"> Sat</label><label style="display:inline-flex;gap:4px;align-items:center;background:white;border:1px solid var(--border);border-radius:9px;padding:4px 10px"><input type="checkbox" id="wh-cw0-cv"> Sun</label></div>
+              <button class="btn-sm" style="margin-bottom:12px" onclick="saveWorkHours('cv')">Save</button>
               <div id="wh-closed-cv" style="margin-bottom:8px"></div>
               <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><input type="date" id="wh-cdate-cv" style="padding:6px 8px;border:1px solid var(--border);border-radius:9px;font-family:Arial;font-size:12px"><input type="text" id="wh-creason-cv" placeholder="Reason (e.g. Rest &amp; reset day)" style="min-width:200px;padding:6px 8px;border:1px solid var(--border);border-radius:9px;font-family:Arial;font-size:12px"><button class="btn-sm" onclick="addClosedDay('cv')">+ Add closed day</button></div>
             </div>
@@ -6249,6 +6253,7 @@ async function loadSpReports(){
   el.innerHTML=list.length?spDayGroups(list,r=>`<div style="border:1px solid var(--border);border-radius:9px;padding:9px 12px;margin-bottom:6px">
     <div style="font-family:Arial;font-size:11px;color:var(--muted);margin-bottom:3px">${r.report_date}</div>
     <div style="font-family:Arial;font-size:13px;color:var(--ink)">${r.content}</div>
+    ${r.request_note?`<div style="margin-top:6px;background:#fff6dc;border:1.5px solid #d6a900;border-radius:8px;padding:6px 10px;font-family:Arial;font-size:12.5px">🙋 <strong>Request:</strong> ${r.request_note}</div>`:''}
   </div>`):'<p style="font-family:Arial;font-size:12px;color:var(--muted)">No reports submitted yet.</p>';
 }
 async function loadSpTeamReports(clientId,excludeStaffId){
@@ -6258,6 +6263,7 @@ async function loadSpTeamReports(clientId,excludeStaffId){
   el.innerHTML=list.length?spDayGroups(list,r=>`<div style="border:1px solid var(--border);border-radius:9px;padding:9px 12px;margin-bottom:6px">
     <div style="font-size:12px;color:var(--muted);margin-bottom:3px"><strong style="color:var(--ink)">${(r.client_staff&&r.client_staff.name)||'—'}</strong> · ${r.report_date}</div>
     <div style="font-size:13px;color:var(--ink)">${r.content}</div>
+    ${r.request_note?`<div style="margin-top:6px;background:#fff6dc;border:1.5px solid #d6a900;border-radius:8px;padding:6px 10px;font-family:Arial;font-size:12.5px">🙋 <strong>Request:</strong> ${r.request_note}</div>`:''}
   </div>`):'<p style="font-size:12px;color:var(--muted)">No reports from the team yet.</p>';
 }
 async function submitDailyReport(){
@@ -6265,10 +6271,15 @@ async function submitDailyReport(){
   const fb=document.getElementById('sp-report-feedback');
   const figRow={};let hasFig=false;
   FIG_COLS.forEach(c=>{const e=document.getElementById('sp-fg-'+c[0]);if(e&&e.value!==''){figRow[c[0]]=parseFloat(e.value);hasFig=true;}});
-  if(!content&&!hasFig){fb.innerHTML='<div class="error-msg">Write something before submitting.</div>';return;}
+  const reqNote=(document.getElementById('sp-report-request')||{value:''}).value.trim();
+  if(!content&&!hasFig&&!reqNote){fb.innerHTML='<div class="error-msg">Write something before submitting.</div>';return;}
   const today=localDateStr();
-  if(content){
-    const {error}=await db.from('staff_daily_reports').insert({staff_id:_spStaffId,client_id:_spClientId,report_date:today,content});
+  if(content||reqNote){
+    const base={staff_id:_spStaffId,client_id:_spClientId,report_date:today,content:content||'(request only)'};
+    let {error}=await db.from('staff_daily_reports').insert(reqNote?Object.assign({request_note:reqNote},base):base);
+    if(error&&reqNote){ // column not added yet: keep the request inside the report text so it is not lost
+      ({error}=await db.from('staff_daily_reports').insert(Object.assign({},base,{content:base.content+'\n\nREQUEST: '+reqNote})));
+    }
     if(error){fb.innerHTML=`<div class="error-msg">${error.message}</div>`;return;}
   }
   if(hasFig){
@@ -6278,7 +6289,7 @@ async function submitDailyReport(){
     if(r.error){fb.innerHTML=`<div class="error-msg">Report saved, but the figures could not be: ${r.error.message}</div>`;return;}
   }
   fb.innerHTML='<div class="success-msg">✓ Submitted'+(hasFig?' (with figures)':'')+'.</div>';
-  document.getElementById('sp-report-content').value='';
+  document.getElementById('sp-report-content').value='';{const rq=document.getElementById('sp-report-request');if(rq)rq.value='';}
   loadSpReports();
   setTimeout(()=>{fb.innerHTML='';},2500);
 }
@@ -6339,6 +6350,7 @@ function effectiveHours(client,ds){
   if(!client)return out;
   const cl=whClosures(client).find(x=>x.date===ds);
   if(cl){out.closed=true;out.reason=cl.reason||'';return out;}
+  {let cw=client.closed_weekdays;if(typeof cw==='string'){try{cw=JSON.parse(cw);}catch(e){cw=[];}}if(Array.isArray(cw)&&cw.includes(new Date(ds+'T12:00:00').getDay())){out.closed=true;out.reason='Not a working day';return out;}}
   const ov=whOverrides(client).find(x=>x.from&&ds>=x.from&&ds<=(x.to||x.from));
   if(ov){out.open=ov.open?String(ov.open).slice(0,5):null;out.close=ov.close?String(ov.close).slice(0,5):null;out.special=true;out.reason=ov.reason||'';return out;}
   if(client.work_hours_start&&ds<String(client.work_hours_start).slice(0,10)){out.notStarted=true;return out;}
@@ -9046,6 +9058,7 @@ async function loadGeofenceStatus(clientId,scope){
     set('wh-start',client.work_hours_start);
     const g=$('wh-grace');if(g&&client.late_grace_minutes!=null)g.value=client.late_grace_minutes;
     renderClosedDays(scope,client);
+    if(scope==='cv'){let cw=client.closed_weekdays;if(typeof cw==='string'){try{cw=JSON.parse(cw);}catch(e){cw=[];}}for(let i=0;i<7;i++){const b=document.getElementById('wh-cw'+i+'-cv');if(b)b.checked=Array.isArray(cw)&&cw.includes(i);}}
     if(scope==='cv'){const e=document.getElementById('dr-emails-cv'),o=document.getElementById('dr-on-cv');if(e)e.value=client.report_emails||'';if(o)o.checked=client.report_auto!==false;}
   }
 }
@@ -9093,6 +9106,7 @@ async function saveWorkHours(scope){
   const v=id=>(document.getElementById(id+'-'+scope)||{}).value||null;
   const basic={opening_time:v('wh-open'),closing_time:v('wh-close'),late_grace_minutes:parseInt(v('wh-grace'))||10};
   const full={...basic,weekend_opening_time:v('wh-wopen'),weekend_closing_time:v('wh-wclose'),work_hours_start:v('wh-start')};
+  if(scope==='cv'){full.closed_weekdays=[0,1,2,3,4,5,6].filter(i=>{const b=document.getElementById('wh-cw'+i+'-cv');return b&&b.checked;});}
   let {error}=await db.from('clients').update(full).eq('id',clientId);
   if(error){
     const r=await db.from('clients').update(basic).eq('id',clientId);
@@ -15428,6 +15442,7 @@ async function loadDailyReportsList(scopedClientIds,date){
   el.innerHTML=rows.length?rows.map(r=>`<div class="card" style="padding:12px 16px;margin-bottom:8px">
     <div style="font-family:Arial;font-size:12px;color:var(--muted);margin-bottom:4px"><strong style="color:var(--ink)">${(r.client_staff&&r.client_staff.name)||'—'}</strong> · ${(r.clients&&r.clients.business_name)||'—'}</div>
     <div style="font-family:Arial;font-size:13px;color:var(--ink2)">${r.content}</div>
+    ${r.request_note?`<div style="margin-top:6px;background:#fff6dc;border:1.5px solid #d6a900;border-radius:8px;padding:6px 10px;font-family:Arial;font-size:12.5px">🙋 <strong>Request:</strong> ${r.request_note}</div>`:''}
   </div>`).join(''):'<p style="font-family:Arial;font-size:13px;color:var(--muted)">No daily reports logged for this date.</p>';
 }
 async function loadDailyIncidentsList(scopedClientIds){
