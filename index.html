@@ -7560,8 +7560,9 @@ async function saveAction(){
 let _allStaff = [];
 
 async function loadStaff(){
-  const {data}=await db.from('client_staff').select('*,clients(business_name)').order('created_at',{ascending:false});
-  _allStaff = data||[];
+  const {data}=await db.from('client_staff').select('*,clients(business_name,status)').order('created_at',{ascending:false});
+  // staff of archived (Inactive) clients are hidden from this list
+  _allStaff = (data||[]).filter(s=>!(s.clients&&s.clients.status==='Inactive'));
   // Populate client filter dropdown
   const sel = document.getElementById('staff-client-filter');
   if(sel){
