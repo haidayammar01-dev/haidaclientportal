@@ -427,6 +427,31 @@ details.setbox>div,details.setbox>.card{margin:0 12px 12px}
   .btn-save,.btn-add,.btn-cancel{width:100%;margin-bottom:8px}
   .content-area{padding:16px 12px}
 }
+
+.stk-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+.stk-tab,.stk-mode{font-family:Arial;font-size:13px;font-weight:600;padding:8px 14px;border:1px solid var(--border);background:white;border-radius:999px;cursor:pointer;color:var(--ink2)}
+.stk-tab.on,.stk-mode.on{background:var(--ink);color:white;border-color:var(--ink)}
+.stk-modes{display:flex;gap:6px;flex-wrap:wrap}
+.stk-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#e53935;vertical-align:middle}
+.stk-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:12px}
+.stk-card{border:1px solid var(--border);border-radius:10px;padding:12px 14px;background:white}
+.stk-n{font-family:Arial;font-size:24px;font-weight:700}.stk-l{font-family:Arial;font-size:11.5px;color:var(--muted)}
+.stk-alert{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;border:1.5px solid #b00020;background:#fdecea;color:#b00020;border-radius:10px;padding:10px 14px;margin-bottom:12px;font-family:Arial;font-size:13px}
+.stk-setup{border:1.5px dashed var(--gold);background:var(--gold-light);border-radius:12px;padding:14px 16px;margin-bottom:14px;font-family:Arial;font-size:13.5px}
+.stk-bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+.stk-bar input[type=text],.stk-bar select{padding:7px 10px;border:1px solid var(--border);border-radius:9px;font-family:Arial;font-size:13px}
+.stk-chk{font-family:Arial;font-size:12.5px;color:var(--ink2);display:inline-flex;gap:5px;align-items:center}
+.stk-pill{font-family:Arial;font-size:10.5px;font-weight:700;border:1px solid;border-radius:999px;padding:2px 8px;white-space:nowrap}
+.stk-chip{font-size:10px;background:#eee;border-radius:6px;padding:1px 6px;color:#555;font-weight:400}
+.stk-cat{background:#f5f3ee;font-family:Arial;font-size:11px;text-transform:uppercase;letter-spacing:.06em;font-weight:700;color:var(--muted)}
+.stk-in,.stk-cnt{padding:6px 8px;border:1px solid var(--border);border-radius:8px;font-size:14px}
+.stk-form{display:grid;grid-template-columns:1fr 1fr;gap:10px}.stk-form label{font-family:Arial;font-size:12px;color:var(--ink2);display:flex;flex-direction:column;gap:4px}
+.stk-form input,.stk-form select{padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px}
+@media(max-width:560px){.stk-form{grid-template-columns:1fr}}
+.stk-hist{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;border:1px solid var(--border);border-radius:9px;padding:9px 12px;margin-bottom:6px;font-family:Arial;font-size:13px;cursor:pointer}
+.stk-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+.stk-box{padding:12px 16px}.stk-box h4{font-family:Arial;font-size:13px;margin:0 0 8px}
+.stk-row{display:flex;justify-content:space-between;gap:10px;font-family:Arial;font-size:13px;padding:4px 0;border-bottom:1px solid var(--border)}
 </style>
 
 <script>
@@ -582,6 +607,12 @@ self.addEventListener('notificationclick',function(e){
     <div id="sp-audits-box" style="display:none;background:white;border:1px solid var(--border);border-radius:12px;padding:20px 24px;margin-bottom:16px">
       <div style="font-family:Arial;font-size:11px;text-transform:uppercase;color:var(--muted);margin-bottom:4px">✅ My Checklists</div>
       <div id="sp-audits-list"></div>
+    </div>
+
+    <!-- STOCK (usage + counts) -->
+    <div id="sp-stock-box" style="display:none;background:white;border:1px solid var(--border);border-radius:12px;padding:20px 24px;margin-bottom:16px">
+      <div style="font-family:Arial;font-size:11px;text-transform:uppercase;color:var(--muted);margin-bottom:10px">📦 Stock &amp; Supplies</div>
+      <div id="sp-stock-hub"></div>
     </div>
 
     <!-- MY DETAILS NAG + FORM -->
@@ -1216,6 +1247,12 @@ self.addEventListener('notificationclick',function(e){
           <div class="page-title" style="font-size:20px">📝 Daily Reports</div>
           <div class="page-sub">What staff logged as their day's work, for the date selected above</div>
           <div id="dhr-daily-reports-list"></div>
+        </div>
+
+        <div style="margin-top:28px;padding-top:20px;border-top:1px solid var(--border)">
+          <div class="page-title" style="font-size:20px">📦 Stock Summary</div>
+          <div class="page-sub">Used, received, wasted, low items and stock-count status for the date selected above</div>
+          <div id="dhr-stock-list"></div>
         </div>
 
         <div style="margin-top:28px;padding-top:20px;border-top:1px solid var(--border)">
@@ -2365,17 +2402,11 @@ self.addEventListener('notificationclick',function(e){
         <div id="cv-kpis-panel" class="cv-tab-content" style="display:none"><div id="cv-kpis-list"></div></div>
         <div id="cv-compliance-panel" class="cv-tab-content" style="display:none"><div id="cv-compliance-list"></div></div>
         <div id="cv-inventory-panel" class="cv-tab-content" style="display:none">
-          <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
-            <input type="text" id="inv-item" placeholder="Item name" style="flex:1;min-width:140px;padding:7px 10px;border:1px solid var(--border);border-radius:9px;font-family:Arial;font-size:12px">
-            <input type="text" id="inv-category" placeholder="Category" style="width:120px;padding:7px 10px;border:1px solid var(--border);border-radius:9px;font-family:Arial;font-size:12px">
-            <input type="number" id="inv-qty" placeholder="Qty" style="width:80px;padding:7px 10px;border:1px solid var(--border);border-radius:9px;font-family:Arial;font-size:12px">
-            <input type="text" id="inv-unit" placeholder="Unit" style="width:80px;padding:7px 10px;border:1px solid var(--border);border-radius:9px;font-family:Arial;font-size:12px">
-            <input type="number" id="inv-reorder" placeholder="Reorder at" style="width:90px;padding:7px 10px;border:1px solid var(--border);border-radius:9px;font-family:Arial;font-size:12px">
-            <button class="btn-add" onclick="addInventoryItem()">+ Add Item</button>
-          </div>
           <div id="cv-inventory-list"></div>
         </div>
         <div id="cv-qc-panel" class="cv-tab-content" style="display:none">
+          <div id="cv-stockcount-hub"></div>
+          <details style="margin-top:22px"><summary style="cursor:pointer;font-family:Arial;font-size:13px;font-weight:700;color:var(--ink2)">Batch / product quality log (optional)</summary><div style="margin-top:12px">
           <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
             <input type="date" id="qc-date" style="padding:7px 10px;border:1px solid var(--border);border-radius:9px;font-family:Arial;font-size:12px">
             <input type="text" id="qc-batch" placeholder="Batch ref" style="width:110px;padding:7px 10px;border:1px solid var(--border);border-radius:9px;font-family:Arial;font-size:12px">
@@ -2385,7 +2416,7 @@ self.addEventListener('notificationclick',function(e){
             <input type="text" id="qc-inspector" placeholder="Inspector" style="width:110px;padding:7px 10px;border:1px solid var(--border);border-radius:9px;font-family:Arial;font-size:12px">
             <button class="btn-add" onclick="addQcEntry()">+ Log Entry</button>
           </div>
-          <div id="cv-qc-list"></div>
+          <div id="cv-qc-list"></div></div></details>
         </div>
         <div id="cv-notices-panel" class="cv-tab-content" style="display:none">
           <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
@@ -2398,6 +2429,13 @@ self.addEventListener('notificationclick',function(e){
         <div id="cv-leaderboard-panel" class="cv-tab-content" style="display:none"><div id="cv-leaderboard-list"></div></div>
         <div id="cv-attendance-panel" class="cv-tab-content" style="display:none">
           <details class="setbox"><summary>⚙ Attendance settings — work location, work hours, closed days</summary>
+          <div style="background:var(--surface2);border:1px solid var(--border);border-radius:9px;padding:14px;margin-bottom:16px">
+            <div style="font-family:Arial;font-size:11px;text-transform:uppercase;color:var(--muted);margin-bottom:8px">📧 Daily report — emailed to this client automatically every evening</div>
+            <input type="text" id="dr-emails-cv" placeholder="client@email.com, manager@email.com" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:9px;font-family:Arial;font-size:13px">
+            <label style="display:flex;gap:8px;align-items:center;margin-top:8px;font-family:Arial;font-size:12.5px;color:var(--ink2)"><input type="checkbox" id="dr-on-cv" checked> Send them the report automatically (attendance, stock, reports, incidents, feedback)</label>
+            <button class="btn-sm" style="margin-top:10px" onclick="saveReportEmails()">Save</button>
+            <div id="dr-fb-cv" style="font-family:Arial;font-size:12px;margin-top:6px;color:var(--muted)">You always get a copy too.</div>
+          </div>
           <div id="cv-geofence-box" style="background:var(--surface2);border:1px solid var(--border);border-radius:9px;padding:14px;margin-bottom:16px">
             <div style="font-family:Arial;font-size:11px;text-transform:uppercase;color:var(--muted);margin-bottom:8px">📍 Work Location (staff must be within this radius to clock in)</div>
             <div id="cv-geofence-status" style="font-family:Arial;font-size:12px;color:var(--ink);margin-bottom:8px"></div>
@@ -2967,8 +3005,8 @@ self.addEventListener('notificationclick',function(e){
           <button class="ptab" data-service="operations" onclick="switchPortalTab('portal-actions-tab',this)">Action Items</button>
           <button class="ptab" data-service="staffing" onclick="switchPortalTab('portal-staff-tab',this);loadPortalStaff(currentUser.clientId)">Our Staff</button>
           <button class="ptab" data-service="staffing" onclick="switchPortalTab('portal-events-tab',this);loadPortalEvents(currentUser.clientId)">📅 Events</button>
-          <button class="ptab" data-service="operations" onclick="switchPortalTab('portal-inventory-tab',this);loadInventory(currentUser.clientId,'portal-inventory-list',true)">📦 Inventory</button>
-          <button class="ptab" data-service="operations" onclick="switchPortalTab('portal-qc-tab',this);loadQc(currentUser.clientId,'portal-qc-list',true)">✔ Quality Control</button>
+          <button class="ptab" data-service="operations" onclick="switchPortalTab('portal-inventory-tab',this);renderStockHub('pc',currentUser.clientId,'portal-inventory-list')">📦 Inventory</button>
+          <button class="ptab" data-service="operations" onclick="switchPortalTab('portal-qc-tab',this);renderStockHub('pc',currentUser.clientId,'portal-stockcount-hub',{only:'count'});loadQc(currentUser.clientId,'portal-qc-list',true)">✔ Quality Control</button>
           <button class="ptab" data-service="staffing" onclick="switchPortalTab('portal-notices-tab',this);loadNotices(currentUser.clientId,'portal-notices-list',true)">📌 Notice Board</button>
           <button class="ptab" data-service="staffing" onclick="switchPortalTab('portal-leaderboard-tab',this);loadLeaderboard(currentUser.clientId,'portal-leaderboard-list')">🏆 Leaderboard</button>
           <button class="ptab" data-service="staffing" onclick="switchPortalTab('portal-attendance-tab',this);loadAttendance(currentUser.clientId,'portal-attendance-list');loadGeofenceStatus(currentUser.clientId,'portal')">🕒 Attendance</button>
@@ -3125,17 +3163,11 @@ self.addEventListener('notificationclick',function(e){
           </div>
         </div>
         <div id="portal-inventory-tab" class="portal-tab-content" style="display:none">
-          <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
-            <input type="text" id="inv-item-p" placeholder="Item name" style="flex:1;min-width:140px;padding:7px 10px;border:1px solid var(--border);border-radius:9px;font-family:Arial;font-size:12px">
-            <input type="text" id="inv-category-p" placeholder="Category" style="width:120px;padding:7px 10px;border:1px solid var(--border);border-radius:9px;font-family:Arial;font-size:12px">
-            <input type="number" id="inv-qty-p" placeholder="Qty" style="width:80px;padding:7px 10px;border:1px solid var(--border);border-radius:9px;font-family:Arial;font-size:12px">
-            <input type="text" id="inv-unit-p" placeholder="Unit" style="width:80px;padding:7px 10px;border:1px solid var(--border);border-radius:9px;font-family:Arial;font-size:12px">
-            <input type="number" id="inv-reorder-p" placeholder="Reorder at" style="width:90px;padding:7px 10px;border:1px solid var(--border);border-radius:9px;font-family:Arial;font-size:12px">
-            <button class="btn-add" onclick="addInventoryItem()">+ Add Item</button>
-          </div>
           <div id="portal-inventory-list"></div>
         </div>
         <div id="portal-qc-tab" class="portal-tab-content" style="display:none">
+          <div id="portal-stockcount-hub"></div>
+          <details style="margin-top:22px"><summary style="cursor:pointer;font-family:Arial;font-size:13px;font-weight:700;color:var(--ink2)">Batch / product quality log (optional)</summary><div style="margin-top:12px">
           <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
             <input type="date" id="qc-date-p" style="padding:7px 10px;border:1px solid var(--border);border-radius:9px;font-family:Arial;font-size:12px">
             <input type="text" id="qc-batch-p" placeholder="Batch ref" style="width:110px;padding:7px 10px;border:1px solid var(--border);border-radius:9px;font-family:Arial;font-size:12px">
@@ -3145,7 +3177,7 @@ self.addEventListener('notificationclick',function(e){
             <input type="text" id="qc-inspector-p" placeholder="Inspector" style="width:110px;padding:7px 10px;border:1px solid var(--border);border-radius:9px;font-family:Arial;font-size:12px">
             <button class="btn-add" onclick="addQcEntry()">+ Log Entry</button>
           </div>
-          <div id="portal-qc-list"></div>
+          <div id="portal-qc-list"></div></div></details>
         </div>
         <div id="portal-notices-tab" class="portal-tab-content" style="display:none">
           <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
@@ -5848,12 +5880,12 @@ function logout(){
   document.getElementById('login-pass').value='';
   // Hard wipe: never let one session's data linger visually for the next login in this tab
   ['portal-staff-tab','portal-reports-tab','portal-invoices-tab','portal-complaints-tab','portal-docs-tab',
-   'portal-actions-tab','portal-events-list','portal-inventory-list','portal-qc-list','portal-notices-list',
+   'portal-actions-tab','portal-events-list','portal-inventory-list','portal-qc-list','portal-stockcount-hub','portal-notices-list',
    'portal-leaderboard-list','portal-attendance-list','portal-leave-list','portal-shifts-list','portal-kb-list',
    'portal-staffing-list','portal-procurement-list',
    'sp-notes-list','sp-notices-list','sp-trainings-list','sp-courses-list','sp-reports-list','sp-incidents-list',
    'sp-attendance-list','sp-leave-list','sp-shifts-list','sp-strike-log',
-   'cv-staff-list','cv-reports-list','cv-inventory-list','cv-qc-list','cv-notices-list','cv-leaderboard-list',
+   'cv-staff-list','cv-reports-list','cv-inventory-list','cv-qc-list','cv-stockcount-hub','cv-notices-list','cv-leaderboard-list',
    'cv-attendance-list','cv-leave-list','cv-shifts-list','cv-kb-list','cv-staffing-list','cv-procurement-list',
    'tp-history-list','tp-staff-rows'
   ].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML='';});
@@ -6101,6 +6133,7 @@ async function showStaffPortal(staff){
   await loadSpSwapRequests();
   await loadSpReadingList();
   renderAuditHub('sp',_spClientId,'sp-audits-list');
+  (async()=>{try{const {data:cl}=await db.from('clients').select('*').eq('id',_spClientId).maybeSingle();if(cl&&clientHas(cl,'operations')){const b=document.getElementById('sp-stock-box');if(b)b.style.display='block';renderStockHub('sp',_spClientId,'sp-stock-hub');}}catch(e){}})();
   await loadClientStaffDetails();
   await loadMyFaceStatus();
 }
@@ -8527,15 +8560,6 @@ function applyClientViewServices(client){
     if(b)b.style.display=clientHas(client,CV_TAB_SERVICE[tab])?'':'none';
   });
 }
-async function checkClientLowStockBanner(clientId){
-  const banner=document.getElementById('cv-low-stock-banner');if(!banner)return;
-  const {data}=await db.from('client_inventory').select('item_name,quantity,reorder_level').eq('client_id',clientId);
-  const low=(data||[]).filter(i=>i.reorder_level!=null&&i.quantity<=i.reorder_level);
-  if(!low.length){banner.style.display='none';return;}
-  banner.style.display='block';
-  banner.innerHTML=`⚠ ${low.length} item${low.length===1?'':'s'} at or below reorder level: ${low.map(i=>i.item_name).join(', ')} — click to view Inventory`;
-}
-
 let _lastClientReports=[];
 async function loadClientViewReports(clientId){
   const {data}=await db.from('reports').select('*').eq('client_id',clientId).order('date',{ascending:false});
@@ -8597,8 +8621,9 @@ async function loadClientViewTab(tab,clientId,keep){
   } else if(tab==='cv-compliance'){
     await loadCVCompliance(cid);
   } else if(tab==='cv-inventory'){
-    await loadInventory(cid,'cv-inventory-list',true);
+    await renderStockHub('cv',cid,'cv-inventory-list');
   } else if(tab==='cv-qc'){
+    await renderStockHub('cv',cid,'cv-stockcount-hub',{only:'count'});
     await loadQc(cid,'cv-qc-list',true);
   } else if(tab==='cv-notices'){
     await loadNotices(cid,'cv-notices-list',true);
@@ -8984,6 +9009,7 @@ async function loadGeofenceStatus(clientId,scope){
     set('wh-start',client.work_hours_start);
     const g=$('wh-grace');if(g&&client.late_grace_minutes!=null)g.value=client.late_grace_minutes;
     renderClosedDays(scope,client);
+    if(scope==='cv'){const e=document.getElementById('dr-emails-cv'),o=document.getElementById('dr-on-cv');if(e)e.value=client.report_emails||'';if(o)o.checked=client.report_auto!==false;}
   }
 }
 function renderClosedDays(scope,client){
@@ -9016,6 +9042,15 @@ async function removeSpecialHours(scope,idx){
   const list=whOverrides(c);list.splice(idx,1);await _saveSpecial(scope,list);
 }
 function _whClientId(scope){return scope==='cv'?_currentViewClientId:currentUser.clientId;}
+async function saveReportEmails(){
+  const emails=(document.getElementById('dr-emails-cv').value||'').split(/[,;\s]+/).filter(Boolean);
+  const bad=emails.filter(x=>!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(x));
+  const fb=document.getElementById('dr-fb-cv');
+  if(bad.length){fb.style.color='var(--danger)';fb.textContent='These do not look like email addresses: '+bad.join(', ');return;}
+  const {error}=await db.from('clients').update({report_emails:emails.join(', '),report_auto:document.getElementById('dr-on-cv').checked}).eq('id',_currentViewClientId);
+  if(error){fb.style.color='var(--danger)';fb.textContent='Could not save — run client_daily_report_migration.sql in Supabase first. ('+error.message+')';return;}
+  fb.style.color='var(--success)';fb.textContent=emails.length?'Saved. '+emails.length+' address'+(emails.length===1?'':'es')+' will get the report every evening.':'Saved (no email addresses, so only you get it).';
+}
 async function saveWorkHours(scope){
   const clientId=_whClientId(scope);
   const v=id=>(document.getElementById(id+'-'+scope)||{}).value||null;
@@ -12862,40 +12897,511 @@ async function addShift(){
   if(document.getElementById('portal-shifts-list'))loadShifts(_shClientId,'portal-shifts-list',true);
 }
 
-// ══ INVENTORY (shared: admin cv-tab + client portal tab) ══
-let _invClientId=null;
+// ══ STOCK & INVENTORY (items · reorder levels · daily usage · stock counts · daily summary) ══
+const STK_UNITS=['kg','g','mg','lb','oz','litre','ml','cl','gallon','cup','tbsp','tsp','piece','dozen','pair','set','pack','packet','sachet','bottle','can','jar','tin','tub','tube','carton','crate','box','case','bag','sack','tray','roll','sheet','sleeve','bunch','bundle','loaf','slice','portion','serving','keg','cylinder','drum','jerrycan','bucket','pallet','unit'];
+const STK_CATS={
+  stock:['Coffee & tea','Dairy & eggs','Meat & poultry','Fish & seafood','Fruit & vegetables','Bakery & dough','Dry goods & grains','Oils, sauces & spices','Drinks & beverages','Syrups & flavourings','Frozen','Packaging & takeaway','Gas & fuel','Other'],
+  supplies:['Cleaning','Hygiene & PPE','Paper & disposables','Kitchen supplies','Office & admin','Maintenance','Uniform & linen','Other']
+};
+// Starter packs: [name, type, category, unit, reorderAt, target(par)]
+const STK_SUPPLIES_PACK=[
+ ['Disposable gloves','supplies','Hygiene & PPE','box',2,6],['Hairnets / caps','supplies','Hygiene & PPE','pack',2,6],['Aprons','supplies','Uniform & linen','piece',3,10],
+ ['Hand soap','supplies','Hygiene & PPE','litre',2,6],['Hand sanitiser','supplies','Hygiene & PPE','bottle',2,6],['Blue plasters','supplies','Hygiene & PPE','box',1,3],
+ ['Window / glass cleaner','supplies','Cleaning','bottle',2,6],['Floor cleaner','supplies','Cleaning','litre',3,10],['Disinfectant','supplies','Cleaning','litre',3,10],['Bleach','supplies','Cleaning','litre',2,6],
+ ['Dishwashing liquid','supplies','Cleaning','litre',3,10],['Sponges','supplies','Cleaning','pack',2,6],['Scouring pads','supplies','Cleaning','pack',2,6],['Mop heads','supplies','Cleaning','piece',2,4],['Air freshener','supplies','Cleaning','can',2,6],
+ ['Toilet tissue','supplies','Paper & disposables','pack',3,10],['Paper towels','supplies','Paper & disposables','roll',4,12],['Napkins / serviettes','supplies','Paper & disposables','pack',4,12],['Bin liners','supplies','Paper & disposables','roll',3,10],
+ ['Cling film','supplies','Kitchen supplies','roll',2,5],['Aluminium foil','supplies','Kitchen supplies','roll',2,5],['Receipt paper rolls','supplies','Office & admin','roll',4,12],['Light bulbs','supplies','Maintenance','piece',3,8],['Batteries (AA)','supplies','Maintenance','pack',2,5]
+];
+const STK_PACKS={
+ cafe:{label:'☕ Café',items:[
+  ['Espresso beans','stock','Coffee & tea','kg',3,10],['Ground coffee','stock','Coffee & tea','kg',2,6],['Tea bags','stock','Coffee & tea','box',3,8],['Hot chocolate powder','stock','Coffee & tea','kg',2,5],
+  ['Whole milk','stock','Dairy & eggs','litre',10,30],['Oat / plant milk','stock','Dairy & eggs','litre',6,18],['Fresh cream','stock','Dairy & eggs','litre',3,8],['Butter','stock','Dairy & eggs','kg',2,6],['Eggs','stock','Dairy & eggs','tray',2,6],['Cheese','stock','Dairy & eggs','kg',2,5],
+  ['Sugar','stock','Dry goods & grains','kg',5,15],['Sweetener sachets','stock','Dry goods & grains','box',2,5],['Flour','stock','Dry goods & grains','kg',10,30],['Rice','stock','Dry goods & grains','bag',1,3],
+  ['Vanilla syrup','stock','Syrups & flavourings','bottle',2,6],['Caramel syrup','stock','Syrups & flavourings','bottle',2,6],['Chocolate sauce','stock','Syrups & flavourings','bottle',2,6],['Honey','stock','Syrups & flavourings','bottle',2,5],
+  ['Bread loaves','stock','Bakery & dough','loaf',6,20],['Croissants','stock','Bakery & dough','piece',12,40],['Chicken','stock','Meat & poultry','kg',5,15],['Sausages','stock','Meat & poultry','pack',3,10],
+  ['Tomatoes','stock','Fruit & vegetables','kg',3,10],['Lettuce','stock','Fruit & vegetables','kg',2,6],['Avocado','stock','Fruit & vegetables','piece',8,24],['Lemons','stock','Fruit & vegetables','kg',2,5],['Bananas','stock','Fruit & vegetables','bunch',3,8],
+  ['Bottled water','stock','Drinks & beverages','crate',2,6],['Soft drinks','stock','Drinks & beverages','crate',2,6],['Fruit juice','stock','Drinks & beverages','litre',6,20],['Ice','stock','Drinks & beverages','bag',4,12],
+  ['Cooking oil','stock','Oils, sauces & spices','litre',5,20],['Salt','stock','Oils, sauces & spices','pack',3,8],['Black pepper','stock','Oils, sauces & spices','pack',2,5],['Ketchup / mayo','stock','Oils, sauces & spices','bottle',3,8],
+  ['Takeaway cups (hot)','stock','Packaging & takeaway','sleeve',5,15],['Cup lids','stock','Packaging & takeaway','sleeve',5,15],['Takeaway food boxes','stock','Packaging & takeaway','pack',4,12],['Paper bags','stock','Packaging & takeaway','pack',3,10],['Straws','stock','Packaging & takeaway','pack',3,8],['Coffee stirrers','stock','Packaging & takeaway','pack',2,6],
+  ['Gas cylinder','stock','Gas & fuel','cylinder',1,2],['Generator fuel','stock','Gas & fuel','litre',20,60]]},
+ restaurant:{label:'🍽️ Restaurant',items:[
+  ['Rice','stock','Dry goods & grains','bag',2,6],['Pasta','stock','Dry goods & grains','kg',5,15],['Flour','stock','Dry goods & grains','kg',10,30],['Beans','stock','Dry goods & grains','kg',5,15],['Garri / yam flour','stock','Dry goods & grains','kg',5,15],
+  ['Chicken','stock','Meat & poultry','kg',10,30],['Beef','stock','Meat & poultry','kg',8,25],['Goat meat','stock','Meat & poultry','kg',5,15],['Turkey','stock','Meat & poultry','kg',5,15],['Fish','stock','Fish & seafood','kg',5,15],['Prawns','stock','Fish & seafood','kg',2,6],
+  ['Tomatoes','stock','Fruit & vegetables','kg',8,25],['Onions','stock','Fruit & vegetables','kg',5,15],['Peppers (tatashe / rodo)','stock','Fruit & vegetables','kg',4,12],['Yam','stock','Fruit & vegetables','piece',6,20],['Plantain','stock','Fruit & vegetables','bunch',4,12],['Potatoes','stock','Fruit & vegetables','kg',5,15],['Vegetables (greens)','stock','Fruit & vegetables','kg',3,10],
+  ['Eggs','stock','Dairy & eggs','tray',3,10],['Cheese','stock','Dairy & eggs','kg',2,6],['Cream','stock','Dairy & eggs','litre',3,8],['Butter','stock','Dairy & eggs','kg',2,6],
+  ['Vegetable oil','stock','Oils, sauces & spices','litre',10,40],['Palm oil','stock','Oils, sauces & spices','litre',5,20],['Seasoning cubes','stock','Oils, sauces & spices','box',3,10],['Curry / thyme / spices','stock','Oils, sauces & spices','pack',4,12],['Tomato paste','stock','Oils, sauces & spices','tin',6,20],['Salt','stock','Oils, sauces & spices','pack',3,8],
+  ['Soft drinks','stock','Drinks & beverages','crate',3,8],['Bottled water','stock','Drinks & beverages','crate',3,8],['Juice','stock','Drinks & beverages','litre',6,20],
+  ['Takeaway packs','stock','Packaging & takeaway','pack',6,20],['Gas cylinder','stock','Gas & fuel','cylinder',1,2],['Charcoal','stock','Gas & fuel','bag',2,6],['Generator fuel','stock','Gas & fuel','litre',20,60]]},
+ bakery:{label:'🥐 Bakery / pastry',items:[
+  ['Flour (bread)','stock','Dry goods & grains','kg',20,100],['Flour (cake)','stock','Dry goods & grains','kg',15,60],['Sugar','stock','Dry goods & grains','kg',10,40],['Icing sugar','stock','Dry goods & grains','kg',3,10],['Yeast','stock','Dry goods & grains','pack',3,10],['Baking powder','stock','Dry goods & grains','pack',3,10],['Cocoa powder','stock','Dry goods & grains','kg',2,6],
+  ['Butter','stock','Dairy & eggs','kg',5,20],['Margarine','stock','Dairy & eggs','kg',5,20],['Eggs','stock','Dairy & eggs','tray',5,20],['Milk','stock','Dairy & eggs','litre',6,20],['Fresh cream','stock','Dairy & eggs','litre',3,10],['Cream cheese','stock','Dairy & eggs','kg',2,6],
+  ['Vanilla essence','stock','Syrups & flavourings','bottle',2,6],['Food colouring','stock','Syrups & flavourings','bottle',3,8],['Chocolate (baking)','stock','Syrups & flavourings','kg',3,10],['Sprinkles','stock','Syrups & flavourings','pack',3,8],
+  ['Vegetable oil','stock','Oils, sauces & spices','litre',5,20],['Cinnamon','stock','Oils, sauces & spices','pack',2,5],
+  ['Cake boxes','stock','Packaging & takeaway','pack',5,15],['Cake boards','stock','Packaging & takeaway','pack',3,10],['Pastry boxes','stock','Packaging & takeaway','pack',5,15],['Piping bags','stock','Packaging & takeaway','pack',3,8],['Baking / parchment paper','stock','Packaging & takeaway','roll',3,8],['Paper bags','stock','Packaging & takeaway','pack',3,10],
+  ['Gas cylinder','stock','Gas & fuel','cylinder',1,2],['Generator fuel','stock','Gas & fuel','litre',20,60]]},
+ bar:{label:'🍸 Bar / lounge',items:[
+  ['Spirits (assorted)','stock','Drinks & beverages','bottle',6,24],['Wine','stock','Drinks & beverages','bottle',6,24],['Beer','stock','Drinks & beverages','crate',3,10],['Soft drinks / mixers','stock','Drinks & beverages','crate',3,10],['Tonic / soda water','stock','Drinks & beverages','crate',2,6],['Bottled water','stock','Drinks & beverages','crate',3,8],['Energy drinks','stock','Drinks & beverages','crate',1,4],
+  ['Syrups','stock','Syrups & flavourings','bottle',3,8],['Bitters','stock','Syrups & flavourings','bottle',1,3],['Fruit juice','stock','Drinks & beverages','litre',6,20],
+  ['Lemons / limes','stock','Fruit & vegetables','kg',2,6],['Mint','stock','Fruit & vegetables','bunch',3,8],['Oranges','stock','Fruit & vegetables','kg',2,6],
+  ['Ice','stock','Drinks & beverages','bag',6,20],['Cocktail straws','stock','Packaging & takeaway','pack',3,8],['Cocktail napkins','stock','Packaging & takeaway','pack',4,12],['Coasters','stock','Packaging & takeaway','pack',2,6],['Generator fuel','stock','Gas & fuel','litre',20,60]]},
+ fastfood:{label:'🍔 Fast food / grill',items:[
+  ['Chicken','stock','Meat & poultry','kg',10,30],['Beef patties','stock','Meat & poultry','pack',5,20],['Sausages','stock','Meat & poultry','pack',4,12],['Fish','stock','Fish & seafood','kg',4,12],
+  ['Burger buns','stock','Bakery & dough','pack',5,20],['Bread','stock','Bakery & dough','loaf',6,20],['Fries (frozen)','stock','Frozen','kg',10,30],['Potatoes','stock','Fruit & vegetables','kg',8,25],
+  ['Cheese slices','stock','Dairy & eggs','pack',4,12],['Eggs','stock','Dairy & eggs','tray',3,10],['Cooking oil','stock','Oils, sauces & spices','litre',10,40],['Ketchup / mayo / chilli sauce','stock','Oils, sauces & spices','bottle',4,12],['Spices & marinade','stock','Oils, sauces & spices','pack',4,12],
+  ['Soft drinks','stock','Drinks & beverages','crate',3,8],['Bottled water','stock','Drinks & beverages','crate',3,8],
+  ['Takeaway boxes','stock','Packaging & takeaway','pack',6,20],['Foil wraps','stock','Packaging & takeaway','roll',3,8],['Paper bags','stock','Packaging & takeaway','pack',4,12],['Gas cylinder','stock','Gas & fuel','cylinder',1,2],['Charcoal','stock','Gas & fuel','bag',2,6]]},
+ salon:{label:'💇 Salon / hair & beauty',items:[
+  ['Shampoo','stock','Dry goods & grains','bottle',3,10],['Conditioner','stock','Dry goods & grains','bottle',3,10],['Relaxer kits','stock','Dry goods & grains','box',3,10],['Hair dye','stock','Dry goods & grains','piece',6,20],['Developer / peroxide','stock','Dry goods & grains','bottle',3,10],['Hair oil / treatment','stock','Dry goods & grains','bottle',3,10],['Styling gel / wax','stock','Dry goods & grains','tub',3,8],['Braiding hair','stock','Dry goods & grains','pack',10,40],
+  ['Foils','stock','Dry goods & grains','roll',3,8],['Towels','supplies','Uniform & linen','piece',10,30],['Capes','supplies','Uniform & linen','piece',3,8],['Combs & brushes','supplies','Kitchen supplies','piece',5,15],['Neck strips','supplies','Paper & disposables','pack',2,6]]},
+ aesthetics:{label:'💆 Aesthetics / wellness',items:[
+  ['Facial cleanser','stock','Dry goods & grains','bottle',3,8],['Serums','stock','Dry goods & grains','bottle',3,8],['Face masks','stock','Dry goods & grains','box',3,10],['Massage oil','stock','Dry goods & grains','bottle',2,6],['Gel / conductive gel','stock','Dry goods & grains','bottle',2,6],['Moisturiser / SPF','stock','Dry goods & grains','tub',3,8],
+  ['Cotton pads','supplies','Hygiene & PPE','pack',4,12],['Alcohol swabs','supplies','Hygiene & PPE','box',2,6],['Disposable bed sheets','supplies','Paper & disposables','roll',3,8],['Towels','supplies','Uniform & linen','piece',10,30],['Disposable slippers','supplies','Hygiene & PPE','pack',3,8]]},
+ school:{label:'🎓 School / training',items:[
+  ['Printing paper (A4)','supplies','Office & admin','box',3,10],['Toner / ink','supplies','Office & admin','piece',1,3],['Markers','supplies','Office & admin','box',3,8],['Chalk','supplies','Office & admin','box',3,8],['Exercise books','supplies','Office & admin','pack',5,20],['Pens','supplies','Office & admin','box',3,8],['Staples & files','supplies','Office & admin','pack',3,8],
+  ['First-aid supplies','supplies','Hygiene & PPE','box',1,3],['Drinking water','stock','Drinks & beverages','crate',3,10]]},
+ hospitality:{label:'🏠 Guest house / hospitality',items:[
+  ['Bed sheets & pillowcases','supplies','Uniform & linen','set',10,30],['Bath towels','supplies','Uniform & linen','piece',10,30],['Toiletries (shampoo, soap)','supplies','Hygiene & PPE','pack',5,20],['Slippers','supplies','Hygiene & PPE','pair',10,30],['Tea / coffee sachets','stock','Coffee & tea','box',3,10],['Bottled water','stock','Drinks & beverages','crate',2,8],['Laundry detergent','supplies','Cleaning','litre',3,10],['Generator fuel','stock','Gas & fuel','litre',20,60]]},
+ retail:{label:'🛍️ Retail / shop',items:[
+  ['Carrier bags','supplies','Paper & disposables','pack',5,20],['Price labels','supplies','Office & admin','roll',3,8],['Gift wrap','supplies','Paper & disposables','roll',2,6],['Gift boxes','supplies','Paper & disposables','pack',3,10],['Tags & stickers','supplies','Office & admin','pack',3,10]]},
+ general:{label:'📋 General business',items:[['Printing paper (A4)','supplies','Office & admin','box',3,10],['Pens','supplies','Office & admin','box',3,8],['Drinking water','stock','Drinks & beverages','crate',2,6],['Generator fuel','stock','Gas & fuel','litre',20,60]]}
+};
+function stkGuessPack(client){
+  if(!client)return 'general';
+  const n=(client.business_name||'').toLowerCase(),nic=client.niche||'';
+  if(/bak(e|ery)|pastr|cake|cinnamona/.test(n))return 'bakery';
+  if(/\\b(bar|lounge|club|pub)\\b/.test(n))return 'bar';
+  if(/restaurant|grill|kitchen|eatery|bukka|canteen|buka|bistro/.test(n))return 'restaurant';
+  if(/burger|pizza|shawarma|chicken|fried|fast/.test(n))return 'fastfood';
+  const m={cafe:'cafe',hair:'salon',aesthetics:'aesthetics',wellness:'aesthetics',education:'school',hospitality:'hospitality',retail:'retail',homebrand:'retail'};
+  return m[nic]||'general';
+}
+const _stkS={};
+const _fq=n=>{n=Number(n)||0;return String(Math.round(n*100)/100);};
+const _fm=n=>'₦'+Math.round(Number(n)||0).toLocaleString();
+function stkStatus(i){
+  const q=Number(i.quantity)||0,m=(i.reorder_level===null||i.reorder_level===undefined||i.reorder_level==='')?null:Number(i.reorder_level);
+  if(q<=0)return 'out';
+  if(m!==null&&q<=m)return 'low';
+  if(m!==null&&m>0&&q<=m*1.25)return 'soon';
+  return 'ok';
+}
+const STK_ST={out:{c:'#8b0000',bg:'#fdecea',t:'OUT OF STOCK',dot:'🔴'},low:{c:'#b00020',bg:'#fdecea',t:'REORDER NOW',dot:'🔴'},soon:{c:'#8a6d00',bg:'#fff6dc',t:'Getting low',dot:'🟠'},ok:{c:'#17693a',bg:'transparent',t:'OK',dot:'🟢'}};
+function stkAvgDaily(S,item){
+  const cutoff=localDateStr(new Date(Date.now()-14*86400000));let tot=0,first=null;
+  S.moves.forEach(m=>{if(m.item_id===item.id&&(m.move_type==='used'||m.move_type==='waste')&&m.move_date>=cutoff){tot+=Math.abs(Number(m.quantity)||0);if(!first||m.move_date<first)first=m.move_date;}});
+  if(!tot)return 0;
+  const span=Math.round((new Date(localDateStr()+'T12:00:00')-new Date(first+'T12:00:00'))/86400000)+1;
+  return tot/Math.max(3,Math.min(14,span));
+}
+function stkDaysLeft(S,i){const a=stkAvgDaily(S,i);return a>0?(Number(i.quantity)||0)/a:null;}
+function stkCountStatus(S){
+  const perWeek=Number((S.client&&S.client.stock_counts_per_week)||3);
+  const gap=Math.max(1,Math.round(7/perWeek));
+  const last=S.counts[0];
+  if(!last)return {due:true,gap,perWeek,last:null,days:null,text:'No stock count has been done yet'};
+  const days=Math.round((new Date(localDateStr()+'T12:00:00')-new Date(last.count_date+'T12:00:00'))/86400000);
+  const due=days>=gap;
+  const text=days===0?'Last count: today':days===1?'Last count: yesterday':`Last count: ${days} days ago`;
+  return {due,gap,perWeek,last,days,text:text+(due?(days>gap?` — OVERDUE (every ${gap} day${gap===1?'':'s'})`:' — due today'):` — next due in ${gap-days} day${gap-days===1?'':'s'}`)};
+}
+async function stkWho(){
+    if(typeof _spStaffId!=='undefined'&&_spStaffId&&typeof currentUser!=='undefined'&&(!currentUser||!currentUser.role||currentUser.role==='staff')){
+    try{if(typeof _spStaffNameCache!=='undefined'&&_spStaffNameCache)return _spStaffNameCache;const {data}=await db.from('client_staff').select('name').eq('id',_spStaffId).maybeSingle();if(data&&data.name)return data.name;}catch(e){}
+  }
+  return (currentUser&&(currentUser.name||currentUser.username))||'Admin';
+}
+async function stkLoad(id){
+  const S=_stkS[id];const cid=S.clientId;
+  const since=localDateStr(new Date(Date.now()-35*86400000));
+  const [a,b,c,d]=await Promise.all([
+    db.from('client_inventory').select('*').eq('client_id',cid).order('item_name',{ascending:true}),
+    db.from('stock_movements').select('*').eq('client_id',cid).gte('move_date',since).order('created_at',{ascending:false}).limit(3000),
+    db.from('stock_counts').select('*').eq('client_id',cid).order('created_at',{ascending:false}).limit(30),
+    db.from('clients').select('*').eq('id',cid).maybeSingle()
+  ]);
+  if(S.ctx==='sp'){try{const {data:me}=await db.from('client_staff').select('role,is_ops_manager').eq('id',_spStaffId).maybeSingle();S.isAdmin=!!(me&&(me.is_ops_manager||/admin|manager|supervisor|owner/i.test(me.role||'')));}catch(e){S.isAdmin=false;}}
+  S.items=(a.data||[]).map(i=>Object.assign({item_type:'stock',is_active:true},i,{item_type:i.item_type||'stock',is_active:i.is_active!==false}));
+  S.moves=b.data||[];S.counts=c.data||[];S.client=d.data||null;
+  S.err=(a.error||b.error||c.error)?(a.error||b.error||c.error).message:null;
+}
+async function renderStockHub(ctx,clientId,elId,opts){
+  opts=opts||{};
+  const el=document.getElementById(elId);if(!el)return;
+  if(!clientId){el.innerHTML='';return;}
+  const prev=_stkS[elId];
+  const S=_stkS[elId]={ctx,clientId,elId,only:opts.only||null,tab:(prev&&prev.clientId===clientId&&prev.tab)||opts.tab||(ctx==='sp'?'usage':'stock'),items:[],moves:[],counts:[],client:null,
+    f:(prev&&prev.f)||{type:'all',q:'',cat:'',low:false},mode:(prev&&prev.mode)||'used',date:localDateStr(),blind:true,countType:'all'};
+  if(opts.only)S.tab=opts.only;
+  el.innerHTML='<p style="font-family:Arial;font-size:13px;color:var(--muted)">Loading stock…</p>';
+  await stkLoad(elId);
+  stkRender(elId);
+}
+function stkRefresh(id){return stkLoad(id).then(()=>stkRender(id));}
+function stkTab(id,t){_stkS[id].tab=t;stkRender(id);}
+function stkRender(id){
+  const S=_stkS[id];const el=document.getElementById(id);if(!el||!S)return;
+  if(S.err){
+    if(S.ctx==='sp'){const b=document.getElementById('sp-stock-box');if(b)b.style.display='none';return;}
+    el.innerHTML=`<div class="card" style="padding:18px;font-family:Arial;font-size:13px">The stock system needs its database tables first — run <strong>stock_system_migration.sql</strong> in Supabase, then refresh. <span style="color:var(--muted)">(${stkEsc(S.err)})</span></div>`;return;
+  }
+  const canManage=S.ctx!=='sp';
+  const tabs=S.only?[]:(S.ctx==='sp'?(S.isAdmin?[['usage','📝 Daily usage'],['count','✅ Stock count']]:[['usage','📝 Daily usage']]):[['stock','📦 Stock'],['usage','📝 Daily usage'],['count','✅ Stock count'],['activity','📊 Daily summary']]);
+  const cs=stkCountStatus(S);
+  const low=S.items.filter(i=>i.is_active&&['low','out'].includes(stkStatus(i)));
+  let head='';
+  if(!S.only){
+    head=`<div class="stk-tabs">${tabs.map(([k,l])=>`<button class="stk-tab ${S.tab===k?'on':''}" onclick="stkTab('${id}','${k}')">${l}${k==='count'&&cs.due?' <span class="stk-dot"></span>':''}</button>`).join('')}</div>`;
+  }
+  let body='';
+  if(S.tab==='stock')body=stkViewStock(id,S,canManage,low,cs);
+  else if(S.tab==='usage')body=stkViewUsage(id,S);
+  else if(S.tab==='count')body=stkViewCount(id,S,cs,canManage);
+  else body=stkViewActivity(id,S);
+  el.innerHTML=head+body;
+}
+// ── STOCK overview ──
+function stkViewStock(id,S,canManage,low,cs){
+  const act=S.items.filter(i=>i.is_active);
+  const soon=act.filter(i=>stkStatus(i)==='soon');
+  const f=S.f;
+  const cats=[...new Set(act.map(i=>i.category).filter(Boolean))].sort();
+  let rows=act.filter(i=>(f.type==='all'||i.item_type===f.type)&&(!f.cat||i.category===f.cat)&&(!f.q||(i.item_name||'').toLowerCase().includes(f.q.toLowerCase()))&&(!f.low||['low','out','soon'].includes(stkStatus(i))));
+  const ord={out:0,low:1,soon:2,ok:3};
+  rows.sort((a,b)=>ord[stkStatus(a)]-ord[stkStatus(b)]||(a.item_name||'').localeCompare(b.item_name||''));
+  const cards=`<div class="stk-cards">
+    <div class="stk-card"><div class="stk-n">${act.length}</div><div class="stk-l">items tracked</div></div>
+    <div class="stk-card" style="${low.length?'border-color:#b00020;background:#fdecea':''}"><div class="stk-n" style="color:${low.length?'#b00020':'inherit'}">${low.length}</div><div class="stk-l">at / below minimum</div></div>
+    <div class="stk-card" style="${soon.length?'border-color:#d6a900;background:#fff6dc':''}"><div class="stk-n">${soon.length}</div><div class="stk-l">getting low</div></div>
+    <div class="stk-card" style="${cs.due?'border-color:#b00020;background:#fdecea':''}"><div class="stk-n" style="font-size:14px;line-height:1.3;color:${cs.due?'#b00020':'inherit'}">${cs.due?'⚠ Count due':'✓ Counts on track'}</div><div class="stk-l">${stkEsc(cs.text)}</div></div>
+  </div>`;
+  const banner=low.length?`<div class="stk-alert"><div><strong>🔴 ${low.length} item${low.length===1?'':'s'} need${low.length===1?'s':''} reordering:</strong> ${low.slice(0,8).map(i=>stkEsc(i.item_name)).join(', ')}${low.length>8?' …':''}</div><button class="btn-sm" onclick="stkShopping('${id}')">🛒 Shopping list</button></div>`:'';
+  const setup=(act.length<5&&canManage)?stkSetupBox(id,S):'';
+  const toolbar=`<div class="stk-bar">
+    <input type="text" placeholder="🔍 Search items…" value="${stkEsc(f.q)}" oninput="_stkS['${id}'].f.q=this.value;stkRender('${id}');this.focus()" style="flex:1;min-width:150px">
+    <select onchange="_stkS['${id}'].f.type=this.value;stkRender('${id}')"><option value="all" ${f.type==='all'?'selected':''}>All items</option><option value="stock" ${f.type==='stock'?'selected':''}>Main stock</option><option value="supplies" ${f.type==='supplies'?'selected':''}>Small supplies</option></select>
+    <select onchange="_stkS['${id}'].f.cat=this.value;stkRender('${id}')"><option value="">All categories</option>${cats.map(c=>`<option ${f.cat===c?'selected':''}>${stkEsc(c)}</option>`).join('')}</select>
+    <label class="stk-chk"><input type="checkbox" ${f.low?'checked':''} onchange="_stkS['${id}'].f.low=this.checked;stkRender('${id}')"> Low only</label>
+    ${canManage?`<button class="btn-add" onclick="stkItemModal('${id}')">+ Add item</button>`:''}
+  </div>`;
+  const tbl=rows.length?`<div style="overflow-x:auto"><table class="data-table stk-table"><thead><tr><th>Status</th><th>Item</th><th>In stock</th><th>Reorder at</th><th>Days left</th><th></th></tr></thead><tbody>`+rows.map(i=>{
+    const st=stkStatus(i),m=STK_ST[st],dl=stkDaysLeft(S,i);
+    const typeChip=i.item_type==='supplies'?'<span class="stk-chip">supplies</span>':'';
+    return `<tr style="background:${m.bg}">
+      <td><span class="stk-pill" style="color:${m.c};border-color:${m.c}">${m.dot} ${m.t}</span></td>
+      <td style="font-family:Arial;font-size:13px;font-weight:600">${stkEsc(i.item_name)} ${typeChip}<div style="font-weight:400;font-size:11px;color:var(--muted)">${stkEsc(i.category||'')}${i.supplier?' · '+stkEsc(i.supplier):''}</div></td>
+      <td style="font-family:Arial;font-size:14px;font-weight:700;color:${m.c==='#17693a'?'inherit':m.c}">${_fq(i.quantity)} <span style="font-weight:400;font-size:12px;color:var(--muted)">${stkEsc(i.unit||'')}</span></td>
+      <td style="font-family:Arial;font-size:12.5px;color:var(--muted)">${i.reorder_level!=null&&i.reorder_level!==''?_fq(i.reorder_level)+' '+stkEsc(i.unit||''):'—'}${i.par_level?`<div style="font-size:10.5px">target ${_fq(i.par_level)}</div>`:''}</td>
+      <td style="font-family:Arial;font-size:12.5px;color:${dl!==null&&dl<=2?'#b00020':'var(--muted)'}">${dl===null?'—':(dl<1?'< 1 day':'~'+Math.round(dl)+' day'+(Math.round(dl)===1?'':'s'))}</td>
+      <td style="white-space:nowrap"><button class="btn-sm" onclick="stkMoveModal('${id}','${i.id}','received')">＋ In</button> <button class="btn-sm" onclick="stkMoveModal('${id}','${i.id}','used')">－ Use</button> ${canManage?`<button class="btn-sm" onclick="stkItemModal('${id}','${i.id}')">✎</button>`:''}</td>
+    </tr>`;}).join('')+`</tbody></table></div>`:`<p style="font-family:Arial;font-size:13px;color:var(--muted);padding:14px 0">${act.length?'No items match.':'No items yet — add your first item or load the starter list above.'}</p>`;
+  const settings=canManage?`<div style="margin-top:18px;font-family:Arial;font-size:12px;color:var(--muted)">Stock counts required per week: <select onchange="stkSetPerWeek('${id}',this.value)" style="padding:4px 8px;border:1px solid var(--border);border-radius:8px"><option ${cs.perWeek===2?'selected':''} value="2">2 times</option><option ${cs.perWeek===3?'selected':''} value="3">3 times</option><option ${cs.perWeek===4?'selected':''} value="4">4 times</option></select> · the admin is reminded when a count is due</div>`:'';
+  return cards+banner+setup+toolbar+tbl+settings;
+}
+function stkSetupBox(id,S){
+  const guess=stkGuessPack(S.client);
+  return `<div class="stk-setup"><div style="font-weight:700;margin-bottom:6px">⚡ Set this up for ${stkEsc((S.client&&S.client.business_name)||'this business')} in one tap</div>
+   <div style="font-size:12.5px;color:var(--ink2);margin-bottom:10px">Load a ready-made list of the items this kind of business actually uses, each with units and a "reorder at" level already filled in. You can edit or delete anything afterwards. Small supplies like gloves and window cleaner are included.</div>
+   <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><select id="stk-pack-${id}" style="padding:7px 10px;border:1px solid var(--border);border-radius:9px">${Object.keys(STK_PACKS).map(k=>`<option value="${k}" ${k===guess?'selected':''}>${STK_PACKS[k].label}</option>`).join('')}</select>
+   <label class="stk-chk"><input type="checkbox" id="stk-pack-sup-${id}" checked> include small supplies (gloves, cleaners, tissue…)</label>
+   <button class="btn-save" onclick="stkLoadPack('${id}')">Load starter list</button></div></div>`;
+}
+async function stkLoadPack(id){
+  const S=_stkS[id];const key=document.getElementById('stk-pack-'+id).value;
+  const withSup=document.getElementById('stk-pack-sup-'+id).checked;
+  let list=STK_PACKS[key].items.slice();
+  if(withSup)list=list.concat(STK_SUPPLIES_PACK);
+  const have=new Set(S.items.map(i=>(i.item_name||'').toLowerCase()));
+  const rows=list.filter(x=>!have.has(x[0].toLowerCase())).map(x=>({client_id:S.clientId,item_name:x[0],item_type:x[1],category:x[2],unit:x[3],quantity:0,reorder_level:x[4],par_level:x[5],is_active:true}));
+  if(!rows.length){alert('Those items are already there.');return;}
+  if(!confirm(`Add ${rows.length} items (all starting at 0)? You will then enter what you currently have using a Stock count.`))return;
+  const {error}=await db.from('client_inventory').insert(rows);
+  if(error){alert('Could not add: '+error.message+'\n\nHave you run stock_system_migration.sql?');return;}
+  S.tab='stock';await stkRefresh(id);
+  alert(`Added ${rows.length} items. Next: open the "Stock count" tab and type in what you have on the shelf right now.`);
+}
+// ── Item add/edit modal ──
+function stkOpenModal(title,body,w){
+  stkCloseModal();
+  const d=document.createElement('div');d.className='modal-overlay open';d.id='stk-modal';
+  d.innerHTML=`<div class="modal" style="width:${w||560}px;max-width:96vw;max-height:92vh;overflow:auto"><div class="modal-header"><div class="modal-title">${title}</div><button class="modal-close" onclick="stkCloseModal()">×</button></div><div class="modal-body">${body}</div></div>`;
+  document.body.appendChild(d);
+}
+function stkCloseModal(){const d=document.getElementById('stk-modal');if(d)d.remove();}
+function stkItemModal(id,itemId){
+  const S=_stkS[id];const it=itemId?S.items.find(x=>x.id===itemId):null;
+  const v=k=>it&&it[k]!=null?stkEsc(it[k]):'';
+  const type=(it&&it.item_type)||'stock';
+  stkOpenModal(it?'Edit item':'Add item',`
+   <datalist id="stk-units">${STK_UNITS.map(u=>`<option value="${u}">`).join('')}</datalist>
+   <datalist id="stk-cats">${[...new Set(STK_CATS.stock.concat(STK_CATS.supplies).concat(S.items.map(i=>i.category).filter(Boolean)))].map(c=>`<option value="${stkEsc(c)}">`).join('')}</datalist>
+   <div class="stk-form">
+    <label>Item name<input id="sm-name" value="${v('item_name')}" placeholder="e.g. Espresso beans"></label>
+    <label>Type<select id="sm-type"><option value="stock" ${type==='stock'?'selected':''}>Main stock (ingredients / products sold)</option><option value="supplies" ${type==='supplies'?'selected':''}>Small supplies (gloves, cleaners, tissue…)</option></select></label>
+    <label>Category<input id="sm-cat" list="stk-cats" value="${v('category')}" placeholder="Pick or type your own"></label>
+    <label>Unit of measure<input id="sm-unit" list="stk-units" value="${v('unit')}" placeholder="kg, litre, crate, box… or type your own"></label>
+    <label>${it?'Quantity in stock now':'Quantity in stock now'}<input id="sm-qty" type="number" step="any" value="${it?_fq(it.quantity):'0'}"></label>
+    <label>🔴 Reorder at (turns red at or below this)<input id="sm-min" type="number" step="any" value="${v('reorder_level')}" placeholder="e.g. 5"></label>
+    <label>Target level (what to order up to)<input id="sm-par" type="number" step="any" value="${v('par_level')}" placeholder="e.g. 20"></label>
+    <label>Cost per unit (₦) — optional<input id="sm-cost" type="number" step="any" value="${v('cost_per_unit')}"></label>
+    <label>Supplier — optional<input id="sm-sup" value="${v('supplier')}"></label>
+    <label>Notes — optional<input id="sm-notes" value="${v('notes')}"></label>
+   </div>
+   <div id="sm-fb"></div>
+   <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px"><button class="btn-save" onclick="stkSaveItem('${id}','${itemId||''}')">Save</button>${it?`<button class="btn-sm" onclick="stkArchiveItem('${id}','${itemId}')">${it.is_active?'Stop tracking':'Track again'}</button><button class="btn-danger" onclick="stkDeleteItem('${id}','${itemId}')">Delete</button>`:''}</div>`,600);
+}
+async function stkSaveItem(id,itemId){
+  const S=_stkS[id];const g=i=>document.getElementById(i).value.trim();
+  const name=g('sm-name');if(!name){document.getElementById('sm-fb').innerHTML='<div class="error-msg">Give the item a name.</div>';return;}
+  const num=s=>{const n=parseFloat(g(s));return isNaN(n)?null:n;};
+  const row={item_name:name,item_type:document.getElementById('sm-type').value,category:g('sm-cat')||null,unit:g('sm-unit')||null,reorder_level:num('sm-min'),par_level:num('sm-par'),cost_per_unit:num('sm-cost'),supplier:g('sm-sup')||null,notes:g('sm-notes')||null};
+  const qty=num('sm-qty')||0;
+  const who=await stkWho();
+  if(itemId){
+    const it=S.items.find(x=>x.id===itemId);
+    const {error}=await db.from('client_inventory').update(row).eq('id',itemId);
+    if(error){document.getElementById('sm-fb').innerHTML='<div class="error-msg">'+stkEsc(error.message)+'</div>';return;}
+    if(Math.abs(qty-(Number(it.quantity)||0))>0.0001){Object.assign(it,row);await stkMove(it,'adjustment',qty-(Number(it.quantity)||0),'Quantity corrected by hand',who);}
+  }else{
+    const {data,error}=await db.from('client_inventory').insert(Object.assign({client_id:S.clientId,quantity:qty,is_active:true},row)).select().single();
+    if(error){document.getElementById('sm-fb').innerHTML='<div class="error-msg">'+stkEsc(error.message)+'</div>';return;}
+    if(qty>0&&data)await db.from('stock_movements').insert({client_id:S.clientId,item_id:data.id,item_name:name,move_type:'received',quantity:qty,qty_after:qty,unit:row.unit,note:'Opening stock',done_by:who,move_date:localDateStr()});
+  }
+  stkCloseModal();await stkRefresh(id);
+}
+async function stkArchiveItem(id,itemId){const it=_stkS[id].items.find(x=>x.id===itemId);await db.from('client_inventory').update({is_active:!it.is_active}).eq('id',itemId);stkCloseModal();stkRefresh(id);}
+async function stkDeleteItem(id,itemId){if(!confirm('Delete this item completely? Its history stays in the activity log.'))return;await db.from('client_inventory').delete().eq('id',itemId);stkCloseModal();stkRefresh(id);}
+// ── Movements ──
+async function stkMove(item,type,qty,note,who,date){
+  const delta=(type==='adjustment'||type==='count')?Number(qty):(type==='received'?1:-1)*Math.abs(Number(qty));
+  const after=Math.max(0,Math.round(((Number(item.quantity)||0)+delta)*1000)/1000);
+  const upd={quantity:after,updated_at:new Date().toISOString()};
+  if(type==='count')upd.last_counted_at=new Date().toISOString();
+  const {error}=await db.from('client_inventory').update(upd).eq('id',item.id);
+  if(error)throw error;
+  const {error:e2}=await db.from('stock_movements').insert({client_id:item.client_id,item_id:item.id,item_name:item.item_name,move_type:type,quantity:delta,qty_after:after,unit:item.unit,note:note||null,done_by:who,move_date:date||localDateStr()});
+  if(e2)throw e2;
+  item.quantity=after;
+  return delta;
+}
+function stkMoveModal(id,itemId,type){
+  const S=_stkS[id];const it=S.items.find(x=>x.id===itemId);
+  const lab={received:'Stock received',used:'Used',waste:'Wasted / spoiled'}[type];
+  stkOpenModal(`${lab}: ${stkEsc(it.item_name)}`,`<div style="font-family:Arial;font-size:13px;margin-bottom:10px">Currently in stock: <strong>${_fq(it.quantity)} ${stkEsc(it.unit||'')}</strong></div>
+   <div class="stk-form"><label>How much (${stkEsc(it.unit||'units')})<input id="mv-qty" type="number" step="any" min="0" autofocus></label>
+   <label>Type<select id="mv-type"><option value="received" ${type==='received'?'selected':''}>＋ Received / delivered</option><option value="used" ${type==='used'?'selected':''}>－ Used</option><option value="waste" ${type==='waste'?'selected':''}>🗑 Wasted / spoiled / broken</option></select></label>
+   <label style="grid-column:1/-1">Note (optional)<input id="mv-note" placeholder="e.g. delivery from supplier, expired, dropped"></label></div><div id="mv-fb"></div>
+   <button class="btn-save" style="margin-top:12px" onclick="stkDoMove('${id}','${itemId}')">Save</button>`,440);
+}
+async function stkDoMove(id,itemId){
+  const S=_stkS[id];const it=S.items.find(x=>x.id===itemId);
+  const q=parseFloat(document.getElementById('mv-qty').value);const t=document.getElementById('mv-type').value;
+  if(!(q>0)){document.getElementById('mv-fb').innerHTML='<div class="error-msg">Enter how much.</div>';return;}
+  if(t!=='received'&&q>(Number(it.quantity)||0)&&!confirm(`That is more than the ${_fq(it.quantity)} ${it.unit||''} on record. Save anyway (stock will go to 0)?`))return;
+  try{await stkMove(it,t,q,document.getElementById('mv-note').value.trim(),await stkWho());}catch(e){document.getElementById('mv-fb').innerHTML='<div class="error-msg">'+stkEsc(e.message)+'</div>';return;}
+  stkCloseModal();stkRefresh(id);
+}
+async function stkSetPerWeek(id,v){const S=_stkS[id];const {error}=await db.from('clients').update({stock_counts_per_week:parseInt(v)}).eq('id',S.clientId);if(error){alert('Run stock_system_migration.sql first. '+error.message);return;}stkRefresh(id);}
+// ── Shopping list ──
+function stkShoppingText(S){
+  const need=S.items.filter(i=>i.is_active&&['low','out'].includes(stkStatus(i)));
+  const lines=need.map(i=>{const tgt=Number(i.par_level)||(Number(i.reorder_level)||0)*2;const buy=Math.max(0,Math.ceil((tgt-(Number(i.quantity)||0))*100)/100);return `• ${i.item_name}: have ${_fq(i.quantity)} ${i.unit||''} (min ${_fq(i.reorder_level)}) → order about ${buy?_fq(buy):'?'} ${i.unit||''}`;});
+  return `Shopping list — ${(S.client&&S.client.business_name)||''} — ${new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'})}\n\n${lines.join('\n')||'Nothing needs reordering.'}`;
+}
+function stkShopping(id){
+  const t=stkShoppingText(_stkS[id]);
+  stkOpenModal('🛒 Shopping list',`<textarea id="stk-shop" style="width:100%;height:260px;font-family:Arial;font-size:13px;padding:10px;border:1px solid var(--border);border-radius:9px">${stkEsc(t)}</textarea><button class="btn-save" style="margin-top:10px" onclick="navigator.clipboard.writeText(document.getElementById('stk-shop').value).then(()=>{this.textContent='✓ Copied'})">Copy (paste into WhatsApp)</button>`,560);
+}
+// ── DAILY USAGE sheet ──
+function stkViewUsage(id,S){
+  const modeLab={used:'Used today',received:'Delivery received',waste:'Wasted / spoiled'};
+  const act=S.items.filter(i=>i.is_active);
+  const f=S.f;
+  const today=S.date;
+  const logged={};S.moves.filter(m=>m.move_date===today).forEach(m=>{const k=m.item_id+'|'+m.move_type;logged[k]=(logged[k]||0)+Math.abs(Number(m.quantity)||0);});
+  const cats=[...new Set(act.map(i=>i.category||'Other'))].sort();
+  const blocks=cats.map(c=>{
+    const its=act.filter(i=>(i.category||'Other')===c&&(f.type==='all'||i.item_type===f.type));
+    if(!its.length)return '';
+    return `<tr><td colspan="4" class="stk-cat">${stkEsc(c)}</td></tr>`+its.map(i=>{
+      const st=stkStatus(i),m=STK_ST[st];const lg=logged[i.id+'|'+S.mode];
+      return `<tr style="background:${m.bg}"><td style="font-family:Arial;font-size:13px;font-weight:600">${stkEsc(i.item_name)}</td>
+      <td style="font-family:Arial;font-size:12.5px;white-space:nowrap;color:${m.c==='#17693a'?'var(--muted)':m.c}">${m.dot} ${_fq(i.quantity)} ${stkEsc(i.unit||'')}</td>
+      <td><input type="number" step="any" min="0" class="stk-in" data-id="${i.id}" placeholder="0" style="width:90px"> <span style="font-size:11.5px;color:var(--muted)">${stkEsc(i.unit||'')}</span></td>
+      <td style="font-family:Arial;font-size:11px;color:var(--muted)">${lg?`logged today: ${_fq(lg)}`:''}</td></tr>`;}).join('');
+  }).join('');
+  return `<div class="stk-bar" style="margin-top:4px">
+    <div class="stk-modes">${Object.keys(modeLab).map(k=>`<button class="stk-mode ${S.mode===k?'on':''}" onclick="_stkS['${id}'].mode='${k}';stkRender('${id}')">${k==='used'?'－':k==='received'?'＋':'🗑'} ${modeLab[k]}</button>`).join('')}</div>
+    <select onchange="_stkS['${id}'].f.type=this.value;stkRender('${id}')"><option value="all">All items</option><option value="stock" ${f.type==='stock'?'selected':''}>Main stock</option><option value="supplies" ${f.type==='supplies'?'selected':''}>Small supplies</option></select>
+    <input type="date" value="${S.date}" max="${localDateStr()}" onchange="_stkS['${id}'].date=this.value||localDateStr();stkRender('${id}')" style="padding:7px 10px;border:1px solid var(--border);border-radius:9px">
+  </div>
+  <div style="font-family:Arial;font-size:12.5px;color:var(--ink2);margin:6px 0 10px">${S.mode==='used'?'Type how much of each item was <strong>used</strong> today. Leave blank if none. It is taken off the stock automatically.':S.mode==='received'?'Type how much of each item was <strong>delivered</strong>. It is added to the stock automatically.':'Type anything <strong>wasted, spoiled, expired or broken</strong>. It is taken off the stock and shown in the daily summary.'}</div>
+  ${act.length?`<div style="overflow-x:auto"><table class="data-table stk-table"><thead><tr><th>Item</th><th>In stock</th><th>${modeLab[S.mode]}</th><th></th></tr></thead><tbody>${blocks}</tbody></table></div>
+  <div id="usage-fb-${id}" style="margin-top:10px"></div>
+  <button class="btn-save" style="margin-top:12px" onclick="stkSubmitUsage('${id}')">Save ${modeLab[S.mode].toLowerCase()}</button>`:'<p style="font-family:Arial;font-size:13px;color:var(--muted)">No items yet — ask your manager to set up the stock list.</p>'}`;
+}
+async function stkSubmitUsage(id){
+  const S=_stkS[id];const fb=document.getElementById('usage-fb-'+id);
+  const entries=[...document.querySelectorAll(`#${id} .stk-in`)].map(e=>({id:e.dataset.id,q:parseFloat(e.value)})).filter(x=>x.q>0);
+  if(!entries.length){fb.innerHTML='<div class="error-msg">Type at least one quantity first.</div>';return;}
+  const over=entries.filter(e=>S.mode!=='received'&&e.q>(Number(S.items.find(i=>i.id===e.id).quantity)||0));
+  if(over.length&&!confirm(`${over.length} item${over.length===1?'':'s'} ${over.length===1?'is':'are'} more than the stock on record (${over.map(e=>S.items.find(i=>i.id===e.id).item_name).slice(0,4).join(', ')}). Save anyway? Stock will go to 0 and a stock count will check it.`))return;
+  const who=await stkWho();
+  try{await Promise.all(entries.map(e=>stkMove(S.items.find(i=>i.id===e.id),S.mode,e.q,null,who,S.date)));}catch(e){fb.innerHTML='<div class="error-msg">'+stkEsc(e.message)+'</div>';return;}
+  await stkLoad(id);
+  const newLow=S.items.filter(i=>i.is_active&&['low','out'].includes(stkStatus(i))&&entries.some(e=>e.id===i.id));
+  stkRender(id);
+  const fb2=document.getElementById('usage-fb-'+id);
+  if(fb2)fb2.innerHTML=`<div class="success-msg">✓ Saved ${entries.length} item${entries.length===1?'':'s'}. Stock updated automatically.</div>${newLow.length?`<div class="stk-alert" style="margin-top:8px"><div>🔴 <strong>Now low:</strong> ${newLow.map(i=>stkEsc(i.item_name)).join(', ')} — tell the manager to reorder.</div></div>`:''}`;
+}
+// ── STOCK COUNT (quality control) ──
+function stkViewCount(id,S,cs,canManage){
+  const act=S.items.filter(i=>i.is_active);
+  const status=`<div class="stk-alert" style="background:${cs.due?'#fdecea':'#e9f6ee'};border-color:${cs.due?'#b00020':'#2e8b57'};color:${cs.due?'#b00020':'#17693a'}"><div><strong>${cs.due?'⚠ Stock count needed':'✓ Stock counts on track'}</strong> — ${stkEsc(cs.text)}. <span style="opacity:.8">Required ${cs.perWeek}× per week.</span></div></div>`;
+  const hist=S.counts.slice(0,8).map(c=>{
+    const bad=c.mismatched>0;
+    return `<div class="stk-hist" onclick="stkShowCount('${id}','${c.id}')"><div><strong>${new Date(c.count_date+'T12:00:00').toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'})}</strong> <span style="color:var(--muted)">by ${stkEsc(c.counted_by||'—')}</span></div>
+      <div>${c.items_counted} items · <span style="color:#17693a">${c.matched} matched</span>${bad?` · <span style="color:#b00020;font-weight:700">${c.mismatched} differ</span>`:''}${Number(c.shortage_value)>0?` · <span style="color:#b00020">${_fm(c.shortage_value)} short</span>`:''}</div></div>`;}).join('');
+  const sheet=act.length?`<div class="card" style="padding:14px 16px;margin:14px 0">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px"><div style="font-weight:700;font-size:14px">New stock count</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center"><select onchange="_stkS['${id}'].countType=this.value;stkRender('${id}')" style="padding:6px 10px;border:1px solid var(--border);border-radius:9px"><option value="all">All items</option><option value="stock" ${S.countType==='stock'?'selected':''}>Main stock only</option><option value="supplies" ${S.countType==='supplies'?'selected':''}>Small supplies only</option></select>
+    <label class="stk-chk"><input type="checkbox" ${S.blind?'checked':''} onchange="_stkS['${id}'].blind=this.checked;stkRender('${id}')"> Blind count (hide what the system expects)</label></div></div>
+    <div style="font-family:Arial;font-size:12.5px;color:var(--ink2);margin-bottom:10px">Physically count each item on the shelf and type the number. Leave blank to skip an item. The system compares it with what it expects and flags every difference.</div>
+    <div style="overflow-x:auto"><table class="data-table stk-table"><thead><tr><th>Item</th>${S.blind?'':'<th>System says</th>'}<th>You counted</th><th>Difference</th></tr></thead><tbody>`+
+    [...new Set(act.map(i=>i.category||'Other'))].sort().map(c=>{
+      const its=act.filter(i=>(i.category||'Other')===c&&(S.countType==='all'||i.item_type===S.countType));
+      if(!its.length)return '';
+      return `<tr><td colspan="4" class="stk-cat">${stkEsc(c)}</td></tr>`+its.map(i=>`<tr><td style="font-family:Arial;font-size:13px;font-weight:600">${stkEsc(i.item_name)} <span style="font-weight:400;font-size:11px;color:var(--muted)">(${stkEsc(i.unit||'units')})</span></td>
+        ${S.blind?'':`<td style="font-family:Arial;font-size:13px">${_fq(i.quantity)}</td>`}
+        <td><input type="number" step="any" min="0" class="stk-cnt" data-id="${i.id}" data-sys="${Number(i.quantity)||0}" oninput="stkVar(this)" style="width:100px" placeholder="count"></td>
+        <td class="stk-var" style="font-family:Arial;font-size:12.5px;font-weight:700"></td></tr>`).join('');
+    }).join('')+`</tbody></table></div>
+    <div style="margin-top:10px"><input id="cnt-notes-${id}" placeholder="Notes (optional) — e.g. where you found missing items" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:9px"></div>
+    <div id="cnt-fb-${id}" style="margin-top:10px"></div>
+    <button class="btn-save" style="margin-top:10px" onclick="stkSubmitCount('${id}')">Submit stock count</button></div>`:'<p style="font-family:Arial;font-size:13px;color:var(--muted)">No items to count yet. Add items on the Stock tab first.</p>';
+  return status+sheet+(hist?`<div style="font-family:Arial;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:16px 0 6px">Previous counts</div>${hist}`:'');
+}
+function stkVar(inp){
+  const td=inp.closest('tr').querySelector('.stk-var');if(!td)return;
+  if(inp.value===''){td.textContent='';return;}
+  const d=Math.round((parseFloat(inp.value)-parseFloat(inp.dataset.sys))*100)/100;
+  const blind=inp.closest('table').querySelectorAll('thead th').length===3;
+  if(blind){td.textContent=inp.value===''?'':'';return;}
+  td.textContent=d===0?'✓ matches':(d>0?'+'+d+' (more)':d+' (short)');td.style.color=d===0?'#17693a':'#b00020';
+}
+async function stkSubmitCount(id){
+  const S=_stkS[id];const fb=document.getElementById('cnt-fb-'+id);
+  const entries=[...document.querySelectorAll(`#${id} .stk-cnt`)].filter(e=>e.value!=='').map(e=>({item:S.items.find(i=>i.id===e.dataset.id),counted:parseFloat(e.value)}));
+  if(!entries.length){fb.innerHTML='<div class="error-msg">Count at least one item.</div>';return;}
+  const diffs=entries.filter(e=>Math.abs(e.counted-(Number(e.item.quantity)||0))>0.0001);
+  if(!confirm(`Submit this count? ${entries.length} item${entries.length===1?'':'s'} counted${diffs.length?`, ${diffs.length} differ from the system. The stock will be corrected to what you counted and the differences recorded.`:', everything matches.'}`))return;
+  const who=await stkWho();
+  const lines=entries.map(e=>({id:e.item.id,name:e.item.item_name,unit:e.item.unit||'',system:Number(e.item.quantity)||0,counted:e.counted,diff:Math.round((e.counted-(Number(e.item.quantity)||0))*1000)/1000,cost:Number(e.item.cost_per_unit)||0}));
+  const shortage=lines.filter(l=>l.diff<0).reduce((a,l)=>a+Math.abs(l.diff)*l.cost,0);
+  const {data:rec,error}=await db.from('stock_counts').insert({client_id:S.clientId,count_date:localDateStr(),counted_by:who,items_counted:lines.length,matched:lines.filter(l=>l.diff===0).length,mismatched:lines.filter(l=>l.diff!==0).length,shortage_value:shortage,notes:(document.getElementById('cnt-notes-'+id).value||'').trim()||null,lines}).select().single();
+  if(error){fb.innerHTML='<div class="error-msg">'+stkEsc(error.message)+'</div>';return;}
+  try{await Promise.all(entries.map(e=>{
+    const d=e.counted-(Number(e.item.quantity)||0);
+    if(Math.abs(d)>0.0001)return stkMove(e.item,'count',d,`Stock count: system ${_fq(e.item.quantity)}, counted ${_fq(e.counted)}`,who);
+    return db.from('client_inventory').update({last_counted_at:new Date().toISOString()}).eq('id',e.item.id);
+  }));}catch(e){fb.innerHTML='<div class="error-msg">'+stkEsc(e.message)+'</div>';return;}
+  await stkLoad(id);S.tab='count';
+  stkRender(id);
+  stkShowCount(id,rec.id,true);
+}
+function stkShowCount(id,countId,justDone){
+  const S=_stkS[id];const c=S.counts.find(x=>x.id===countId);if(!c)return;
+  const ls=(c.lines||[]).slice().sort((a,b)=>Math.abs(b.diff)-Math.abs(a.diff));
+  const bad=ls.filter(l=>l.diff!==0);
+  stkOpenModal(`${justDone?'✓ Count submitted':'Stock count'} — ${new Date(c.count_date+'T12:00:00').toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'short'})}`,`
+   <div style="font-family:Arial;font-size:13px;margin-bottom:10px">Counted by <strong>${stkEsc(c.counted_by||'—')}</strong> · ${c.items_counted} items · <span style="color:#17693a">${c.matched} matched</span> · <span style="color:${c.mismatched?'#b00020':'inherit'};font-weight:${c.mismatched?700:400}">${c.mismatched} differ</span>${Number(c.shortage_value)>0?` · <span style="color:#b00020">${_fm(c.shortage_value)} short</span>`:''}</div>
+   ${bad.length?`<table class="data-table"><thead><tr><th>Item</th><th>System</th><th>Counted</th><th>Difference</th></tr></thead><tbody>${bad.map(l=>`<tr style="background:${l.diff<0?'#fdecea':'#fff6dc'}"><td>${stkEsc(l.name)}</td><td>${_fq(l.system)} ${stkEsc(l.unit)}</td><td>${_fq(l.counted)} ${stkEsc(l.unit)}</td><td style="font-weight:700;color:${l.diff<0?'#b00020':'#8a6d00'}">${l.diff>0?'+':''}${_fq(l.diff)} ${stkEsc(l.unit)} ${l.diff<0?'(short)':'(extra)'}</td></tr>`).join('')}</tbody></table>`:'<div class="success-msg">Everything counted matched the system. 👏</div>'}
+   ${c.notes?`<div style="margin-top:10px;font-family:Arial;font-size:12.5px"><strong>Notes:</strong> ${stkEsc(c.notes)}</div>`:''}`,620);
+}
+// ── DAILY SUMMARY ──
+function stkDayData(S,date){
+  const mv=S.moves.filter(m=>m.move_date===date);
+  const agg=t=>{const o={};mv.filter(m=>m.move_type===t).forEach(m=>{const k=m.item_name||'?';o[k]=o[k]||{q:0,u:m.unit||''};o[k].q+=Math.abs(Number(m.quantity)||0);});return Object.entries(o).map(([n,v])=>({n,q:v.q,u:v.u})).sort((a,b)=>b.q-a.q);};
+  return {used:agg('used'),received:agg('received'),waste:agg('waste'),counts:S.counts.filter(c=>c.count_date===date),log:mv};
+}
+function stkSummaryText(S,date){
+  const d=stkDayData(S,date);const low=S.items.filter(i=>i.is_active&&['low','out'].includes(stkStatus(i)));
+  const L=a=>a.length?a.map(x=>`  • ${x.n}: ${_fq(x.q)} ${x.u}`).join('\n'):'  —';
+  const cs=stkCountStatus(S);
+  return `STOCK SUMMARY — ${(S.client&&S.client.business_name)||''} — ${new Date(date+'T12:00:00').toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'})}\n\nUSED:\n${L(d.used)}\n\nRECEIVED:\n${L(d.received)}\n\nWASTED / SPOILED:\n${L(d.waste)}\n\nSTOCK COUNTS TODAY: ${d.counts.length?d.counts.map(c=>`${c.items_counted} items, ${c.mismatched} differ (by ${c.counted_by})`).join('; '):'none'}\n${cs.due?'⚠ A stock count is due.\n':''}\nNEEDS REORDERING (${low.length}):\n${low.length?low.map(i=>`  • ${i.item_name}: ${_fq(i.quantity)} ${i.unit||''} left (min ${_fq(i.reorder_level)})`).join('\n'):'  nothing'}`;
+}
+function stkViewActivity(id,S){
+  const date=S.date||localDateStr();const d=stkDayData(S,date);
+  const low=S.items.filter(i=>i.is_active&&['low','out'].includes(stkStatus(i)));
+  const list=(a,empty)=>a.length?a.map(x=>`<div class="stk-row"><span>${stkEsc(x.n)}</span><strong>${_fq(x.q)} ${stkEsc(x.u)}</strong></div>`).join(''):`<div style="color:var(--muted);font-size:12.5px">${empty}</div>`;
+  const typeLab={used:'Used',received:'Received',waste:'Wasted',adjustment:'Adjusted',count:'Count fix'};
+  return `<div class="stk-bar"><input type="date" value="${date}" max="${localDateStr()}" onchange="_stkS['${id}'].date=this.value||localDateStr();stkRender('${id}')" style="padding:7px 10px;border:1px solid var(--border);border-radius:9px"><button class="btn-sm" onclick="stkCopySummary('${id}')">📋 Copy summary (WhatsApp)</button></div>
+   <div class="stk-grid">
+    <div class="card stk-box"><h4>－ Used</h4>${list(d.used,'Nothing logged as used.')}</div>
+    <div class="card stk-box"><h4>＋ Received</h4>${list(d.received,'No deliveries.')}</div>
+    <div class="card stk-box"><h4>🗑 Wasted / spoiled</h4>${list(d.waste,'None.')}</div>
+    <div class="card stk-box" style="${low.length?'border-color:#b00020':''}"><h4>🔴 Needs reordering (${low.length})</h4>${low.length?low.map(i=>`<div class="stk-row"><span>${stkEsc(i.item_name)}</span><strong style="color:#b00020">${_fq(i.quantity)} / min ${_fq(i.reorder_level)} ${stkEsc(i.unit||'')}</strong></div>`).join(''):'<div style="color:var(--muted);font-size:12.5px">Nothing — all above minimum.</div>'}</div>
+   </div>
+   ${d.counts.length?`<div class="card stk-box" style="margin-top:12px"><h4>✅ Stock count today</h4>${d.counts.map(c=>`<div class="stk-row" style="cursor:pointer" onclick="stkShowCount('${id}','${c.id}')"><span>${stkEsc(c.counted_by||'')} · ${c.items_counted} items</span><strong style="color:${c.mismatched?'#b00020':'#17693a'}">${c.mismatched?c.mismatched+' differ':'all matched'}</strong></div>`).join('')}</div>`:''}
+   <div style="font-family:Arial;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:18px 0 6px">Activity log</div>
+   ${d.log.length?`<div style="overflow-x:auto"><table class="data-table"><thead><tr><th>Time</th><th>Item</th><th>What</th><th>Qty</th><th>Left</th><th>By</th></tr></thead><tbody>${d.log.slice(0,150).map(m=>`<tr><td style="font-size:12px;color:var(--muted)">${m.created_at?new Date(m.created_at).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}):''}</td><td style="font-size:13px">${stkEsc(m.item_name)}</td><td><span class="badge ${m.move_type==='received'?'badge-green':m.move_type==='waste'?'badge-red':'badge-gold'}">${typeLab[m.move_type]||m.move_type}</span>${m.note?`<div style="font-size:11px;color:var(--muted)">${stkEsc(m.note)}</div>`:''}</td><td style="font-size:13px;font-weight:600;color:${Number(m.quantity)<0?'#b00020':'#17693a'}">${Number(m.quantity)>0?'+':''}${_fq(m.quantity)} ${stkEsc(m.unit||'')}</td><td style="font-size:12.5px">${_fq(m.qty_after)}</td><td style="font-size:12px;color:var(--muted)">${stkEsc(m.done_by||'')}</td></tr>`).join('')}</tbody></table></div>`:'<p style="font-family:Arial;font-size:13px;color:var(--muted)">No stock activity on this day.</p>'}`;
+}
+function stkCopySummary(id){const S=_stkS[id];navigator.clipboard.writeText(stkSummaryText(S,S.date||localDateStr())).then(()=>alert('Summary copied. Paste it into WhatsApp.'));}
+function stkEsc(s){return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+// ── Wrappers so the old tab calls keep working ──
 async function loadInventory(clientId,targetId,canEdit){
-  _invClientId=clientId;
-  const {data}=await db.from('client_inventory').select('*').eq('client_id',clientId).order('item_name',{ascending:true});
-  const items=data||[];const el=document.getElementById(targetId);if(!el)return;
-  if(!items.length){el.innerHTML='<p style="font-family:Arial;font-size:13px;color:var(--muted)">No inventory items yet.</p>';return;}
-  const lowItems=items.filter(i=>i.reorder_level!=null&&i.quantity<=i.reorder_level);
-  const banner=lowItems.length?`<div style="background:var(--danger-light);border:1.5px solid var(--danger);border-radius:9px;padding:10px 14px;margin-bottom:12px;font-family:Arial;font-size:13px;color:var(--danger)">⚠ ${lowItems.length} item${lowItems.length===1?'':'s'} at or below reorder level: ${lowItems.map(i=>i.item_name).join(', ')}</div>`:'';
-  el.innerHTML=banner+`<table class="data-table"><thead><tr><th>Item</th><th>Category</th><th>Qty</th><th>Reorder At</th><th>Updated</th>${canEdit?'<th></th>':''}</tr></thead><tbody>`+
-    items.map(i=>{
-      const low=i.reorder_level!=null&&i.quantity<=i.reorder_level;
-      return`<tr${low?' style="background:var(--danger-light)"':''}>
-        <td style="font-family:Arial;font-size:13px">${i.item_name}${low?' ⚠':''}</td>
-        <td style="font-family:Arial;font-size:12px;color:var(--muted)">${i.category||'—'}</td>
-        <td style="font-family:Arial;font-size:13px">${i.quantity} ${i.unit||''}</td>
-        <td style="font-family:Arial;font-size:12px;color:var(--muted)">${i.reorder_level||'—'}</td>
-        <td style="font-family:Arial;font-size:11px;color:var(--muted)">${(i.updated_at||'').slice(0,10)}</td>
-        ${canEdit?`<td><button class="btn-danger" onclick="deleteInventoryItem('${i.id}','${targetId}')">Del</button></td>`:''}
-      </tr>`;
-    }).join('')+`</tbody></table>`;
+  const ctx=(currentUser&&currentUser.role==='client')?'pc':'cv';
+  return renderStockHub(ctx,clientId,targetId);
 }
-async function addInventoryItem(){
-  const p=currentUser&&currentUser.role==='client'?'-p':'';
-  const item=document.getElementById('inv-item'+p).value.trim();if(!item||!_invClientId)return;
-  const {error}=await db.from('client_inventory').insert({client_id:_invClientId,item_name:item,category:document.getElementById('inv-category'+p).value.trim(),quantity:parseFloat(document.getElementById('inv-qty'+p).value)||0,unit:document.getElementById('inv-unit'+p).value.trim(),reorder_level:parseFloat(document.getElementById('inv-reorder'+p).value)||0});
-  if(error){alert('Could not add item: '+error.message);return;}
-  ['inv-item','inv-category','inv-qty','inv-unit','inv-reorder'].forEach(id=>{const e=document.getElementById(id+p);if(e)e.value='';});
-  if(document.getElementById('cv-inventory-list'))loadInventory(_invClientId,'cv-inventory-list',true);
-  if(document.getElementById('portal-inventory-list'))loadInventory(_invClientId,'portal-inventory-list',true);
+// ── Low-stock banner (top of the client page) ──
+async function checkClientLowStockBanner(clientId){
+  const banner=document.getElementById('cv-low-stock-banner');if(!banner)return;
+  const [a,b,c]=await Promise.all([db.from('client_inventory').select('item_name,quantity,reorder_level,is_active').eq('client_id',clientId),db.from('stock_counts').select('count_date').eq('client_id',clientId).order('created_at',{ascending:false}).limit(1),db.from('clients').select('stock_counts_per_week').eq('id',clientId).maybeSingle()]);
+  const items=(a.data||[]).filter(i=>i.is_active!==false);
+  const low=items.filter(i=>(Number(i.quantity)||0)<=0||(i.reorder_level!=null&&Number(i.quantity)<=Number(i.reorder_level)));
+  const gap=Math.max(1,Math.round(7/Number((c.data&&c.data.stock_counts_per_week)||3)));
+  const last=b.data&&b.data[0];
+  const days=last?Math.round((new Date(localDateStr()+'T12:00:00')-new Date(last.count_date+'T12:00:00'))/86400000):null;
+  const countDue=items.length>0&&(days===null||days>=gap);
+  const parts=[];
+  if(low.length)parts.push(`🔴 ${low.length} item${low.length===1?'':'s'} at or below minimum stock: ${low.slice(0,6).map(i=>i.item_name).join(', ')}${low.length>6?' …':''}`);
+  if(countDue)parts.push(`⚠ stock count ${days===null?'never done':'overdue ('+days+' days)'}`);
+  if(!parts.length){banner.style.display='none';return;}
+  banner.style.display='block';banner.innerHTML=parts.join(' · ')+' — click to open Stock';
 }
-async function deleteInventoryItem(id,targetId){
-  await db.from('client_inventory').delete().eq('id',id);
-  loadInventory(_invClientId,targetId,true);
+// ── Daily HR Report: stock block for every client on the chosen date ──
+async function loadDailyStockList(clientIds,date){
+  const el=document.getElementById('dhr-stock-list');if(!el)return;
+  if(!clientIds.length){el.innerHTML='';return;}
+  const [inv,mv,cn,cl]=await Promise.all([
+    db.from('client_inventory').select('*').in('client_id',clientIds),
+    db.from('stock_movements').select('*').in('client_id',clientIds).eq('move_date',date),
+    db.from('stock_counts').select('*').in('client_id',clientIds).order('created_at',{ascending:false}).limit(200),
+    db.from('clients').select('id,business_name,services,stock_counts_per_week').in('id',clientIds)
+  ]);
+  if(inv.error||mv.error||cn.error){el.innerHTML='<p style="font-family:Arial;font-size:13px;color:var(--muted)">Stock tracking is not set up yet (run stock_system_migration.sql).</p>';return;}
+  const out=[];
+  (cl.data||[]).forEach(c=>{
+    if(typeof clientHas==='function'&&!clientHas(c,'operations'))return;
+    const items=(inv.data||[]).filter(i=>i.client_id===c.id&&i.is_active!==false);
+    if(!items.length)return;
+    const m=(mv.data||[]).filter(x=>x.client_id===c.id);
+    const sum=t=>m.filter(x=>x.move_type===t).reduce((a,x)=>a+Math.abs(Number(x.quantity)||0),0);
+    const cnts=(cn.data||[]).filter(x=>x.client_id===c.id);
+    const todayCnt=cnts.filter(x=>x.count_date===date);
+    const last=cnts[0];const gap=Math.max(1,Math.round(7/Number(c.stock_counts_per_week||3)));
+    const days=last?Math.round((new Date(date+'T12:00:00')-new Date(last.count_date+'T12:00:00'))/86400000):null;
+    const low=items.filter(i=>(Number(i.quantity)||0)<=0||(i.reorder_level!=null&&Number(i.quantity)<=Number(i.reorder_level)));
+    const top=(t)=>{const o={};m.filter(x=>x.move_type===t).forEach(x=>{o[x.item_name]=(o[x.item_name]||0)+Math.abs(Number(x.quantity)||0);});return Object.entries(o).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([n,q])=>`${stkEsc(n)} ${_fq(q)}`).join(', ');};
+    out.push(`<div class="card" style="padding:14px 18px;margin-bottom:10px;border-left:4px solid ${low.length?'#b00020':'#2e8b57'}">
+      <div style="font-family:Arial;font-size:14px;font-weight:700;margin-bottom:6px">${stkEsc(c.business_name)}</div>
+      <div style="font-family:Arial;font-size:12.5px;line-height:1.7;color:var(--ink2)">
+       <div>📝 Stock movements today: <strong>${m.length}</strong>${top('used')?` · used: ${top('used')}`:''}</div>
+       ${sum('received')?`<div>＋ Received: ${top('received')}</div>`:''}${sum('waste')?`<div style="color:#b00020">🗑 Wasted: ${top('waste')}</div>`:''}
+       <div>✅ Stock count: ${todayCnt.length?todayCnt.map(x=>`${x.items_counted} items by ${stkEsc(x.counted_by||'')}, <strong style="color:${x.mismatched?'#b00020':'#17693a'}">${x.mismatched?x.mismatched+' differ':'all matched'}</strong>`).join('; '):(days===null?'<span style="color:#b00020;font-weight:700">never done</span>':(days>=gap?`<span style="color:#b00020;font-weight:700">overdue — last ${days} day${days===1?'':'s'} ago</span>`:`last ${days} day${days===1?'':'s'} ago`))}</div>
+       <div>${low.length?`<span style="color:#b00020;font-weight:700">🔴 ${low.length} to reorder:</span> ${low.slice(0,8).map(i=>stkEsc(i.item_name)).join(', ')}`:'🟢 Nothing below minimum'}</div>
+      </div></div>`);
+  });
+  el.innerHTML=out.length?out.join(''):'<p style="font-family:Arial;font-size:13px;color:var(--muted)">No clients are tracking stock yet.</p>';
 }
 
 // ══ QUALITY CONTROL (shared) ══
@@ -14733,7 +15239,7 @@ async function loadDailyHRReport(){
     document.getElementById('dhr-summary').innerHTML='<p style="font-family:Arial;font-size:13px;color:var(--muted)">No clients are set up to use the staff portal yet. Mark a client as portal-active from ✎ Edit Client Info.</p>';
     document.getElementById('dhr-list').innerHTML='';
     document.getElementById('dhr-training-gap-list').innerHTML='';
-    document.getElementById('dhr-daily-reports-list').innerHTML='';
+    document.getElementById('dhr-daily-reports-list').innerHTML='';{const x=document.getElementById('dhr-stock-list');if(x)x.innerHTML='';}
     document.getElementById('dhr-face-requests-list').innerHTML='';
     document.getElementById('dhr-incidents-list').innerHTML='';
     return;
@@ -14771,6 +15277,7 @@ async function loadDailyHRReport(){
     absentees.map(s=>`<div style="font-family:Arial;font-size:12.5px;color:var(--ink2);padding:6px 0;border-bottom:1px solid var(--border)">${s.name} — ${(s.clients&&s.clients.business_name)||'—'}</div>`).join('')+`</div>`:'');
   loadTrainingGapList(scopedClientIds);
   loadDailyReportsList(scopedClientIds,date);
+  loadDailyStockList(scopedClientIds,date);
   loadFaceChangeRequests(scopedClientIds);
   loadDailyIncidentsList(scopedClientIds);
 }
