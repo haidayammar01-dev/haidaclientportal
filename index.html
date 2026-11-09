@@ -964,6 +964,8 @@ self.addEventListener('notificationclick',function(e){
           <button class="tab-btn" onclick="showAdminTab('interviews',this)">🗣 Interviews</button>
           <button class="tab-btn" onclick="showAdminTab('screening',this)">📝 Screening Tests</button>
           <button class="tab-btn" onclick="showAdminTab('talentpool',this)">🧑‍💻 Talent Pool</button>
+          <button class="tab-btn" onclick="showAdminTab('recruit',this)">📝 Recruitment Intake</button>
+          <button class="tab-btn" onclick="showAdminTab('onboard',this)">✅ Onboarding &amp; Checks</button>
         </div>
       </div>
       <div class="nav-group" data-g="admin">
@@ -2672,6 +2674,18 @@ self.addEventListener('notificationclick',function(e){
         <div id="training-companies-list"></div>
       </div>
 
+      <div class="page" id="page-recruit">
+        <div class="page-title">Recruitment Intake</div>
+        <div class="page-sub">Client hiring requirements. Click “Find matches” and the portal checks the whole Talent Pool for you — no calling people who don't fit.</div>
+        <div id="recruit-body"></div>
+      </div>
+
+      <div class="page" id="page-onboard">
+        <div class="page-title">Onboarding &amp; Checks</div>
+        <div class="page-sub">Shortlisted people: offer → guarantor → address visit → reference call. Cleared only when all four are done.</div>
+        <div id="onboard-body"></div>
+      </div>
+
       <!-- TALENT POOL (general applicant pool, not tied to any one client) -->
       <div class="page" id="page-talentpool">
         <div class="page-title">Talent Pool</div>
@@ -2682,10 +2696,13 @@ self.addEventListener('notificationclick',function(e){
             <option value="">All statuses</option>
             <option>New</option><option>Reviewed</option><option>Shortlisted</option><option>Rejected</option>
           </select>
+          <select id="tp-city-filter" onchange="loadTalentPool()" style="padding:8px 12px;border:1px solid var(--border);border-radius:9px;font-size:13px"><option value="">All cities</option></select>
+          <select id="tp-gender-filter" onchange="loadTalentPool()" style="padding:8px 12px;border:1px solid var(--border);border-radius:9px;font-size:13px"><option value="">Any gender</option><option value="F">Female</option><option value="M">Male</option></select>
           <label style="display:flex;align-items:center;gap:6px;font-family:Arial;font-size:13px;color:var(--ink)">
             <input type="checkbox" id="tp-priority-filter" onchange="loadTalentPool()" style="width:auto"> ⭐ Priority only
           </label>
         </div>
+        <div class="card" style="padding:12px 16px;margin-bottom:12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span style="font-size:13px">📋 Application form (replaces Google Form):</span><button class="btn-sm" onclick="copyApplyLink()">Copy link</button><a class="btn-sm" href="apply.html" target="_blank" style="text-decoration:none">Open form</a></div>
         <div id="talentpool-list"></div>
       </div>
 
@@ -10700,7 +10717,261 @@ async function saveScreeningInvite(){
   setTimeout(()=>{loadScreening();},800);
 }
 
+// ══ ONBOARDING: offer → guarantor → address check → reference ══
+function obBase(){
+  let b='';try{b=localStorage.getItem('forms_base')||'';}catch(e){}
+  if(!b){b=prompt('Paste the address of your application site (the Netlify link), e.g. https://haida-apply.netlify.app','')||'';b=b.trim().replace(/\/+$/,'').replace(/\/(index|apply)\.html$/,'');if(b&&!/^https?:/.test(b))b='https://'+b;try{if(b)localStorage.setItem('forms_base',b);}catch(e){}}
+  return b;
+}
+function obChangeBase(){try{localStorage.removeItem('forms_base');}catch(e){}const b=obBase();if(b)alert('Saved: '+b);}
+const obWa=(p,m)=>'https://wa.me/'+String(p||'').replace(/\D/g,'').replace(/^0/,'234')+'?text='+encodeURIComponent(m);
+const obLink=(page,tok)=>obBase()+'/'+page+'.html?t='+tok;
+function obOfferMsg(o){return `Hello ${o.candidate_name}, congratulations! You have been shortlisted for ${o.role_name} at ${o.company_name} through Haida Yammar Limited. Please open this link, read the offer and reply: ${obLink('onboard',o.token)}`;}
+async function obCreate(talentId,ctx){
+  const {data:ex}=await db.from('onboarding_requests').select('*').eq('talent_id',talentId).eq('role_name',ctx.role_name).neq('status','Declined').limit(1);
+  if(ex&&ex.length)return ex[0];
+  const {data:a}=await db.from('talent_pool').select('full_name,phone').eq('id',talentId).single();
+  const {data,error}=await db.from('onboarding_requests').insert({talent_id:talentId,client_id:ctx.client_id||null,intake_id:ctx.intake_id||null,role_name:ctx.role_name,company_name:ctx.company_name,candidate_name:a.full_name,candidate_phone:a.phone,offer:ctx.offer||{},status:'Sent'}).select().single();
+  if(error){alert('Could not start onboarding: '+error.message+'\n(Run recruit_intake_migration.sql first.)');return null;}
+  return data;
+}
+async function obStartFromPool(id){
+  const sel=document.getElementById('tp-sendto-'+id);const cid=sel&&sel.value||null;
+  const {data:a}=await db.from('talent_pool').select('position_applied').eq('id',id).single();
+  let company='Haida Yammar Limited';
+  if(cid){const {data:c}=await db.from('clients').select('business_name').eq('id',cid).single();if(c)company=c.business_name;}
+  const role=prompt('Role offered?',(a&&a.position_applied||'').split(',')[0].trim());if(!role)return;
+  const o=await obCreate(id,{client_id:cid,role_name:role,company_name:company});if(!o)return;
+  window.open(obWa(o.candidate_phone,obOfferMsg(o)),'_blank');
+}
+let _obData=null,_obShowAll=false;
+async function loadOnboarding(){
+  const el=document.getElementById('onboard-body');if(!el)return;
+  el.innerHTML='<p style="font-size:13px;color:var(--muted)">Loading…</p>';
+  const [a,b,c]=await Promise.all([db.from('onboarding_requests').select('*').order('created_at',{ascending:false}),db.from('guarantor_forms').select('*').order('created_at'),db.from('address_checks').select('*').order('created_at')]);
+  if(a.error){el.innerHTML=`<p style="color:var(--danger);font-size:13px">Run recruit_intake_migration.sql in Supabase first. (${rcEsc(a.error.message)})</p>`;return;}
+  _obData={ob:a.data||[],g:b.data||[],ck:c.data||[]};obRender();
+}
+function obState(o){
+  const g=_obData.g.filter(x=>x.onboarding_id===o.id),ck=_obData.ck.filter(x=>x.onboarding_id===o.id);
+  const gDone=g.some(x=>x.status==='Submitted'),ckDone=ck.some(x=>x.status==='Done'&&/^Lives here/.test(x.result||'')),ckBad=ck.some(x=>x.status==='Done'&&!/^Lives here/.test(x.result||''));
+  const accepted=['Accepted','Guarantor sent','Guarantor done'].includes(o.status);
+  const missing=[];if(!accepted)missing.push('Candidate has not accepted');if(!gDone)missing.push('Guarantor form');if(!ckDone)missing.push(ckBad?'Address check FAILED':'Address check');if(!o.reference_checked)missing.push('Reference call');
+  const days=Math.floor((Date.now()-new Date(o.created_at))/864e5);
+  return {g,ck,gDone,ckDone,ckBad,accepted,missing,cleared:!missing.length,stalled:!accepted&&o.status!=='Declined'&&days>=2,days};
+}
+function obRender(){
+  const el=document.getElementById('onboard-body');if(!el||!_obData)return;
+  const f=document.getElementById('ob-filter')?.value||'';
+  let rows=_obData.ob.map(o=>({o,s:obState(o)}));
+  if(f==='wait')rows=rows.filter(r=>!r.s.accepted&&r.o.status!=='Declined');
+  if(f==='guar')rows=rows.filter(r=>r.s.accepted&&!r.s.gDone);
+  if(f==='addr')rows=rows.filter(r=>r.s.accepted&&!r.s.ckDone);
+  if(f==='clear')rows=rows.filter(r=>r.s.cleared);
+  if(f==='')rows=rows.filter(r=>r.o.status!=='Declined');
+  const total=rows.length;if(!_obShowAll)rows=rows.slice(0,15);
+  const chip=(t,ok,bad)=>`<span style="display:inline-block;font-size:11.5px;padding:3px 9px;border-radius:99px;margin:2px 4px 2px 0;background:${ok?'#e7f6ec':bad?'#fde8e6':'#f1efe9'};color:${ok?'#1a7f37':bad?'#b3261e':'#6b6b66'}">${t}</span>`;
+  el.innerHTML=`<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center"><select id="ob-filter" onchange="obRender()" style="padding:8px 12px;border:1px solid var(--border);border-radius:9px;font-size:13px"><option value="">Active</option><option value="wait" ${f==='wait'?'selected':''}>Waiting on candidate</option><option value="guar" ${f==='guar'?'selected':''}>Waiting on guarantor</option><option value="addr" ${f==='addr'?'selected':''}>Needs address check</option><option value="clear" ${f==='clear'?'selected':''}>✅ Cleared to start</option></select><button class="btn-sm" onclick="obChangeBase()">⚙ Form site link</button></div>
+  ${rows.map(({o,s})=>{const gl=s.g[0];return `<div class="card" style="padding:14px 16px;margin-bottom:10px;${s.cleared?'border:1.5px solid #1a7f37':s.stalled||s.ckBad?'border:1.5px solid #b3261e':''}">
+   <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><div><strong>${rcEsc(o.candidate_name)}</strong> <span style="font-size:12px;color:var(--muted)">${rcEsc(o.role_name)} · ${rcEsc(o.company_name)}</span><div style="font-size:12px;color:var(--muted)">📞 ${rcEsc(o.candidate_phone||'—')} · ${s.days}d ago</div></div>
+    <div>${s.cleared?'<span class="badge badge-green">✅ Cleared to start</span>':''}</div></div>
+   <div style="margin-top:6px">${chip('1 Offer: '+(o.status==='Sent'||o.status==='Seen'?(s.stalled?'no reply '+s.days+'d':'sent'):o.status==='Declined'?'declined':'accepted'),s.accepted,s.stalled)}${chip('2 Guarantor: '+(s.gDone?'done':s.g.length?'waiting':'not yet'),s.gDone,false)}${chip('3 Address: '+(s.ckDone?'confirmed':s.ckBad?'FAILED':s.ck.length?'visit pending':'not started'),s.ckDone,s.ckBad)}${chip('4 Reference: '+(o.reference_checked?'called':'not yet'),o.reference_checked,false)}</div>
+   ${s.cleared?'':`<div style="font-size:12px;color:#b3261e;margin-top:4px">Still needed: ${s.missing.join(' · ')}</div>`}
+   <div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap">
+    ${!s.accepted?`<a class="btn-sm" style="text-decoration:none" target="_blank" href="${obWa(o.candidate_phone,obOfferMsg(o))}">📨 Resend offer</a>`:''}
+    ${s.accepted&&!s.ck.length?`<button class="btn-sm" onclick="obStartCheck('${o.id}')">📍 Send address check</button>`:''}
+    ${s.ck.filter(x=>x.status!=='Done').map(x=>`<a class="btn-sm" style="text-decoration:none" target="_blank" href="${obWa(x.assigned_phone,'Address check for '+o.candidate_name+'. Please open: '+obLink('check',x.token))}">📍 Resend to ${rcEsc(x.assigned_to||'checker')}</a>`).join('')}
+    ${s.accepted?`<button class="btn-sm" onclick="obToggleRef('${o.id}',${!o.reference_checked})">${o.reference_checked?'↩ Reference not called':'☎ Mark reference called'}</button>`:''}
+    <button class="btn-danger" onclick="obDel('${o.id}')">Del</button></div>
+   ${(s.g.length||s.ck.length)?`<details style="margin-top:8px"><summary style="cursor:pointer;font-size:12.5px;color:var(--muted)">Details</summary>
+    ${s.g.map(x=>`<div style="font-size:12.5px;padding:6px 0;border-top:1px solid var(--border)"><strong>Guarantor:</strong> ${rcEsc(x.guarantor_name||'—')} · ${rcEsc(x.guarantor_phone||'')} · ${x.status==='Submitted'?`${rcEsc(x.relationship||'')}, known ${rcEsc(x.years_known||'')} · ${rcEsc(x.occupation||'')} at ${rcEsc(x.employer||'')}<br>🏠 ${rcEsc(x.home_address||'')} ${x.id_url?`· <a href="${x.id_url}" target="_blank">ID</a>`:''} ${x.photo_url?`· <a href="${x.photo_url}" target="_blank">Photo</a>`:''}`:'<span style="color:#b3261e">not submitted yet</span>'}</div>`).join('')}
+    ${s.ck.map(x=>`<div style="font-size:12.5px;padding:6px 0;border-top:1px solid var(--border)"><strong>Address check</strong> by ${rcEsc(x.assigned_to||'—')} · fee ₦${Number(x.fee||0).toLocaleString()} · ${x.paid?'<span style="color:#1a7f37">paid</span>':`<span style="color:#b3261e">unpaid</span> <button class="btn-sm" onclick="obPay('${x.id}')">Mark paid</button>`}<br>📍 ${rcEsc(x.address||'')}<br>${x.status==='Done'?`Result: <strong>${rcEsc(x.result)}</strong> (by ${rcEsc(x.confirmed_by||'')}) ${rcEsc(x.notes||'')} ${x.photo_url?`· <a href="${x.photo_url}" target="_blank">Photo</a>`:''} ${x.lat?`· <a href="https://maps.google.com/?q=${x.lat},${x.lng}" target="_blank">Map</a>`:''}`:'Visit pending'}</div>`).join('')}</details>`:''}
+  </div>`}).join('')||'<p style="font-size:13px;color:var(--muted)">Nothing here yet. Shortlist someone from Recruitment Intake → Find matches.</p>'}
+  ${total>15&&!_obShowAll?`<button class="btn-sm" onclick="_obShowAll=true;obRender()">Show ${total-15} more</button>`:''}`;
+}
+async function obStartCheck(id){
+  const o=_obData.ob.find(x=>x.id===id);
+  const who=prompt('Who will visit the address? (name)');if(!who)return;
+  const ph=prompt('Their WhatsApp number');if(!ph)return;
+  const fee=Number(prompt('Fee for this visit (₦)','10000'))||10000;
+  const {data:tp}=await db.from('talent_pool').select('address,address_landmark').eq('id',o.talent_id).single();
+  const addr=o.address_given||(tp&&tp.address)||'';
+  const {data,error}=await db.from('address_checks').insert({onboarding_id:id,candidate_name:o.candidate_name,candidate_phone:o.candidate_phone,address:addr,landmark:tp&&tp.address_landmark||'',assigned_to:who,assigned_phone:ph,fee,status:'Pending'}).select().single();
+  if(error){alert(error.message);return;}
+  window.open(obWa(ph,'Address check for '+o.candidate_name+'. Please open: '+obLink('check',data.token)),'_blank');
+  loadOnboarding();
+}
+async function obToggleRef(id,v){await db.from('onboarding_requests').update({reference_checked:v}).eq('id',id);loadOnboarding();}
+async function obPay(id){await db.from('address_checks').update({paid:true,paid_at:new Date().toISOString()}).eq('id',id);loadOnboarding();}
+async function obDel(id){if(!confirm('Delete this onboarding record?'))return;await db.from('onboarding_requests').delete().eq('id',id);loadOnboarding();}
+
+// ══ RECRUITMENT INTAKE + MATCHING ══
+const RC_CITIES=['Abuja','Lagos','Port Harcourt','Kano','Kaduna','Ibadan','Enugu','Jos','Benin City','Owerri','Uyo','Warri','Abeokuta','Ilorin'];
+const RC_SECTIONS=[
+ {t:'1. Client details',open:1,f:[['company','Company name','text'],['date','Date','date'],['contact','Contact person','text'],['position','Their position','text'],['phone','Phone / WhatsApp','text'],['email','Email','text'],['taken_by','Taken by','text']]},
+ {t:'2. About the company',f:[['biz_type','Business type','multi',['Hotel','Restaurant','Lounge/Bar','Resort','Short-let','Event centre','Other']],['years_operating','Years operating','text'],['current_staff','Current staff no.','text'],['branches','No. of branches','text'],['staff_mf','Male / Female staff','text'],['why_hiring','Why hiring now','multi',['New opening','Expansion','Replacing staff','Seasonal/peak']],['culture','Culture (3 words)','text'],['guests','Typical guests','text'],['report_to','New staff report to','text'],['decision_maker','Decision maker','text'],['notes_2','Notes','area']]},
+ {t:'3. Location',open:1,f:[['address','Full address','text'],['city','City','city'],['state','State','text'],['landmark','Landmark / bus stop','text'],['move_sites','Staff move between sites?','yn'],['accept_relocate','Accept relocating candidates?','yn'],['late_safe','Safe for late shifts?','yn'],['max_distance','Max. distance candidate can live','text'],['notes_3','Notes','area']]},
+ {t:'6. General candidate requirements',open:1,f:[['min_edu','Min. education','sel',['Any','SSCE','OND','HND/BSc']],['languages','Languages needed','multi',['English','Hausa','Other']],['must_live_nearby','Must live nearby?','yn'],['smartphone','Smartphone needed?','yn'],['dress','Appearance / dress standard','text'],['certs','Certifications needed','multi',['Food handler','First aid','Hospitality cert.','Other']],['guarantor','Guarantor required?','yn'],['background','Background check?','yn'],['medical','Medical test?','yn'],['references','References (how many)','text'],['notes_6','Notes','area']]},
+ {t:'7. Pay details',f:[['payday','Payday','text'],['pay_method','Payment method','multi',['Bank','Cash']],['probation','Probation length','text'],['probation_full','Full pay on probation?','yn'],['tips','Service charge / tips?','yn'],['tips_share','How tips are shared','text'],['overtime','Overtime paid?','yn'],['overtime_rate','Overtime rate','text'],['pension','Pension deducted?','yn'],['paye','Tax (PAYE) deducted?','yn'],['review','Salary review','sel',['6 months','Yearly','None']],['negotiable','Pay negotiable?','yn'],['notes_7','Notes','area']]},
+ {t:'8. Working schedule',open:1,f:[['days_week','Days per week','text'],['hours_shift','Hours per shift','text'],['off_days','Off days','sel',['Fixed','Rotating']],['nights','Night shifts?','yn'],['weekends','Work weekends?','yn'],['holidays','Work public holidays?','yn'],['notes_8','Notes','area']]},
+ {t:'9. Accommodation',f:[['accom','Provided?','yn'],['accom_roles','For which roles','text'],['accom_loc','Location','sel',['On-site','Off-site']],['accom_distance','Distance to work','text'],['room','Room type','sel',['Private','Shared']],['room_share','Per room (if shared)','text'],['accom_cost','Cost to staff','text'],['utilities','Utilities included?','yn'],['rules','Rules (curfew, visitors)','text'],['allowance','If none: housing allowance (₦)','text'],['transport','Transport to work?','yn'],['notes_9','Notes','area']]},
+ {t:'10. Perks & benefits',f:[['perks','Tick all that apply','multi',['Meals on duty','HMO/health cover','Transport allowance','Staff bus','Free uniform','13th month','Bonus','Training','Staff discounts','Promotion path']],['leave_days','Annual leave (days)','text'],['other_perks','Other perks','text'],['notes_10','Notes','area']]},
+ {t:'11. Recruitment process',f:[['scope','Our scope','sel',['Shortlist only','Shortlist + interviews','Full hire + onboarding']],['per_role','Candidates per role','text'],['stages','Interview stages','text'],['trial','Trial shift?','yn'],['deadline','Shortlist deadline','date'],['target_start','Target start date','date']]},
+ {t:'12. Additional notes',f:[['notes_12','Notes','area']]}
+];
+const rcEsc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const rcNorm=s=>{s=String(s||'').toLowerCase().replace(/[^a-z]/g,'').replace(/fct/g,'');return s||'abuja';};
+let _rcIntakes=[],_rcRoles=[],_rcEdit=null,_rcView=null;
+const rcInp='padding:8px 10px;border:1px solid var(--border);border-radius:9px;font-size:13px;width:100%;box-sizing:border-box';
+function rcField(f,v){
+  const [k,l,t,o]=f,id='ri-'+k;let h='';
+  if(t==='text'||t==='date')h=`<input type="${t}" id="${id}" value="${rcEsc(v)}" style="${rcInp}">`;
+  else if(t==='area')h=`<textarea id="${id}" rows="2" style="${rcInp}">${rcEsc(v)}</textarea>`;
+  else if(t==='city')h=`<input list="rc-cities" id="${id}" value="${rcEsc(v)}" placeholder="e.g. Abuja" style="${rcInp}">`;
+  else if(t==='yn'||t==='sel'){const opts=t==='yn'?['Yes','No']:o;h=`<select id="${id}" style="${rcInp}"><option value="">—</option>${opts.map(x=>`<option ${x===v?'selected':''}>${x}</option>`).join('')}</select>`;}
+  else if(t==='multi'){const arr=Array.isArray(v)?v:[];h=`<div style="display:flex;flex-wrap:wrap;gap:6px 12px">${o.map(x=>`<label style="font-size:12.5px;display:flex;gap:4px;align-items:center;font-family:Arial"><input type="checkbox" style="width:auto" class="${id}" value="${rcEsc(x)}" ${arr.includes(x)?'checked':''}>${x}</label>`).join('')}</div>`;}
+  return `<div style="margin-bottom:10px"><label style="font-size:11.5px;color:var(--muted);display:block;margin-bottom:3px">${l}</label>${h}</div>`;
+}
+function rcRoleRow(r){
+  r=r||{};const g=(k)=>rcEsc(r[k]==null?'':r[k]);
+  const sel=(k,opts)=>`<select data-k="${k}" style="${rcInp}">${opts.map(([v,l])=>`<option value="${v}" ${String(r[k]||'')===v?'selected':''}>${l}</option>`).join('')}</select>`;
+  return `<div class="rc-role card" style="padding:12px;margin-bottom:10px;background:var(--surface)">
+   <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px">
+    <div style="grid-column:span 2"><label style="font-size:11px;color:var(--muted)">Role *</label><input data-k="role_name" value="${g('role_name')}" placeholder="e.g. Waiter" style="${rcInp}"></div>
+    <div><label style="font-size:11px;color:var(--muted)">How many</label><input data-k="num_needed" type="number" value="${g('num_needed')}" style="${rcInp}"></div>
+    <div><label style="font-size:11px;color:var(--muted)">Gender</label>${sel('gender',[['Any','Any'],['M','Male'],['F','Female']])}</div>
+    <div><label style="font-size:11px;color:var(--muted)">Age from</label><input data-k="age_min" type="number" value="${g('age_min')}" style="${rcInp}"></div>
+    <div><label style="font-size:11px;color:var(--muted)">Age to</label><input data-k="age_max" type="number" value="${g('age_max')}" style="${rcInp}"></div>
+    <div><label style="font-size:11px;color:var(--muted)">Min. exp (yrs)</label><input data-k="min_exp" type="number" step="0.5" value="${g('min_exp')}" style="${rcInp}"></div>
+    <div><label style="font-size:11px;color:var(--muted)">Type</label>${sel('job_type',[['FT','Full-time'],['PT','Part-time'],['C','Contract'],['S','Seasonal']])}</div>
+    <div><label style="font-size:11px;color:var(--muted)">Monthly pay ₦</label><input data-k="pay_monthly" type="number" value="${g('pay_monthly')}" style="${rcInp}"></div>
+    <div><label style="font-size:11px;color:var(--muted)">Gross / Net</label>${sel('gross_net',[['Net','Net'],['Gross','Gross']])}</div>
+    <div><label style="font-size:11px;color:var(--muted)">Accommodation?</label>${sel('accommodation_provided',[['','—'],['Yes','Yes'],['No','No']])}</div>
+    <div><label style="font-size:11px;color:var(--muted)">Start date</label><input data-k="start_date" type="date" value="${g('start_date')}" style="${rcInp}"></div>
+    <div style="grid-column:span 2"><label style="font-size:11px;color:var(--muted)">Days/week &amp; hours</label><input data-k="schedule" value="${g('schedule')}" style="${rcInp}"></div>
+    <div style="grid-column:1/-1"><label style="font-size:11px;color:var(--muted)">Key skills / qualifications</label><input data-k="skills" value="${g('skills')}" style="${rcInp}"></div>
+   </div>
+   <button class="btn-danger" style="margin-top:8px" onclick="this.closest('.rc-role').remove()">Remove role</button></div>`;
+}
+function rcAddRole(){document.getElementById('rc-roles-box').insertAdjacentHTML('beforeend',rcRoleRow());}
+async function loadRecruit(){
+  const el=document.getElementById('recruit-body');if(!el)return;
+  _rcView=null;el.innerHTML='<p style="font-size:13px;color:var(--muted)">Loading…</p>';
+  const [{data:its,error},{data:roles}]=await Promise.all([db.from('recruit_intakes').select('*').order('created_at',{ascending:false}),db.from('recruit_roles').select('*')]);
+  if(error){el.innerHTML=`<p style="color:var(--danger);font-size:13px">Run recruit_intake_migration.sql in Supabase first. (${rcEsc(error.message)})</p>`;return;}
+  _rcIntakes=its||[];_rcRoles=roles||[];
+  el.innerHTML=`<datalist id="rc-cities">${RC_CITIES.map(c=>`<option value="${c}">`).join('')}</datalist>
+  <button class="btn-add" onclick="rcEditIntake()" style="margin-bottom:14px">+ New client intake</button>
+  ${_rcIntakes.length?`<div class="staff-grid" style="grid-template-columns:repeat(auto-fill,minmax(300px,1fr))">`+_rcIntakes.map(i=>{const rs=_rcRoles.filter(r=>r.intake_id===i.id);const d=i.data||{};
+   return `<div class="card" style="padding:16px 18px"><strong style="font-size:14px">${rcEsc(i.company_name)}</strong>
+   <div style="font-size:12px;color:var(--muted);margin-top:3px">📍 ${rcEsc(d.city||'—')} · ${rs.length} role${rs.length===1?'':'s'} · ${rcEsc(i.status||'Open')}</div>
+   <div style="font-size:12px;margin-top:6px">${rs.map(r=>`${rcEsc(r.role_name)} ×${r.num_needed||1}`).join(', ')||'<span style="color:var(--muted)">No roles yet</span>'}</div>
+   <div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap"><button class="btn-sm" onclick="rcOpen('${i.id}')">🎯 Find matches</button><button class="btn-sm" onclick="rcEditIntake('${i.id}')">Edit</button><button class="btn-danger" onclick="rcDelIntake('${i.id}')">Del</button></div></div>`}).join('')+`</div>`:'<p style="font-size:13px;color:var(--muted)">No intakes yet. Add one from the client intake form.</p>'}`;
+}
+async function rcEditIntake(id){
+  const it=id?_rcIntakes.find(x=>x.id===id):null;_rcEdit=id||null;
+  const d=(it&&it.data)||{};
+  const {data:clients}=await db.from('clients').select('id,business_name').neq('status','Inactive').order('business_name');
+  const rs=id?_rcRoles.filter(r=>r.intake_id===id):[];
+  document.getElementById('recruit-body').innerHTML=`<datalist id="rc-cities">${RC_CITIES.map(c=>`<option value="${c}">`).join('')}</datalist>
+  <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap"><button class="btn-sm" onclick="loadRecruit()">← Back</button><button class="btn-add" id="rc-save" onclick="rcSaveIntake()">Save intake</button></div>
+  <div class="card" style="padding:14px 16px;margin-bottom:10px"><label style="font-size:11.5px;color:var(--muted)">Link to an existing client (needed to send shortlists to their Candidates list)</label>
+   <select id="ri-client_id" style="${rcInp}"><option value="">— not a client yet —</option>${(clients||[]).map(c=>`<option value="${c.id}" ${it&&it.client_id===c.id?'selected':''}>${rcEsc(c.business_name)}</option>`).join('')}</select></div>
+  ${RC_SECTIONS.map(s=>`<details class="card" style="padding:12px 16px;margin-bottom:10px" ${s.open?'open':''}><summary style="cursor:pointer;font-weight:600;font-size:14px">${s.t}</summary><div style="margin-top:10px;display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:0 14px">${s.f.map(f=>rcField(f,d[f[0]])).join('')}</div></details>`).join('')}
+  <details class="card" style="padding:12px 16px;margin-bottom:10px" open><summary style="cursor:pointer;font-weight:600;font-size:14px">4 &amp; 5. Roles needed — requirements, pay &amp; terms</summary><div style="margin-top:10px"><div id="rc-roles-box">${rs.map(rcRoleRow).join('')||rcRoleRow()}</div><button class="btn-sm" onclick="rcAddRole()">+ Add another role</button></div></details>`;
+}
+async function rcSaveIntake(){
+  const b=document.getElementById('rc-save');const data={};
+  RC_SECTIONS.forEach(s=>s.f.forEach(f=>{const k=f[0];if(f[2]==='multi')data[k]=[...document.querySelectorAll('.ri-'+k+':checked')].map(x=>x.value);else data[k]=(document.getElementById('ri-'+k)?.value||'').trim();}));
+  const name=data.company;if(!name){alert('Add the company name.');return;}
+  const clientId=document.getElementById('ri-client_id').value||null;
+  const roles=[...document.querySelectorAll('.rc-role')].map(box=>{const o={};box.querySelectorAll('[data-k]').forEach(x=>{const k=x.dataset.k;let v=x.value.trim();if(['num_needed','age_min','age_max','min_exp','pay_monthly'].includes(k))v=v===''?null:Number(v);else if(k==='start_date'&&v==='')v=null;o[k]=v;});return o;}).filter(r=>r.role_name);
+  b.disabled=true;b.textContent='Saving…';
+  let id=_rcEdit,err;
+  if(id){({error:err}=await db.from('recruit_intakes').update({company_name:name,client_id:clientId,data,taken_by:data.taken_by}).eq('id',id));}
+  else{const r=await db.from('recruit_intakes').insert({company_name:name,client_id:clientId,data,taken_by:data.taken_by,status:'Open'}).select().single();err=r.error;id=r.data&&r.data.id;}
+  if(err){alert('Could not save: '+err.message);b.disabled=false;b.textContent='Save intake';return;}
+  await db.from('recruit_roles').delete().eq('intake_id',id);
+  if(roles.length){const {error:e2}=await db.from('recruit_roles').insert(roles.map(r=>({...r,intake_id:id})));if(e2){alert('Intake saved but roles failed: '+e2.message);}}
+  await logActivity('Saved recruitment intake',name,clientId);
+  await loadRecruit();rcOpen(id);
+}
+async function rcDelIntake(id){if(!confirm('Delete this intake and its roles?'))return;await db.from('recruit_roles').delete().eq('intake_id',id);await db.from('recruit_intakes').delete().eq('id',id);loadRecruit();}
+// matching
+function rcMatch(a,role,it){
+  const d=it.data||{},F=[],W=[],Y=v=>v==='Yes';
+  if(role.gender==='M'||role.gender==='F'){if(a.gender&&a.gender!==role.gender)F.push('Gender: role needs '+(role.gender==='M'?'male':'female'));}
+  if(a.age!=null&&a.age!==''){if(role.age_min&&a.age<role.age_min)F.push(`Age ${a.age} (needs ${role.age_min}+)`);if(role.age_max&&a.age>role.age_max)F.push(`Age ${a.age} (max ${role.age_max})`);}
+  if(role.min_exp&&a.exp_years!=null&&Number(a.exp_years)<role.min_exp)F.push(`Experience ${a.exp_years}y (needs ${role.min_exp}y)`);
+  if(role.job_type&&a.job_types){const jt=a.job_types.split(',').map(x=>x.trim());if(!jt.includes(role.job_type))F.push('Wants '+a.job_types+', role is '+role.job_type);}
+  const cc=d.city;
+  if(cc&&a.city&&rcNorm(cc)!==rcNorm(a.city)){
+    if(Y(d.must_live_nearby))F.push(`Lives in ${a.city} — must live near ${cc}`);
+    else if(!(Y(d.accept_relocate)&&a.willing_relocate))F.push(`Lives in ${a.city}, role is in ${cc}${!Y(d.accept_relocate)?' — client won\'t take relocators':' — candidate won\'t relocate'}`);
+  }
+  if(a.needs_accommodation&&role.accommodation_provided!=='Yes'&&!(role.accommodation_provided==null&&Y(d.accom)))F.push('Needs accommodation — not provided');
+  const rank=s=>/hnd|bsc|degree|higher|post/i.test(s||'')?3:/ond|nce/i.test(s||'')?2:/ssce|waec|secondary/i.test(s||'')?1:0;
+  if(d.min_edu&&d.min_edu!=='Any'&&a.education&&rank(a.education)<rank(d.min_edu))F.push(`Education ${a.education} (needs ${d.min_edu})`);
+  const need=(d.languages||[]).filter(x=>x!=='Other');
+  if(need.length&&a.languages){const have=a.languages.toLowerCase();const miss=need.filter(x=>!have.includes(x.toLowerCase()));if(miss.length)F.push('No '+miss.join('/'));}
+  if(Y(d.smartphone)&&a.has_smartphone===false)F.push('No smartphone');
+  if(Y(d.nights)&&a.ok_nights===false)F.push('Won\'t do night shifts');
+  if(Y(d.weekends)&&a.ok_weekends===false)F.push('Won\'t work weekends');
+  if(Y(d.holidays)&&a.ok_holidays===false)F.push('Won\'t work public holidays');
+  if(Y(d.guarantor)&&a.has_guarantor===false)F.push('No guarantor');
+  if(Y(d.background)&&a.ok_background===false)F.push('Won\'t do background check');
+  if(Y(d.medical)&&a.ok_medical===false)F.push('Won\'t do medical test');
+  if(role.pay_monthly&&a.expected_pay&&Number(a.expected_pay)>role.pay_monthly){const m=`Wants ₦${Number(a.expected_pay).toLocaleString()} (offer ₦${Number(role.pay_monthly).toLocaleString()})`;if(Y(d.negotiable))W.push(m+' — pay negotiable');else F.push(m);}
+  (d.certs||[]).filter(x=>x!=='Other').forEach(c=>{if(a.certifications&&!a.certifications.toLowerCase().includes(c.toLowerCase().split(' ')[0]))W.push('No '+c);});
+  const rn=(role.role_name||'').toLowerCase(),want=(a.position_applied||'').toLowerCase();
+  const roleOk=!want||want.split(/[,/]/).some(w=>{w=w.trim();return w&&(rn.includes(w)||w.includes(rn));});
+  if(!roleOk)W.push('Did not tick this role');
+  return {F,W,roleOk};
+}
+async function rcOpen(id){
+  _rcView=id;const it=_rcIntakes.find(x=>x.id===id);if(!it)return loadRecruit();
+  const rs=_rcRoles.filter(r=>r.intake_id===id);
+  document.getElementById('recruit-body').innerHTML=`<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap"><button class="btn-sm" onclick="loadRecruit()">← Back</button><button class="btn-sm" onclick="rcEditIntake('${id}')">Edit intake</button></div>
+  <div class="card" style="padding:14px 16px;margin-bottom:12px"><strong>${rcEsc(it.company_name)}</strong><div style="font-size:12px;color:var(--muted)">📍 ${rcEsc((it.data||{}).city||'—')} · ${it.client_id?'Linked to client':'<span style="color:var(--danger)">Not linked to a client yet</span>'}</div></div>
+  ${rs.map(r=>`<div class="card" style="padding:14px 16px;margin-bottom:12px"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:center"><div><strong>${rcEsc(r.role_name)}</strong> ×${r.num_needed||1}<div style="font-size:12px;color:var(--muted)">${r.gender&&r.gender!=='Any'?(r.gender==='M'?'Male':'Female')+' · ':''}${r.age_min||r.age_max?`Age ${r.age_min||'any'}–${r.age_max||'any'} · `:''}${r.min_exp?r.min_exp+'y+ exp · ':''}${r.pay_monthly?'₦'+Number(r.pay_monthly).toLocaleString()+' · ':''}${rcEsc(r.job_type||'')}</div></div><button class="btn-add" onclick="rcFind('${id}','${r.id}')">🎯 Find matches</button></div><div id="rc-res-${r.id}"></div></div>`).join('')||'<p style="font-size:13px;color:var(--muted)">No roles on this intake. Click Edit intake to add roles.</p>'}`;
+}
+async function rcFind(iid,rid){
+  const box=document.getElementById('rc-res-'+rid);box.innerHTML='<p style="font-size:13px;color:var(--muted)">Checking everyone in the Talent Pool…</p>';
+  const it=_rcIntakes.find(x=>x.id===iid),role=_rcRoles.find(x=>x.id===rid);
+  const {data:pool}=await db.from('talent_pool').select('*').neq('status','Rejected');
+  const ok=[],no=[],old=[];
+  (pool||[]).forEach(a=>{if(!a.form_version){old.push(a);return;}const m=rcMatch(a,role,it);(m.F.length?no:ok).push({a,m});});
+  ok.sort((x,y)=>(y.m.roleOk-x.m.roleOk)||(x.m.W.length-y.m.W.length));
+  window._rcLast={it,role};
+  const pill=(t,c)=>`<span style="display:inline-block;font-size:11px;padding:2px 8px;border-radius:99px;margin:2px 4px 0 0;background:${c==='r'?'#fde8e6':'#fff3d6'};color:${c==='r'?'#b3261e':'#8a5a00'}">${rcEsc(t)}</span>`;
+  const row=({a,m},bad)=>`<div style="padding:10px 0;border-top:1px solid var(--border)"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><div><strong style="font-size:13px">${rcEsc(a.full_name)}</strong> <span style="font-size:12px;color:var(--muted)">${rcEsc(a.city||'')} · ${a.age||'?'}y · ${a.exp_years!=null?a.exp_years+'y exp':''} · ${rcEsc(a.position_applied||'')}</span><div style="font-size:12px;color:var(--muted)">📞 ${rcEsc(a.phone||'—')}</div></div>
+   ${bad?'':`<div style="display:flex;gap:6px"><a class="btn-sm" style="text-decoration:none" target="_blank" href="https://wa.me/${String(a.phone||'').replace(/\D/g,'').replace(/^0/,'234')}">WhatsApp</a><button class="btn-sm" onclick="rcShortlist('${a.id}',this)">→ Shortlist &amp; send offer</button></div>`}</div>
+   <div>${m.F.map(x=>pill(x,'r')).join('')}${m.W.map(x=>pill(x,'w')).join('')}</div></div>`;
+  box.innerHTML=`<div style="margin-top:12px;font-size:13px"><strong style="color:#1a7f37">✅ ${ok.length} match</strong> · <span style="color:#b3261e">${no.length} excluded</span>${old.length?` · <span style="color:var(--muted)">${old.length} older applicants (no details)</span>`:''}</div>
+   ${ok.map(x=>row(x,false)).join('')||'<p style="font-size:12.5px;color:var(--muted)">No one matches yet.</p>'}
+   ${no.length?`<details style="margin-top:10px"><summary style="cursor:pointer;font-size:12.5px;color:#b3261e">Show excluded (${no.length}) and why</summary>${no.map(x=>row(x,true)).join('')}</details>`:''}
+   ${old.length?`<details style="margin-top:8px"><summary style="cursor:pointer;font-size:12.5px;color:var(--muted)">Older applicants without the new details (${old.length})</summary>${old.map(a=>`<div style="padding:6px 0;border-top:1px solid var(--border);font-size:12.5px">${rcEsc(a.full_name)} · ${rcEsc(a.position_applied||'')} · ${rcEsc(a.phone||'')}</div>`).join('')}</details>`:''}`;
+}
+async function rcShortlist(applicantId,btn){
+  const {it,role}=window._rcLast||{};if(!it)return;
+  if(!obBase()){alert('Add your application site link first.');return;}
+  btn.disabled=true;
+  const {data:a}=await db.from('talent_pool').select('*').eq('id',applicantId).single();if(!a){btn.disabled=false;return;}
+  if(it.client_id){const {error}=await db.from('staff_candidates').insert({client_id:it.client_id,full_name:a.full_name,phone:a.phone,cv_link:a.cv_link,cv_notes:'For: '+role.role_name+'\n'+(a.background||''),status:'Under Review'});if(error){alert('Could not shortlist: '+error.message);btn.disabled=false;return;}}
+  const d=it.data||{};
+  const o=await obCreate(applicantId,{client_id:it.client_id,intake_id:it.id,role_name:role.role_name,company_name:it.company_name,offer:{city:d.city,pay:role.pay_monthly,gross_net:role.gross_net,schedule:role.schedule||[d.days_week&&d.days_week+' days/week',d.hours_shift&&d.hours_shift+' hrs/shift'].filter(Boolean).join(', '),accommodation:role.accommodation_provided==='Yes'?'Provided':role.accommodation_provided==='No'?'Not provided':'',start_date:role.start_date||''}});
+  if(!o){btn.disabled=false;return;}
+  await db.from('talent_pool').update({status:'Shortlisted'}).eq('id',applicantId);
+  await logActivity('Shortlisted & sent offer',a.full_name,it.client_id);
+  const link=document.createElement('a');link.className='btn-sm';link.target='_blank';link.style.cssText='text-decoration:none;background:#1a7f37;color:#fff';link.href=obWa(a.phone,obOfferMsg(o));link.textContent='📨 Tap to send offer on WhatsApp';
+  btn.replaceWith(link);
+}
+
 // ══ TALENT POOL (general applicant pool, not tied to any client) ══
+function copyApplyLink(){
+  const u=new URL('apply.html',location.href).href;
+  (navigator.clipboard?navigator.clipboard.writeText(u):Promise.reject()).then(()=>alert('Link copied:\n'+u),()=>prompt('Copy this link:',u));
+}
 async function loadTalentPool(){
   const el=document.getElementById('talentpool-list');if(!el)return;
   el.innerHTML='<p style="font-size:13px;color:var(--muted)">Loading…</p>';
@@ -10712,6 +10983,11 @@ async function loadTalentPool(){
   if(priorityOnly)q=q.eq('priority',true);
   const {data}=await q;
   let rows=data||[];
+  {const cs=document.getElementById('tp-city-filter');if(cs){const cur=cs.value,cnt={};rows.forEach(r=>{const c=(r.city||'').trim();if(c){const k=rcNorm(c);cnt[k]=cnt[k]||{n:0,l:c};cnt[k].n++;}});
+    cs.innerHTML='<option value="">All cities ('+rows.length+')</option>'+Object.keys(cnt).sort((a,b)=>cnt[b].n-cnt[a].n).map(k=>`<option value="${k}" ${k===cur?'selected':''}>${rcEsc(cnt[k].l)} (${cnt[k].n})</option>`).join('');}}
+  const cityF=document.getElementById('tp-city-filter')?.value||'',genF=document.getElementById('tp-gender-filter')?.value||'';
+  if(cityF)rows=rows.filter(r=>r.city&&rcNorm(r.city)===cityF);
+  if(genF)rows=rows.filter(r=>r.gender===genF);
   if(search)rows=rows.filter(r=>(r.position_applied||'').toLowerCase().includes(search)||(r.full_name||'').toLowerCase().includes(search));
   if(!rows.length){el.innerHTML='<p style="font-size:13px;color:var(--muted)">No applicants match.</p>';return;}
   const {data:clients}=await db.from('clients').select('id,business_name').neq('status','Inactive').order('business_name',{ascending:true});
@@ -10726,7 +11002,10 @@ async function loadTalentPool(){
         </select>
       </div>
       <div style="font-size:12px;color:var(--muted);margin-top:8px">📞 ${r.phone||'—'} · ${r.email||'—'}</div>
-      <div style="font-size:12px;color:var(--muted);margin-top:2px">📍 ${r.address||r.location||'—'} · ${r.work_arrangement||'—'}</div>
+      <div style="font-size:12px;color:var(--muted);margin-top:2px">📍 ${r.city?'<strong>'+rcEsc(r.city)+'</strong> · ':''}${r.address||r.location||'—'} · ${r.work_arrangement||r.job_types||'—'}</div>
+      ${r.form_version?`<div style="font-size:12px;color:var(--muted);margin-top:2px">${r.gender==='F'?'Female':r.gender==='M'?'Male':'—'} · ${r.age||'?'}y · ${r.exp_years!=null?r.exp_years+'y exp':''} · ${rcEsc(r.education||'')}${r.needs_accommodation?' · <span style="color:#b3261e">needs accommodation</span>':''}${r.willing_relocate?' · will relocate':''}</div>
+      <div style="font-size:12px;color:var(--muted);margin-top:2px">🏠 ${rcEsc(r.years_at_address||'—')} at address${r.address_landmark?' · near '+rcEsc(r.address_landmark):''}</div>
+      ${(r.refs||[]).length?`<div style="font-size:12px;color:var(--muted);margin-top:2px">☎ Ref: ${(r.refs||[]).map(x=>rcEsc((x.org||'')+' – '+(x.name||'')+' '+(x.phone||''))).join(' | ')}</div>`:'<div style="font-size:12px;color:#b3261e;margin-top:2px">No reference given</div>'}`:''}
       <div style="font-size:12px;color:var(--muted);margin-top:2px">💰 ${r.expected_salary||'—'} · Available ${r.availability||'—'}</div>
       ${r.background?`<div style="font-size:12px;color:var(--ink2);margin-top:8px;white-space:pre-wrap;max-height:80px;overflow-y:auto">${r.background}</div>`:''}
       ${r.achievement?`<div style="font-size:11px;color:var(--muted);margin-top:6px;font-style:italic">${r.achievement}</div>`:''}
@@ -10740,6 +11019,7 @@ async function loadTalentPool(){
       <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);display:flex;gap:6px;align-items:center;flex-wrap:wrap">
         <select id="tp-sendto-${r.id}" style="flex:1;padding:5px 8px;border:1px solid var(--border);border-radius:9px;font-size:12px"><option value="">Send to client…</option>${clientOptions}</select>
         <button class="btn-sm" onclick="sendTalentToPipeline('${r.id}')">→ Add to Pipeline</button>
+        <button class="btn-sm" onclick="obStartFromPool('${r.id}')">📨 Send offer &amp; onboarding</button>
         <button class="btn-sm" data-tp-id="${r.id}" data-tp-name="${(r.full_name||'').replace(/"/g,'&quot;')}" onclick="openEnrollModal(this.dataset.tpId,this.dataset.tpName,'candidate')">🎓 Enroll in Course</button>
         <button class="btn-sm" data-tp-id="${r.id}" data-tp-name="${(r.full_name||'').replace(/"/g,'&quot;')}" data-tp-role="${(r.position_applied||'').replace(/"/g,'&quot;')}" onclick="openScheduleInterviewModal(this.dataset.tpId,this.dataset.tpName,this.dataset.tpRole)">🗣 Schedule Interview</button>
         <button class="btn-danger" onclick="deleteRow('talent_pool','${r.id}',loadTalentPool)">Del</button>
@@ -15532,6 +15812,8 @@ function showAdminTab(tab,btn){
   if(tab==='income') loadCompanyIncome();
   if(tab==='mywork') loadMyWork();
   if(tab==='talentpool') loadTalentPool();
+  if(tab==='recruit') loadRecruit();
+  if(tab==='onboard') loadOnboarding();
   if(tab==='dashboard') loadDashboard();
   if(tab==='calendar') loadGlobalCalendar();
   if(tab==='projects') loadProjects();
