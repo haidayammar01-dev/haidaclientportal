@@ -2397,7 +2397,7 @@ self.addEventListener('notificationclick',function(e){
           <button class="inner-tab cv-tab" id="cvtab-cv-enquiries" onclick="loadClientViewTab('cv-enquiries')" style="color:var(--brand);font-weight:600">☎ Customer Enquiries</button>
           <button class="inner-tab cv-tab" id="cvtab-cv-credentials" style="display:none;color:var(--danger);font-weight:600" onclick="loadClientViewTab('cv-credentials')">🔐 Access Vault</button>
           <button class="inner-tab cv-tab" id="cvtab-cv-policies" style="display:none;color:var(--danger);font-weight:600" onclick="loadClientViewTab('cv-policies')">📘 Policies &amp; Procedures</button>
-          <button class="inner-tab cv-tab" id="cvtab-cv-social" onclick="loadClientViewTab('cv-social')">📱 Content Planner</button>
+          <button class="inner-tab cv-tab" id="cvtab-cv-social" onclick="loadClientViewTab('cv-social')">📱 Social Media</button>
           <button class="inner-tab cv-tab" id="cvtab-cv-strategy" onclick="loadClientViewTab('cv-strategy')" style="color:var(--gold);font-weight:600">🧭 Strategy</button>
         </div>
         <div id="cv-reports-panel" class="cv-tab-content">
@@ -3046,7 +3046,7 @@ self.addEventListener('notificationclick',function(e){
           <button class="ptab" data-service="staffing" onclick="switchPortalTab('portal-staffing-tab',this);loadStaffingOverview(currentUser.clientId,'portal-staffing-list')" style="font-weight:600;color:var(--danger)">📅 Staffing</button>
           <button class="ptab" data-service="staffing" onclick="switchPortalTab('portal-procurement-tab',this);loadProcurementRequests(currentUser.clientId,'portal-procurement-list',false)" style="font-weight:600;color:var(--gold)">🧑‍💼 Request Staff</button>
           <button class="ptab" data-service="staffing" onclick="switchPortalTab('portal-candidates-tab',this);loadCandidates(currentUser.clientId,'portal-candidates-list',false)" style="font-weight:600;color:var(--gold)">🧑‍🎓 Candidates</button>
-          <button class="ptab" data-service="social" onclick="switchPortalTab('portal-social-tab',this);loadSocial(currentUser.clientId,'portal-social-tab',true)">📱 Content Planner</button>
+          <button class="ptab" data-service="social" onclick="switchPortalTab('portal-social-tab',this);loadSocial(currentUser.clientId,'portal-social-tab',true)">📱 Social Media</button>
           <button class="ptab" onclick="switchPortalTab('portal-projects-tab',this);loadPortalProjects(currentUser.clientId)">📁 Projects</button>
           <button class="ptab" onclick="switchPortalTab('portal-messages-tab',this);loadClientMessages(currentUser.clientId,'portal')" style="font-weight:600;color:var(--brand)">💬 Messages</button>
           <button class="ptab" onclick="switchPortalTab('portal-credentials-tab',this);loadClientCredentials(currentUser.clientId,'pc',true)" style="font-weight:600;color:var(--danger)">🔐 Access & Logins</button>
@@ -7148,54 +7148,420 @@ async function saveQuickReport(){
 }
 function clearReportForm(){['rf-client','rf-date','rf-title','rf-location','rf-summary','rf-actions','rf-recs'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});document.getElementById('form-feedback').innerHTML='';}
 
-// ══ SOCIAL MEDIA CONTENT PLANNER ══
+// ══ SOCIAL MEDIA HUB ══
 const SM_PLATFORMS=['Instagram','TikTok','Facebook','X / Twitter','LinkedIn','WhatsApp','YouTube'];
 const SM_STATUS=['Draft','Scheduled','Posted'];
-async function loadSocial(clientId,elId,readonly){
-  const el=document.getElementById(elId);if(!el||!clientId)return;
-  const {data,error}=await db.from('social_posts').select('*').eq('client_id',clientId).order('post_date',{ascending:true});
-  if(error){el.innerHTML='<div class="card" style="padding:18px;font-size:13px">The content planner needs its table first — run <strong>social_planner_migration.sql</strong> in Supabase. <span style="color:var(--muted)">('+error.message+')</span></div>';return;}
-  const posts=data||[];
-  const today=localDateStr();
-  const form=readonly?'':`<div class="card" style="padding:16px 18px;margin-bottom:16px">
-    <div style="font-weight:600;font-size:13px;margin-bottom:10px">Plan a post</div>
-    <div class="form-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px">
-      <div class="form-field"><label>Date</label><input type="date" id="sm-date" value="${today}"></div>
-      <div class="form-field"><label>Platform</label><select id="sm-platform">${SM_PLATFORMS.map(p=>`<option>${p}</option>`).join('')}</select></div>
-      <div class="form-field"><label>Status</label><select id="sm-status">${SM_STATUS.map(p=>`<option>${p}</option>`).join('')}</select></div>
-      <div class="form-field"><label>Link (optional)</label><input type="text" id="sm-link" placeholder="https://…"></div>
-    </div>
-    <div class="form-field" style="margin-top:10px"><label>Caption / idea</label><textarea id="sm-caption" rows="3" placeholder="What is the post?"></textarea></div>
-    <button class="btn-add" style="margin-top:10px" onclick="addSocialPost('${clientId}','${elId}')">+ Add to planner</button>
-    <div id="sm-fb" style="margin-top:8px"></div></div>`;
-  const row=p=>{
-    const d=new Date(p.post_date+'T12:00:00');
-    const st=readonly?`<span class="sm-st sm-${p.status}">${p.status}</span>`:`<button class="sm-st sm-${p.status}" title="Tap to change" onclick="cycleSocialStatus('${p.id}','${p.status}','${clientId}','${elId}')">${p.status}</button>`;
+const SM_SERVICES=['Strategy','Content creation','Graphic design','Posting & scheduling','Paid ads','Community management (replies & DMs)','Monthly reporting'];
+const SM_LEVELS=['Full management: strategy, content, ads and posting','Content + posting (no ads)','Strategy only','Posting only (client supplies the content)','Custom'];
+const SM_RATE=['Strong','Needs work','Missing'];
+const SM_TABS=[['today','🏠 Today'],['overview','🏷 Brand'],['audience','👥 Audience'],['competitors','🔍 Competitors'],['audit','📷 Instagram audit'],['strategy','🧭 Strategy'],['pillars','🧱 Pillars'],['mood','🎨 Mood board'],['kit','🧰 Brand kit'],['calendar','📅 Calendar'],['reports','📈 Reports'],['approvals','✅ Approvals']];
+const SM_SECTIONS=[['overview','Brand, tone & goals'],['audience','Audience'],['competitors','Competitors'],['audit','Instagram audit'],['strategy','Platform strategy'],['pillars','Content pillars'],['mood','Mood board'],['kit','Brand kit & templates']];
+const SM_REQ_TPL=[['feed','Instagram feed post','1080 × 1350'],['story','Story','1080 × 1920'],['reel','Reel cover','1080 × 1920'],['carousel','Carousel slide','1080 × 1350'],['highlight','Highlight cover','1080 × 1080'],['profile','Profile picture','1080 × 1080'],['fbln','Facebook / LinkedIn post','1200 × 630'],['logo','Logo kit (all versions)','SVG / PNG']];
+const F_OV=[['service_level','Service level','sel',SM_LEVELS],['services','What we do for this client','multi',SM_SERVICES],['brand_overview','Brand overview: what the brand is, its story, what it sells','area'],['usp','What makes them different','area'],['tone_words','Tone of voice in 3 to 5 words','text'],['tone_voice','How the brand sounds (example sentences)','area'],['tone_dos','We always','area'],['tone_donts','We never','area'],['goals','Social media goals (one per line)','area'],['goal_metrics','How we will measure it','text'],['brand_tags','Brand hashtags','text']];
+const F_AUD=[['h1','Demographics','h'],['age_range','Age range','text'],['gender','Gender split','text'],['location','Locations','text'],['income','Income level','text'],['occupation','Occupation / life stage','text'],['language','Languages','text'],['h2','Psychographics','h'],['values','Values: what they care about','area'],['interests','Interests & hobbies','area'],['lifestyle','Lifestyle & daily habits','area'],['pain_points','Pain points','area'],['motivations','What makes them buy','area'],['platforms_used','Where they spend time online','text']];
+const F_AUDIT=[['username','Instagram username','text'],['profile_url','Profile link','text'],['audit_date','Audit date','date'],['followers','Followers','text'],['following','Following','text'],['posts_count','Number of posts','text'],['avg_engagement','Average likes / comments per post','text'],['posting_freq','How often they post now','text'],['bio_text','Current bio (paste it)','area'],['bio_rating','Bio','sel',SM_RATE],['pic_rating','Profile picture / logo','sel',SM_RATE],['link_rating','Link in bio','sel',SM_RATE],['hl_rating','Story highlights','sel',SM_RATE],['grid_rating','Grid looks consistent','sel',SM_RATE],['whats_working','What is working','area'],['whats_not','What is not working','area'],['quick_wins','Quick wins for the first 2 weeks','area']];
+const F_STRAT=[['objective','Objective on this platform','area'],['audience_focus','Who we target here','text'],['formats','Content formats','multi',['Reels','Carousels','Single images','Stories','Lives','Short videos','Long videos','Text posts']],['frequency','Posting frequency','text'],['best_times','Best times to post','text'],['hashtag_plan','Hashtag & keyword approach','area'],['engagement_plan','Community & engagement plan','area'],['ads_plan','Paid ads plan: budget, objective, audience','area'],['kpis','KPIs we report on','text']];
+const F_COMP=[['name','Competitor','text'],['handle','Handle or link','text'],['followers','Followers','text'],['strengths','What they do well','area'],['weaknesses','Where they fall short','area'],['takeaway','What we will do differently','area']];
+const F_PIL=[['name','Pillar name (e.g. Education)','text'],['mix','Share of content (%)','text'],['description','What it covers and why','area'],['examples','Example post ideas (one per line)','area']];
+const F_COL=[['name','Colour name','text'],['hex','Colour','color']];
+const F_FNT=[['name','Font','text'],['use','Used for (headings / body / captions)','text']];
+const F_KIT=[['logo_rules','Logo rules (spacing, what not to do)','area'],['canva_brand_kit','Canva brand kit link','text'],['guidelines','Other brand guidelines','area']];
+let _sm={};
+const smE=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+function smStyle(){if(document.getElementById('sm-style'))return;const s=document.createElement('style');s.id='sm-style';s.textContent=`.sh-tabs{display:flex;gap:6px;overflow-x:auto;padding-bottom:6px;margin-bottom:12px}.sh-tab{white-space:nowrap;border:1px solid var(--border);background:var(--white);border-radius:99px;padding:7px 13px;font-size:12.5px;cursor:pointer;color:var(--ink);font-family:inherit}.sh-tab.on{background:var(--ink);color:#fff;border-color:var(--ink)}.sh-tab .ck{color:#2ea44f;margin-left:5px;font-weight:700}.sh-card{background:var(--white);border:1px solid var(--border);border-radius:14px;padding:16px 18px;margin-bottom:12px}.sh-lab{font-size:11.5px;color:var(--muted);display:block;margin:10px 0 3px}.sh-in{width:100%;padding:9px 11px;border:1px solid var(--border);border-radius:9px;font-size:14px;font-family:inherit;background:var(--white);color:var(--ink);box-sizing:border-box}textarea.sh-in{min-height:70px;resize:vertical}.sh-val{font-size:14px;line-height:1.5;white-space:pre-wrap;color:var(--ink)}.sh-chip{display:inline-block;font-size:11.5px;padding:3px 9px;border-radius:99px;margin:2px 4px 2px 0}.sh-g{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:0 16px}.sh-mood{columns:3 170px;column-gap:10px}.sh-mood>div{break-inside:avoid;margin-bottom:10px;position:relative}.sh-mood img{width:100%;border-radius:10px;display:block;cursor:zoom-in}.sh-x{position:absolute;top:6px;right:6px;background:rgba(0,0,0,.6);color:#fff;border:0;border-radius:99px;width:24px;height:24px;cursor:pointer}.sh-h{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:6px}.sh-t{font-weight:700;font-size:15px}.sh-sw{display:inline-block;width:34px;height:34px;border-radius:9px;border:1px solid var(--border);vertical-align:middle}.sh-zoom{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:300;display:flex;align-items:center;justify-content:center;padding:16px}.sh-zoom img{max-width:100%;max-height:100%;border-radius:10px}.sh-toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#1d1d1b;color:#fff;padding:10px 18px;border-radius:99px;font-size:13px;z-index:400}`;document.head.appendChild(s);}
+function smToast(m){const t=document.createElement('div');t.className='sh-toast';t.textContent=m;document.body.appendChild(t);setTimeout(()=>t.remove(),1800);}
+function smZoom(u){const d=document.createElement('div');d.className='sh-zoom';d.onclick=()=>d.remove();d.innerHTML=`<img src="${u}">`;document.body.appendChild(d);}
+async function loadSocial(cid,elId,ro){
+  const el=document.getElementById(elId);if(!el||!cid)return;smStyle();
+  _sm[elId]={cid,ro:!!ro,tab:(_sm[elId]&&_sm[elId].tab)||'today',plat:(_sm[elId]&&_sm[elId].plat)||'Instagram'};
+  el.innerHTML='<p style="font-size:13px;color:var(--muted)">Loading…</p>';await smReload(elId);
+}
+async function smReload(elId){
+  const S=_sm[elId];
+  const [b,a,p,mt,cn]=await Promise.all([db.from('social_brands').select('*').eq('client_id',S.cid).maybeSingle(),db.from('social_assets').select('*').eq('client_id',S.cid).order('created_at',{ascending:false}),db.from('social_posts').select('*').eq('client_id',S.cid).order('post_date',{ascending:true}),db.from('social_metrics').select('*').eq('client_id',S.cid),db.from('clients').select('business_name').eq('id',S.cid).maybeSingle()]);
+  S.cname=(cn.data&&cn.data.business_name)||'';
+  S.metrics=mt.error?[]:(mt.data||[]);S.noMetrics=!!mt.error;
+  const err=b.error||a.error||p.error;
+  if(err){document.getElementById(elId).innerHTML='<div class="card" style="padding:18px;font-size:13px">The social media section needs its database tables first. Run <strong>social_hub_migration.sql</strong> in Supabase. <span style="color:var(--muted)">('+smE(err.message)+')</span></div>';return;}
+  S.row=b.data||{client_id:S.cid};S.assets=a.data||[];S.posts=p.data||[];smRender(elId);
+}
+function smAssets(S,k){return S.assets.filter(x=>x.kind===k);}
+function smDone(S){const r=S.row,o=x=>x&&typeof x==='object'?x:{};return{overview:!!o(r.overview).brand_overview,audience:Object.values(o(r.audience)).some(v=>v&&String(v).length),competitors:(r.competitors||[]).length>0,audit:!!o(r.ig_audit).username,strategy:Object.keys(o(r.strategies)).length>0,pillars:(r.pillars||[]).length>0,mood:smAssets(S,'mood').length>0,kit:(r.kit_colors||[]).length>0||smAssets(S,'template').length>0};}
+function smRender(elId){
+  const S=_sm[elId],el=document.getElementById(elId);const vis=S.row.visible||{};
+  const tabs=SM_TABS.filter(([k])=>!S.ro||vis[k]!==false);
+  if(!tabs.find(t=>t[0]===S.tab))S.tab=tabs[0][0];
+  const d=smDone(S),n=Object.values(d).filter(Boolean).length;
+  el.innerHTML=`<div class="sh-h"><div class="cv-sec-h" style="margin:0">Social media</div><div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">${S.ro?'':`<span style="font-size:12px;color:var(--muted)">Setup: ${n} of 8 sections filled</span>`}<button class="btn-sm" onclick="smPrintPack('${elId}')">⬇ Brand &amp; strategy PDF</button></div></div>
+  <div class="sh-tabs">${tabs.map(([k,l])=>`<button class="sh-tab ${S.tab===k?'on':''}" onclick="smTab('${elId}','${k}')">${l}${d[k]?'<span class="ck">✓</span>':''}</button>`).join('')}</div>
+  <div id="${elId}-body">${smBody(S,elId)}</div>`;
+}
+function smTab(elId,k){_sm[elId].tab=k;smRender(elId);}
+function smBody(S,elId){
+  switch(S.tab){
+   case'today':return smToday(S,elId);
+   case'overview':return smSection(S,elId,'overview','Brand, tone & goals',smFormHTML(S,'overview',F_OV,S.row.overview)+smSaveBtn(S,`smSaveObj('${elId}','overview','overview',F_OV)`));
+   case'audience':return smSection(S,elId,'audience','Audience: demographics & psychographics',smFormHTML(S,'audience',F_AUD,S.row.audience)+smSaveBtn(S,`smSaveObj('${elId}','audience','audience',F_AUD)`));
+   case'competitors':return smSection(S,elId,'competitors','Competitor analysis',smListHTML(S,elId,'competitors',F_COMP,'+ Add competitor',(it,i)=>it.name||'Competitor '+(i+1)));
+   case'audit':return smSection(S,elId,'audit','Instagram audit',smFormHTML(S,'audit',F_AUDIT,S.row.ig_audit)+smSaveBtn(S,`smSaveObj('${elId}','audit','ig_audit',F_AUDIT)`)+smGallery(S,elId,'audit','Screenshots of the profile (before)'));
+   case'strategy':return smStrategy(S,elId);
+   case'pillars':return smSection(S,elId,'pillars','Content pillars',smListHTML(S,elId,'pillars',F_PIL,'+ Add pillar',(it,i)=>it.name||'Pillar '+(i+1)));
+   case'mood':return smSection(S,elId,'mood','Mood board',smMood(S,elId));
+   case'kit':return smKit(S,elId);
+   case'calendar':return smCalendar(S,elId);
+   case'reports':return smReports(S,elId);
+   case'approvals':return smApprovals(S,elId);
+  }return'';
+}
+function smSection(S,elId,sec,title,inner){
+  const v=(S.row.visible||{})[sec]!==false;
+  return `<div class="sh-card"><div class="sh-h"><div class="sh-t">${title}</div>${S.ro?'':`<label style="font-size:12px;color:var(--muted);display:flex;gap:6px;align-items:center"><input type="checkbox" style="width:auto" ${v?'checked':''} onchange="smVis('${elId}','${sec}',this.checked)"> Show to client</label>`}</div>${inner}${smApprBar(S,elId,sec)}</div>`;
+}
+function smSaveBtn(S,call){return S.ro?'':`<button class="btn-add" style="margin-top:14px" onclick="${call}">Save</button>`;}
+// ---- form helpers
+function smFormHTML(S,pre,fields,obj){
+  obj=obj&&typeof obj==='object'&&!Array.isArray(obj)?obj:{};
+  const hide=f=>f[0]==='ads_plan'&&!((S.row.overview||{}).services||[]).includes('Paid ads');
+  const cells=fields.filter(f=>!hide(f)).map(f=>smField(S,pre,f,obj[f[0]])).join('');
+  if(S.ro&&!cells.trim())return'<p style="font-size:13px;color:var(--muted)">Nothing added yet.</p>';
+  return `<div class="sh-g">${cells}</div>`;
+}
+function smField(S,pre,f,v){
+  const [k,l,t,o]=f,id=`smf-${pre}-${k}`;
+  if(t==='h')return `<div style="grid-column:1/-1;font-weight:700;font-size:13px;margin-top:12px;border-bottom:1px solid var(--border);padding-bottom:3px">${l}</div>`;
+  const wide=t==='area'||t==='multi'?'grid-column:1/-1':'';
+  if(S.ro){
+    if(t==='multi'){const a=Array.isArray(v)?v:[];return a.length?`<div style="${wide}"><span class="sh-lab">${l}</span>${a.map(x=>`<span class="sh-chip" style="background:#f1efe9">${smE(x)}</span>`).join('')}</div>`:'';}
+    if(v==null||v==='')return'';
+    if(o===SM_RATE){const c={Strong:['#e7f6ec','#1a7f37'],'Needs work':['#fff3d6','#8a5a00'],Missing:['#fde8e6','#b3261e']}[v]||['#f1efe9','#6b6b66'];return `<div><span class="sh-lab">${l}</span><span class="sh-chip" style="background:${c[0]};color:${c[1]}">${smE(v)}</span></div>`;}
+    return `<div style="${wide}"><span class="sh-lab">${l}</span><div class="sh-val">${smE(v)}</div></div>`;
+  }
+  let h;
+  if(t==='area')h=`<textarea class="sh-in" id="${id}">${smE(v)}</textarea>`;
+  else if(t==='sel')h=`<select class="sh-in" id="${id}"><option value="">—</option>${o.map(x=>`<option ${x===v?'selected':''}>${smE(x)}</option>`).join('')}</select>`;
+  else if(t==='multi'){const a=Array.isArray(v)?v:[];h=`<div style="display:flex;flex-wrap:wrap;gap:6px 14px">${o.map(x=>`<label style="font-size:13px;display:flex;gap:5px;align-items:center"><input type="checkbox" style="width:auto" class="${id}" value="${smE(x)}" ${a.includes(x)?'checked':''}>${smE(x)}</label>`).join('')}</div>`;}
+  else if(t==='color')h=`<input type="color" class="sh-in" id="${id}" value="${/^#[0-9a-f]{6}$/i.test(v||'')?v:'#c9a24b'}" style="height:40px;padding:2px">`;
+  else h=`<input class="sh-in" id="${id}" type="${t==='date'?'date':'text'}" value="${smE(v)}">`;
+  return `<div style="${wide}"><label class="sh-lab">${l}</label>${h}</div>`;
+}
+function smCollect(pre,fields,base){
+  const o={...(base&&typeof base==='object'&&!Array.isArray(base)?base:{})};
+  fields.forEach(f=>{if(f[2]==='h')return;const id=`smf-${pre}-${f[0]}`;if(f[2]==='multi')o[f[0]]=[...document.querySelectorAll('.'+CSS.escape(id)+':checked')].map(x=>x.value);else{const e=document.getElementById(id);if(e)o[f[0]]=e.value.trim();}});
+  return o;
+}
+async function smSaveCol(elId,col,val){
+  const S=_sm[elId];const row={client_id:S.cid,[col]:val,updated_at:new Date().toISOString()};
+  const {error}=await db.from('social_brands').upsert(row,{onConflict:'client_id'});
+  if(error){alert('Could not save: '+error.message);return false;}
+  S.row[col]=val;return true;
+}
+async function smSaveObj(elId,pre,col,fields){
+  const S=_sm[elId];const o=smCollect(pre,fields,S.row[col]);
+  if(await smSaveCol(elId,col,o)){smToast('Saved ✓');smRender(elId);}
+}
+async function smVis(elId,sec,on){const S=_sm[elId];const v={...(S.row.visible||{}),[sec]:on};if(await smSaveCol(elId,'visible',v))smToast(on?'Client can see this':'Hidden from client');}
+// ---- list editor
+function smListHTML(S,elId,col,fields,addLabel,titleFn){
+  const items=Array.isArray(S.row[col])?S.row[col]:[];
+  if(S.ro){if(!items.length)return'<p style="font-size:13px;color:var(--muted)">Nothing added yet.</p>';
+    return items.map((it,i)=>`<div class="sh-card" style="background:var(--surface);${col==='pillars'?`border-left:5px solid hsl(${(i*67)%360},55%,50%)`:''}"><div class="sh-t" style="margin-bottom:2px">${smE(titleFn(it,i))}${it.mix?` <span class="sh-chip" style="background:#f1efe9">${smE(it.mix)}%</span>`:''}</div><div class="sh-g">${fields.slice(1).filter(f=>f[0]!=='mix').map(f=>smField(S,col+i,f,it[f[0]])).join('')}</div></div>`).join('');}
+  return `<div id="${elId}-${col}">${items.map((it,i)=>`<div class="sh-card sml-${col}" data-i="${i}" style="background:var(--surface)"><div class="sh-h"><div class="sh-t">${smE(titleFn(it,i))}</div><button class="btn-sm" style="color:var(--danger)" onclick="smListDel('${elId}','${col}',${i})">Remove</button></div><div class="sh-g">${fields.map(f=>smField(S,col+i,f,it[f[0]])).join('')}</div></div>`).join('')}</div>
+  <button class="btn-sm" onclick="smListAdd('${elId}','${col}')">${addLabel}</button> <button class="btn-add" onclick="smListSave('${elId}','${col}')">Save</button>`;
+}
+const SM_LISTF={competitors:F_COMP,pillars:F_PIL,kit_colors:F_COL,kit_fonts:F_FNT};
+function smListRead(S,col){const f=SM_LISTF[col];return [...document.querySelectorAll('.sml-'+col)].map(box=>{const i=box.dataset.i,o={};f.forEach(x=>{const e=document.getElementById(`smf-${col}${i}-${x[0]}`);if(e)o[x[0]]=e.value.trim();});return o;});}
+function smListAdd(elId,col){const S=_sm[elId];const cur=smListRead(S,col);cur.push({});S.row[col]=cur;smRender(elId);}
+function smListDel(elId,col,i){const S=_sm[elId];const cur=smListRead(S,col);cur.splice(i,1);S.row[col]=cur;smRender(elId);}
+async function smListSave(elId,col){const S=_sm[elId];const cur=smListRead(S,col).filter(o=>Object.values(o).some(v=>v));if(await smSaveCol(elId,col,cur)){smToast('Saved ✓');smRender(elId);}}
+// ---- strategy
+function smStrategy(S,elId){
+  const st=S.row.strategies||{};const plats=[...new Set(['Instagram',...Object.keys(st),...(S.ro?[]:[S.plat])])];
+  if(S.ro){const have=Object.keys(st);if(!have.length)return smSection(S,elId,'strategy','Platform strategy','<p style="font-size:13px;color:var(--muted)">Nothing added yet.</p>');if(!have.includes(S.plat))S.plat=have[0];}
+  const pills=(S.ro?Object.keys(st):plats).map(p=>`<button class="sh-tab ${S.plat===p?'on':''}" onclick="_sm['${elId}'].plat='${p}';smRender('${elId}')">${p}${st[p]&&Object.values(st[p]).some(v=>v&&String(v).length)?'<span class="ck">✓</span>':''}</button>`).join('');
+  const add=S.ro?'':`<select class="sh-in" style="width:auto" onchange="if(this.value){_sm['${elId}'].plat=this.value;smRender('${elId}')}"><option value="">+ Add platform</option>${SM_PLATFORMS.filter(p=>!plats.includes(p)).map(p=>`<option>${p}</option>`).join('')}</select>`;
+  const pre='strat'+SM_PLATFORMS.indexOf(S.plat);
+  return smSection(S,elId,'strategy','Platform strategy',`<div class="sh-tabs">${pills}${add}</div>${S.plat&&!plats.includes(S.plat)&&!S.ro?'':''}${smFormHTML(S,pre,F_STRAT,st[S.plat])}${smSaveBtn(S,`smSaveStrat('${elId}')`)}`);
+}
+async function smSaveStrat(elId){const S=_sm[elId];const pre='strat'+SM_PLATFORMS.indexOf(S.plat);const all={...(S.row.strategies||{})};all[S.plat]=smCollect(pre,F_STRAT,all[S.plat]);if(await smSaveCol(elId,'strategies',all)){smToast('Saved ✓');smRender(elId);}}
+// ---- files
+function smUploadInput(S,elId,kind,label,fmt){return S.ro?'':`<label class="btn-sm" style="display:inline-block;cursor:pointer">${label}<input type="file" accept="image/*,.pdf,.svg" multiple style="display:none" onchange="smUpload('${elId}','${kind}',this,${fmt?`'${fmt}'`:'null'})"></label>`;}
+async function smUpload(elId,kind,inp,fmt){
+  const S=_sm[elId];const files=[...inp.files];if(!files.length)return;smToast('Uploading…');
+  for(const f of files){if(f.size>10*1024*1024){alert(f.name+' is over 10MB.');continue;}
+    const path=`${S.cid}/${kind}_${Date.now()}_${f.name.replace(/[^a-zA-Z0-9._-]/g,'_')}`;
+    const u=await db.storage.from('social').upload(path,f);
+    if(u.error){alert('Upload failed: '+u.error.message+'\nRun social_hub_migration.sql first.');return;}
+    const url=db.storage.from('social').getPublicUrl(path).data.publicUrl;
+    const {error}=await db.from('social_assets').insert({client_id:S.cid,kind,title:f.name.replace(/\.[^.]+$/,''),url,fmt:fmt||null,uploaded_by:(currentUser&&currentUser.name)||''});
+    if(error){alert(error.message);return;}}
+  await smReload(elId);
+}
+async function smDelAsset(elId,id){if(!confirm('Remove this file?'))return;await db.from('social_assets').delete().eq('id',id);await smReload(elId);}
+async function smRenameAsset(elId,id,cur){const t=prompt('Name / caption',cur||'');if(t==null)return;await db.from('social_assets').update({title:t}).eq('id',id);await smReload(elId);}
+const smIsImg=u=>/\.(png|jpe?g|gif|webp|svg)(\?|$)/i.test(u||'');
+function smThumb(a,elId,S){return `<div style="position:relative;border:1px solid var(--border);border-radius:10px;padding:8px;background:var(--white);text-align:center">${smIsImg(a.url)?`<img src="${a.url}" style="width:100%;height:110px;object-fit:contain;cursor:zoom-in" onclick="smZoom('${a.url}')">`:`<a href="${a.url}" target="_blank" style="display:block;padding:34px 0;font-size:28px;text-decoration:none">📄</a>`}<div style="font-size:12px;margin-top:4px;word-break:break-word">${smE(a.title||'')}</div><div style="font-size:11px;margin-top:2px"><a href="${a.url}" target="_blank" download>Download</a>${S.ro?'':` · <a href="#" onclick="smRenameAsset('${elId}','${a.id}','${smE(a.title||'').replace(/'/g,'')}');return false">Rename</a> · <a href="#" style="color:var(--danger)" onclick="smDelAsset('${elId}','${a.id}');return false">Delete</a>`}</div></div>`;}
+function smGallery(S,elId,kind,title){const a=smAssets(S,kind);return `<div style="margin-top:16px"><div class="sh-h"><div style="font-weight:600;font-size:13px">${title}</div>${smUploadInput(S,elId,kind,'⬆ Upload')}</div>${a.length?`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px">${a.map(x=>smThumb(x,elId,S)).join('')}</div>`:'<p style="font-size:12.5px;color:var(--muted)">Nothing uploaded yet.</p>'}</div>`;}
+function smMood(S,elId){
+  const a=smAssets(S,'mood'),kw=(S.row.kit_notes||{}).mood_keywords||'';
+  return `<p style="font-size:13px;color:var(--muted);margin:0 0 10px">The look and feel we are aiming for. Pictures first, words second.</p>
+  ${S.ro?(kw?`<div style="margin-bottom:10px">${kw.split(',').map(x=>`<span class="sh-chip" style="background:#f1efe9">${smE(x.trim())}</span>`).join('')}</div>`:''):`<label class="sh-lab">Mood keywords (comma separated)</label><div style="display:flex;gap:8px;margin-bottom:12px"><input class="sh-in" id="${elId}-kw" value="${smE(kw)}" placeholder="warm, earthy, minimal, bold"><button class="btn-sm" onclick="smSaveKw('${elId}')">Save</button></div>`}
+  ${S.ro?'':`<div style="margin-bottom:12px">${smUploadInput(S,elId,'mood','⬆ Add images')}</div>`}
+  ${a.length?`<div class="sh-mood">${a.map(x=>`<div>${smIsImg(x.url)?`<img src="${x.url}" onclick="smZoom('${x.url}')">`:`<a href="${x.url}" target="_blank">${smE(x.title)}</a>`}${S.ro?'':`<button class="sh-x" onclick="smDelAsset('${elId}','${x.id}')">×</button>`}</div>`).join('')}</div>`:'<p style="font-size:13px;color:var(--muted)">No images yet.</p>'}`;
+}
+async function smSaveKw(elId){const S=_sm[elId];const v={...(S.row.kit_notes||{}),mood_keywords:document.getElementById(elId+'-kw').value.trim()};if(await smSaveCol(elId,'kit_notes',v)){smToast('Saved ✓');smRender(elId);}}
+// ---- brand kit
+function smCanvaEmbed(u){const m=String(u||'').match(/canva\.com\/design\/([^\/?#]+)(?:\/([^\/?#]+))?/);return m?`https://www.canva.com/design/${m[1]}${m[2]&&m[2].length>12?'/'+m[2]:''}/view?embed`:'';}
+function smKit(S,elId){
+  const tpl=smAssets(S,'template'),have=new Set(tpl.map(t=>t.fmt));
+  const colors=(S.row.kit_colors||[]).filter(c=>c.hex);
+  const swatches=colors.length?`<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:10px">${colors.map(c=>`<div style="text-align:center;font-size:11.5px"><span class="sh-sw" style="background:${smE(c.hex)}"></span><div>${smE(c.name||'')}</div><div style="color:var(--muted)">${smE(c.hex)}</div></div>`).join('')}</div>`:'';
+  const fonts=(S.row.kit_fonts||[]).filter(f=>f.name);
+  const kit=S.row.kit_notes||{};
+  const designer=S.ro?'':`<div style="background:var(--surface);border:1px dashed var(--border);border-radius:12px;padding:12px 14px;margin-bottom:14px"><div style="font-weight:700;font-size:13px;margin-bottom:6px">Designer checklist: ${SM_REQ_TPL.filter(r=>have.has(r[0])).length} of ${SM_REQ_TPL.length} templates done</div>${SM_REQ_TPL.map(r=>`<div style="font-size:12.5px;padding:2px 0;color:${have.has(r[0])?'#1a7f37':'var(--ink)'}">${have.has(r[0])?'✅':'⬜'} ${r[1]} <span style="color:var(--muted)">(${r[2]})</span></div>`).join('')}</div>`;
+  const tplHTML=tpl.map(t=>{const emb=smCanvaEmbed(t.link);const spec=(SM_REQ_TPL.find(r=>r[0]===t.fmt)||[])[1]||'Template';return `<div class="sh-card" style="background:var(--surface)"><div class="sh-h"><div><div class="sh-t">${smE(t.title||spec)}</div><div style="font-size:12px;color:var(--muted)">${smE(spec)}${t.notes?' · '+smE(t.notes):''}</div></div><div style="display:flex;gap:6px;flex-wrap:wrap">${t.link?`<a class="btn-sm" style="text-decoration:none" target="_blank" href="${smE(t.link)}">Open in Canva ↗</a>`:''}${S.ro?'':`<button class="btn-sm" style="color:var(--danger)" onclick="smDelAsset('${elId}','${t.id}')">Remove</button>`}</div></div>${t.url&&smIsImg(t.url)?`<img src="${t.url}" style="max-width:100%;max-height:280px;border-radius:10px;cursor:zoom-in;margin-top:6px" onclick="smZoom('${t.url}')">`:''}${emb?`<details style="margin-top:8px"><summary style="cursor:pointer;font-size:12.5px">Preview live from Canva</summary><div style="position:relative;padding-top:62%;margin-top:6px"><iframe src="${emb}" loading="lazy" allowfullscreen style="position:absolute;inset:0;width:100%;height:100%;border:0;border-radius:10px"></iframe></div><div style="font-size:11px;color:var(--muted);margin-top:4px">In Canva, set the design link to “anyone with the link can view”, or the preview stays blank.</div></details>`:''}</div>`;}).join('');
+  const addTpl=S.ro?'':`<details class="sh-card" style="background:var(--surface)"><summary style="cursor:pointer;font-weight:600;font-size:13px">+ Add a template</summary><div class="sh-g"><div><label class="sh-lab">Template type</label><select class="sh-in" id="${elId}-tf"><option value="">Other</option>${SM_REQ_TPL.map(r=>`<option value="${r[0]}">${r[1]} (${r[2]})</option>`).join('')}</select></div><div><label class="sh-lab">Name</label><input class="sh-in" id="${elId}-tt" placeholder="e.g. Feed post: quote"></div><div><label class="sh-lab">Canva link (share link)</label><input class="sh-in" id="${elId}-tl" placeholder="https://www.canva.com/design/…"></div><div><label class="sh-lab">Notes for the designer</label><input class="sh-in" id="${elId}-tn"></div><div><label class="sh-lab">Preview image (optional)</label><input type="file" id="${elId}-tp" accept="image/*"></div></div><button class="btn-add" style="margin-top:12px" onclick="smAddTpl('${elId}')">Add template</button></details>`;
+  const inner=`${designer}
+   <div class="sh-t" style="margin-bottom:6px">Colours</div>${S.ro?(swatches||'<p style="font-size:13px;color:var(--muted)">None yet.</p>'):swatches+smListHTML(S,elId,'kit_colors',F_COL,'+ Add colour',(it,i)=>it.name||'Colour '+(i+1))}
+   <div class="sh-t" style="margin:16px 0 6px">Fonts</div>${S.ro?(fonts.length?fonts.map(f=>`<div style="font-size:14px;padding:2px 0"><strong>${smE(f.name)}</strong> <span style="color:var(--muted)">${smE(f.use||'')}</span></div>`).join(''):'<p style="font-size:13px;color:var(--muted)">None yet.</p>'):smListHTML(S,elId,'kit_fonts',F_FNT,'+ Add font',(it,i)=>it.name||'Font '+(i+1))}
+   ${smGallery(S,elId,'logo','Logo kit (all versions: light, dark, icon)')}
+   <div class="sh-t" style="margin:18px 0 6px">Templates (Canva)</div>${tplHTML||(S.ro?'<p style="font-size:13px;color:var(--muted)">None yet.</p>':'')}${addTpl}
+   <div class="sh-t" style="margin:18px 0 0">Guidelines</div>${smFormHTML(S,'kit',F_KIT,kit)}${smSaveBtn(S,`smSaveObj('${elId}','kit','kit_notes',F_KIT)`)}`;
+  return smSection(S,elId,'kit','Brand kit & templates',inner);
+}
+async function smAddTpl(elId){
+  const S=_sm[elId],g=s=>document.getElementById(elId+'-'+s);const fmt=g('tf').value,title=g('tt').value.trim(),link=g('tl').value.trim(),notes=g('tn').value.trim(),file=g('tp').files[0];
+  if(!title&&!link&&!file){alert('Add a name, a Canva link or a preview image.');return;}
+  let url=null;
+  if(file){const path=`${S.cid}/template_${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g,'_')}`;const u=await db.storage.from('social').upload(path,file);if(u.error){alert('Upload failed: '+u.error.message);return;}url=db.storage.from('social').getPublicUrl(path).data.publicUrl;}
+  const {error}=await db.from('social_assets').insert({client_id:S.cid,kind:'template',fmt:fmt||null,title,link:link||null,notes:notes||null,url,uploaded_by:(currentUser&&currentUser.name)||''});
+  if(error){alert(error.message);return;}await smReload(elId);
+}
+// ---- calendar + post approvals
+const SM_AP={'Not sent':['#f1efe9','#6b6b66'],Pending:['#fff3d6','#8a5a00'],Approved:['#e7f6ec','#1a7f37'],'Changes requested':['#fde8e6','#b3261e']};
+function smCalendar(S,elId){
+  const today=localDateStr(),pils=(S.row.pillars||[]).map(p=>p.name).filter(Boolean);
+  const posts=S.posts.filter(p=>!S.ro||(p.approval&&p.approval!=='Not sent')||p.status!=='Draft');
+  const form=S.ro?'':`<div class="sh-card"><div class="sh-t" style="margin-bottom:6px">Plan a post</div><div class="sh-g">
+    <div><label class="sh-lab">Date</label><input type="date" class="sh-in" id="${elId}-pd" value="${today}"></div>
+    <div><label class="sh-lab">Platform</label><select class="sh-in" id="${elId}-pp">${SM_PLATFORMS.map(p=>`<option>${p}</option>`).join('')}</select></div>
+    <div><label class="sh-lab">Content pillar</label><select class="sh-in" id="${elId}-pl"><option value="">—</option>${pils.map(p=>`<option>${smE(p)}</option>`).join('')}</select></div>
+    <div><label class="sh-lab">Status</label><select class="sh-in" id="${elId}-ps">${SM_STATUS.map(p=>`<option>${p}</option>`).join('')}</select></div>
+    <div><label class="sh-lab">Image / video cover</label><input type="file" id="${elId}-pi" accept="image/*"></div>
+    <div><label class="sh-lab">Link (optional)</label><input class="sh-in" id="${elId}-pk" placeholder="https://…"></div>
+    <div style="grid-column:1/-1"><label class="sh-lab">Caption / idea</label><textarea class="sh-in" id="${elId}-pc"></textarea></div></div>
+    <label style="font-size:13px;display:flex;gap:6px;align-items:center;margin-top:10px"><input type="checkbox" id="${elId}-pa" style="width:auto"> Send to client for approval</label>
+    <button class="btn-add" style="margin-top:10px" onclick="smAddPost('${elId}')">+ Add to calendar</button></div>`;
+  const row=p=>{const d=new Date(p.post_date+'T12:00:00'),ap=p.approval||'Not sent',c=SM_AP[ap]||SM_AP['Not sent'];
+    const st=S.ro?`<span class="sm-st sm-${p.status}">${p.status}</span>`:`<button class="sm-st sm-${p.status}" onclick="smCycle('${elId}','${p.id}','${p.status}')">${p.status}</button>`;
+    const act=S.ro?(ap==='Pending'?`<button class="btn-add" onclick="smPostAppr('${elId}','${p.id}','Approved')">✓ Approve</button> <button class="btn-sm" onclick="smPostAppr('${elId}','${p.id}','Changes requested')">Request changes</button>`:''):`${ap==='Pending'?`<button class="btn-sm" onclick="smPostAppr('${elId}','${p.id}','Not sent')">Withdraw</button>`:`<button class="btn-sm" onclick="smPostAppr('${elId}','${p.id}','Pending')">📤 Send for approval</button>`} <button class="btn-sm" style="color:var(--danger)" onclick="smDelPost('${elId}','${p.id}')">✕</button>`;
     return `<div class="sm-day"><div class="sm-date">${d.toLocaleDateString('en-GB',{day:'numeric',month:'short'})}<div style="font-weight:400;font-size:11px;color:var(--muted)">${d.toLocaleDateString('en-GB',{weekday:'short'})}</div></div>
-      <div style="flex:1;min-width:0"><div style="font-weight:600;margin-bottom:3px">${p.platform||''} ${st}</div><div style="white-space:pre-wrap;color:var(--ink2);line-height:1.5">${(p.caption||'').replace(/</g,'&lt;')}</div>${p.link?`<a href="${p.link}" target="_blank" style="font-size:12px;color:var(--gold)">Open post ↗</a>`:''}</div>
-      ${readonly?'':`<button class="btn-sm" style="color:var(--danger)" onclick="delSocialPost('${p.id}','${clientId}','${elId}')">✕</button>`}</div>`;};
+     ${p.image_url?`<img src="${p.image_url}" style="width:86px;height:86px;object-fit:cover;border-radius:10px;cursor:zoom-in;flex:none" onclick="smZoom('${p.image_url}')">`:''}
+     <div style="flex:1;min-width:0"><div style="font-weight:600;margin-bottom:3px">${smE(p.platform||'')} ${st} <span class="sh-chip" style="background:${c[0]};color:${c[1]}">${ap==='Pending'?'Awaiting approval':ap}</span>${p.pillar?`<span class="sh-chip" style="background:#f1efe9">${smE(p.pillar)}</span>`:''}</div>
+     <div style="white-space:pre-wrap;color:var(--ink2);line-height:1.5">${smE(p.caption||'')}</div>${p.link?`<a href="${smE(p.link)}" target="_blank" style="font-size:12px;color:var(--gold)">Open post ↗</a>`:''}
+     ${p.client_comment?`<div style="font-size:12.5px;margin-top:4px;color:${ap==='Changes requested'?'#b3261e':'var(--muted)'}">Client: “${smE(p.client_comment)}”</div>`:''}
+     <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">${act}</div></div></div>`;};
   const up=posts.filter(p=>p.post_date>=today),past=posts.filter(p=>p.post_date<today).reverse();
-  el.innerHTML=(readonly?'<div class="cv-sec-h">Content planner</div>':'')+form+
-   `<div class="card" style="padding:6px 18px"><div style="font-weight:700;font-size:14px;padding:12px 0 2px">Coming up (${up.length})</div>${up.length?up.map(row).join(''):'<div style="padding:14px 0;color:var(--muted);font-size:13px">Nothing planned yet.</div>'}</div>
-    ${past.length?`<details class="setbox" style="margin-top:14px"><summary>Earlier posts (${past.length})</summary><div style="padding:0 6px">${past.map(row).join('')}</div></details>`:''}`;
+  return form+`<div class="sh-card" style="padding:6px 18px"><div style="font-weight:700;font-size:14px;padding:12px 0 2px">Coming up (${up.length})</div>${up.length?up.map(row).join(''):'<div style="padding:14px 0;color:var(--muted);font-size:13px">Nothing planned yet.</div>'}</div>${past.length?`<details class="setbox" style="margin-top:14px"><summary>Earlier posts (${past.length})</summary><div style="padding:0 6px">${past.map(row).join('')}</div></details>`:''}`;
 }
-async function addSocialPost(cid,elId){
-  const g=i=>document.getElementById(i).value;
-  const fb=document.getElementById('sm-fb');
-  if(!g('sm-date')||!g('sm-caption').trim()){fb.innerHTML='<div class="error-msg">Add a date and a caption.</div>';return;}
-  const {error}=await db.from('social_posts').insert({client_id:cid,post_date:g('sm-date'),platform:g('sm-platform'),status:g('sm-status'),caption:g('sm-caption').trim(),link:g('sm-link').trim()||null});
-  if(error){fb.innerHTML='<div class="error-msg">'+error.message+'</div>';return;}
-  loadSocial(cid,elId,false);
+async function smAddPost(elId){
+  const S=_sm[elId],g=s=>document.getElementById(elId+'-'+s);const cap=g('pc').value.trim();
+  if(!g('pd').value||!cap){alert('Add a date and a caption.');return;}
+  let image_url=null;const f=g('pi').files[0];
+  if(f){const path=`${S.cid}/post_${Date.now()}_${f.name.replace(/[^a-zA-Z0-9._-]/g,'_')}`;const u=await db.storage.from('social').upload(path,f);if(u.error){alert('Upload failed: '+u.error.message);return;}image_url=db.storage.from('social').getPublicUrl(path).data.publicUrl;}
+  const {error}=await db.from('social_posts').insert({client_id:S.cid,post_date:g('pd').value,platform:g('pp').value,pillar:g('pl').value||null,status:g('ps').value,caption:cap,link:g('pk').value.trim()||null,image_url,approval:g('pa').checked?'Pending':'Not sent'});
+  if(error){alert(error.message);return;}await smReload(elId);
 }
-async function cycleSocialStatus(id,cur,cid,elId){
-  const next=SM_STATUS[(SM_STATUS.indexOf(cur)+1)%SM_STATUS.length];
-  await db.from('social_posts').update({status:next}).eq('id',id);
-  loadSocial(cid,elId,false);
+async function smCycle(elId,id,cur){const n=SM_STATUS[(SM_STATUS.indexOf(cur)+1)%SM_STATUS.length];await db.from('social_posts').update({status:n}).eq('id',id);await smReload(elId);}
+async function smDelPost(elId,id){if(!confirm('Remove this post?'))return;await db.from('social_posts').delete().eq('id',id);await smReload(elId);}
+async function smPostAppr(elId,id,status){
+  const S=_sm[elId];let comment=null;
+  if(status==='Changes requested'){comment=prompt('What should change?');if(comment==null)return;}
+  const upd={approval:status};if(S.ro){upd.client_comment=comment||null;upd.approved_by=(currentUser&&currentUser.name)||'Client';upd.approved_at=new Date().toISOString();}else if(status==='Pending'){upd.client_comment=null;}
+  const {error}=await db.from('social_posts').update(upd).eq('id',id);if(error){alert(error.message);return;}
+  if(S.ro)smNotify(S,'Social post '+status.toLowerCase()+(comment?': '+comment:''));
+  await smReload(elId);
 }
-async function delSocialPost(id,cid,elId){
-  if(!confirm('Remove this post from the planner?'))return;
-  await db.from('social_posts').delete().eq('id',id);
-  loadSocial(cid,elId,false);
+// ---- section approvals
+function smApprChip(st){const c=SM_AP[st]||SM_AP['Not sent'];return `<span class="sh-chip" style="background:${c[0]};color:${c[1]}">${st==='Pending'?'Awaiting client approval':st}</span>`;}
+function smApprBar(S,elId,sec){
+  const a=(S.row.approvals||{})[sec]||{},st=a.status||'Not sent';
+  if(S.ro&&st==='Not sent')return'';
+  let btn='';
+  if(S.ro){if(st==='Pending')btn=`<button class="btn-add" onclick="smAppr('${elId}','${sec}','Approved')">✓ Approve</button> <button class="btn-sm" onclick="smAppr('${elId}','${sec}','Changes requested')">Request changes</button>`;}
+  else btn=st==='Pending'?`<button class="btn-sm" onclick="smAppr('${elId}','${sec}','Not sent')">Withdraw</button>`:`<button class="btn-sm" onclick="smAppr('${elId}','${sec}','Pending')">📤 Send for client approval</button>`;
+  return `<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:14px;padding-top:12px;border-top:1px solid var(--border)">${smApprChip(st)}${btn}${a.comment?`<span style="font-size:12px;color:var(--muted)">“${smE(a.comment)}” ${a.by?'· '+smE(a.by):''}</span>`:(a.at&&st==='Approved'?`<span style="font-size:12px;color:var(--muted)">${smE(a.by||'')} · ${new Date(a.at).toLocaleDateString('en-GB')}</span>`:'')}</div>`;
+}
+async function smAppr(elId,sec,status){
+  const S=_sm[elId];let comment='';
+  if(status==='Changes requested'){comment=prompt('What should change?');if(comment==null)return;}
+  const all={...(S.row.approvals||{})};all[sec]={status,comment:comment||'',by:S.ro?((currentUser&&currentUser.name)||'Client'):'',at:new Date().toISOString()};
+  if(await smSaveCol(elId,'approvals',all)){if(S.ro)smNotify(S,'Social media "'+(SM_SECTIONS.find(x=>x[0]===sec)||[sec,sec])[1]+'" '+status.toLowerCase()+(comment?': '+comment:''));smToast(status==='Pending'?'Sent to client':'Saved ✓');smRender(elId);}
+}
+function smNotify(S,msg){
+  try{db.from('notifications').insert({type:'client_request',message:msg,client_id:S.cid,is_read:false}).then(()=>{},()=>{});}catch(e){}
+  try{fetch('https://tdxvioeybgqbbcubngko.supabase.co/functions/v1/notifyhaida',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+SUPA_KEY},body:JSON.stringify({client_name:(currentUser&&currentUser.name)||'Client',task_title:msg,urgency:'Normal',service:'Social media'})}).catch(()=>{});}catch(e){}
+}
+function smApprovals(S,elId){
+  const ap=S.row.approvals||{},vis=S.row.visible||{};
+  const secs=SM_SECTIONS.filter(([k])=>!S.ro||vis[k]!==false);
+  const pend=S.posts.filter(p=>p.approval==='Pending').length;
+  return `<div class="sh-card"><div class="sh-t" style="margin-bottom:8px">${S.ro?'Your approvals':'Client approvals'}</div>
+  ${pend?`<div style="background:#fff3d6;border-radius:10px;padding:10px 12px;font-size:13px;margin-bottom:10px">📅 ${pend} post${pend>1?'s':''} waiting for approval in the <a href="#" onclick="smTab('${elId}','calendar');return false">Calendar</a></div>`:''}
+  ${secs.map(([k,l])=>{const a=ap[k]||{},st=a.status||'Not sent';if(S.ro&&st==='Not sent')return'';return `<div style="padding:10px 0;border-top:1px solid var(--border)"><div class="sh-h" style="margin:0"><div><a href="#" onclick="smTab('${elId}','${k}');return false" style="font-weight:600;color:var(--ink)">${l}</a> ${smApprChip(st)}</div><div style="display:flex;gap:6px">${S.ro?(st==='Pending'?`<button class="btn-add" onclick="smAppr('${elId}','${k}','Approved')">✓ Approve</button><button class="btn-sm" onclick="smAppr('${elId}','${k}','Changes requested')">Changes</button>`:''):(st==='Pending'?`<button class="btn-sm" onclick="smAppr('${elId}','${k}','Not sent')">Withdraw</button>`:`<button class="btn-sm" onclick="smAppr('${elId}','${k}','Pending')">📤 Send</button>`)}</div></div>${a.comment?`<div style="font-size:12.5px;color:var(--muted);margin-top:3px">“${smE(a.comment)}” ${a.by?'· '+smE(a.by):''}</div>`:''}${st==='Approved'&&a.at?`<div style="font-size:12px;color:var(--muted);margin-top:3px">Approved ${smE(a.by||'')} · ${new Date(a.at).toLocaleDateString('en-GB')}</div>`:''}</div>`;}).join('')||'<p style="font-size:13px;color:var(--muted)">Nothing waiting for you.</p>'}</div>`;
+}
+
+// ══ SOCIAL: PERFORMANCE REPORTS + PRINTABLE PDF ══
+const SM_MET=[['followers','Followers'],['reach','Reach'],['impressions','Impressions'],['likes','Likes'],['comments','Comments'],['shares','Shares'],['saves','Saves'],['profile_visits','Profile visits'],['link_clicks','Link clicks'],['posts_published','Posts published'],['ad_spend','Ad spend (₦)']];
+const smNum=v=>v==null||v===''?null:Number(v);
+const smFmt=v=>v==null?'—':Number(v).toLocaleString();
+function smEng(m){const r=smNum(m.reach);if(!r)return null;return ((smNum(m.likes)||0)+(smNum(m.comments)||0)+(smNum(m.shares)||0)+(smNum(m.saves)||0))/r*100;}
+function smMonthLabel(k){const [y,m]=String(k).split('-');return new Date(+y,+m-1,1).toLocaleDateString('en-GB',{month:'long',year:'numeric'});}
+function smPrevOf(S,m){return S.metrics.filter(x=>x.platform===m.platform&&x.month<m.month).sort((a,b)=>b.month.localeCompare(a.month))[0];}
+function smDelta(cur,prev,lowerBetter){if(cur==null||prev==null||prev===0)return'';const d=cur-prev,pct=d/prev*100;if(!d)return '<span style="color:var(--muted)">no change</span>';const good=lowerBetter?d<0:d>0;return `<span style="color:${good?'#1a7f37':'#b3261e'}">${d>0?'▲':'▼'} ${Math.abs(pct).toFixed(1)}%</span>`;}
+function smTile(label,val,delta){return `<div style="background:var(--surface);border-radius:10px;padding:9px 11px"><div style="font-size:11px;color:var(--muted)">${label}</div><div style="font-size:18px;font-weight:700">${val}</div><div style="font-size:11.5px">${delta||'&nbsp;'}</div></div>`;}
+function smSpark(S,plat){
+  const pts=S.metrics.filter(x=>x.platform===plat&&x.followers!=null).sort((a,b)=>a.month.localeCompare(b.month)).slice(-8);
+  if(pts.length<2)return'';const vals=pts.map(p=>+p.followers),mn=Math.min(...vals),mx=Math.max(...vals),w=260,h=50;
+  const xy=vals.map((v,i)=>`${(i/(vals.length-1)*(w-8)+4).toFixed(1)},${(h-6-(mx===mn?0.5:(v-mn)/(mx-mn))*(h-12)).toFixed(1)}`).join(' ');
+  return `<svg viewBox="0 0 ${w} ${h}" style="display:block;width:100%;max-width:${w}px;height:${h}px"><polyline points="${xy}" fill="none" stroke="#C9A24B" stroke-width="2.5" stroke-linejoin="round"/>${xy.split(' ').map(p=>`<circle cx="${p.split(',')[0]}" cy="${p.split(',')[1]}" r="3" fill="#1B2A4A"/>`).join('')}</svg><div style="font-size:11px;color:var(--muted)">Followers, ${pts.length} months</div>`;
+}
+function smReports(S,elId){
+  if(S.noMetrics)return `<div class="sh-card" style="font-size:13px">Reports need one more table. Run <strong>social_hub_migration.sql</strong> again in Supabase.</div>`;
+  const rows=S.metrics.filter(m=>!S.ro||m.published).sort((a,b)=>b.month.localeCompare(a.month)||a.platform.localeCompare(b.platform));
+  const e=S.edit||{};const today=new Date().toISOString().slice(0,7);
+  const form=S.ro?'':`<details class="sh-card" ${S.edit?'open':''}><summary style="cursor:pointer;font-weight:700;font-size:14px">${S.edit?'Editing '+smMonthLabel(e.month)+' · '+smE(e.platform):'+ Add a monthly report'}</summary>
+   <div class="sh-g"><div><label class="sh-lab">Month</label><input type="month" class="sh-in" id="${elId}-mm" value="${e.month||today}"></div>
+   <div><label class="sh-lab">Platform</label><select class="sh-in" id="${elId}-mp">${SM_PLATFORMS.map(p=>`<option ${p===(e.platform||'Instagram')?'selected':''}>${p}</option>`).join('')}</select></div>
+   ${SM_MET.map(([k,l])=>`<div><label class="sh-lab">${l}</label><input type="number" class="sh-in" id="${elId}-m-${k}" value="${e[k]==null?'':e[k]}"></div>`).join('')}
+   <div style="grid-column:1/-1"><label class="sh-lab">Ad results (leads, sales, cost per result)</label><input class="sh-in" id="${elId}-m-ad_results" value="${smE(e.ad_results||'')}"></div>
+   <div style="grid-column:1/-1"><label class="sh-lab">Best post this month</label><input class="sh-in" id="${elId}-m-best_post" value="${smE(e.best_post||'')}" placeholder="Link or description"></div>
+   <div style="grid-column:1/-1"><label class="sh-lab">Highlights: what went well</label><textarea class="sh-in" id="${elId}-m-highlights">${smE(e.highlights||'')}</textarea></div>
+   <div style="grid-column:1/-1"><label class="sh-lab">What we learned</label><textarea class="sh-in" id="${elId}-m-learnings">${smE(e.learnings||'')}</textarea></div>
+   <div style="grid-column:1/-1"><label class="sh-lab">Plan for next month</label><textarea class="sh-in" id="${elId}-m-next_plan">${smE(e.next_plan||'')}</textarea></div></div>
+   <label style="font-size:13px;display:flex;gap:6px;align-items:center;margin-top:10px"><input type="checkbox" id="${elId}-mpub" style="width:auto" ${e.published?'checked':''}> Publish to client (they cannot see it until this is ticked)</label>
+   <button class="btn-add" style="margin-top:10px" onclick="smSaveMetric('${elId}')">Save report</button>${S.edit?` <button class="btn-sm" onclick="_sm['${elId}'].edit=null;smRender('${elId}')">Cancel</button>`:''}</details>`;
+  const plats=[...new Set(rows.map(r=>r.platform))];
+  const trend=plats.map(p=>smSpark(S,p)?`<div style="margin-bottom:8px"><strong style="font-size:12.5px">${smE(p)}</strong>${smSpark(S,p)}</div>`:'').join('');
+  const card=m=>{const pv=smPrevOf(S,m),en=smEng(m),pen=pv?smEng(pv):null;
+    return `<div class="sh-card"><div class="sh-h"><div><span class="sh-t">${smMonthLabel(m.month)}</span> <span class="sh-chip" style="background:#f1efe9">${smE(m.platform)}</span>${S.ro?'':`<span class="sh-chip" style="background:${m.published?'#e7f6ec':'#fff3d6'};color:${m.published?'#1a7f37':'#8a5a00'}">${m.published?'Published':'Draft'}</span>`}</div>
+     <div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn-sm" onclick="smPrintReport('${elId}','${m.id}')">⬇ PDF</button>${S.ro?'':`<button class="btn-sm" onclick="smEditMetric('${elId}','${m.id}')">Edit</button><button class="btn-sm" style="color:var(--danger)" onclick="smDelMetric('${elId}','${m.id}')">✕</button>`}</div></div>
+     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;margin:8px 0">
+      ${smTile('Followers',smFmt(m.followers),smDelta(smNum(m.followers),pv&&smNum(pv.followers)))}${smTile('Reach',smFmt(m.reach),smDelta(smNum(m.reach),pv&&smNum(pv.reach)))}${smTile('Engagement rate',en==null?'—':en.toFixed(1)+'%',en!=null&&pen!=null?smDelta(en,pen):'')}${smTile('Posts',smFmt(m.posts_published),'')}${smTile('Link clicks',smFmt(m.link_clicks),smDelta(smNum(m.link_clicks),pv&&smNum(pv.link_clicks)))}${smNum(m.ad_spend)?smTile('Ad spend','₦'+smFmt(m.ad_spend),m.ad_results?smE(m.ad_results):''):''}</div>
+     ${m.best_post?`<div style="font-size:13px;margin-top:6px"><strong>Best post:</strong> ${/^https?:/.test(m.best_post)?`<a href="${smE(m.best_post)}" target="_blank">Open ↗</a>`:smE(m.best_post)}</div>`:''}
+     ${m.highlights?`<div style="font-size:13px;margin-top:6px"><strong>What went well</strong><div class="sh-val">${smE(m.highlights)}</div></div>`:''}${m.learnings?`<div style="font-size:13px;margin-top:6px"><strong>What we learned</strong><div class="sh-val">${smE(m.learnings)}</div></div>`:''}${m.next_plan?`<div style="font-size:13px;margin-top:6px"><strong>Next month</strong><div class="sh-val">${smE(m.next_plan)}</div></div>`:''}</div>`;};
+  return form+(trend?`<div class="sh-card"><div class="sh-t" style="margin-bottom:6px">Growth</div>${trend}</div>`:'')+(rows.length?rows.slice(0,4).map(card).join('')+(rows.length>4?`<details class="setbox" style="margin-top:10px"><summary>Earlier months (${rows.length-4})</summary>${rows.slice(4).map(card).join('')}</details>`:''):`<div class="sh-card" style="font-size:13px;color:var(--muted)">${S.ro?'No reports yet. Your first one will appear here.':'No reports yet. Add one above.'}</div>`);
+}
+async function smSaveMetric(elId){
+  const S=_sm[elId],g=k=>document.getElementById(elId+'-'+k);
+  const month=g('mm').value,platform=g('mp').value;if(!month){alert('Pick a month.');return;}
+  const row={client_id:S.cid,month,platform,published:g('mpub').checked};
+  SM_MET.forEach(([k])=>{const v=g('m-'+k).value;row[k]=v===''?null:Number(v);});
+  ['ad_results','best_post','highlights','learnings','next_plan'].forEach(k=>row[k]=g('m-'+k).value.trim()||null);
+  const {error}=await db.from('social_metrics').upsert(row,{onConflict:'client_id,month,platform'});
+  if(error){alert('Could not save: '+error.message);return;}
+  S.edit=null;smToast('Saved ✓');await smReload(elId);
+}
+function smEditMetric(elId,id){const S=_sm[elId];S.edit=S.metrics.find(m=>m.id===id);smRender(elId);}
+async function smDelMetric(elId,id){if(!confirm('Delete this report?'))return;await db.from('social_metrics').delete().eq('id',id);await smReload(elId);}
+// ---- print / PDF
+const SM_PRINT_CSS=`@page{size:A4;margin:16mm}*{box-sizing:border-box}body{font-family:Georgia,'Times New Roman',serif;color:#1B2A4A;margin:0;line-height:1.5;font-size:12.5px}h1{font-size:30px;margin:0 0 4px}h2{font-size:18px;border-bottom:2px solid #C9A24B;padding-bottom:4px;margin:26px 0 10px;page-break-after:avoid}h3{font-size:14px;margin:14px 0 4px}.cover{padding:40px 0 20px;border-bottom:4px solid #C9A24B;margin-bottom:10px}.sub{color:#6b7280;font-family:Arial;font-size:12px}.f{margin:6px 0;page-break-inside:avoid}.f b{display:block;font-family:Arial;font-size:10.5px;color:#6b7280;text-transform:uppercase;letter-spacing:.05em}.f div{white-space:pre-wrap}.card{border:1px solid #DCD8C8;border-radius:8px;padding:10px 12px;margin:8px 0;page-break-inside:avoid}.chip{display:inline-block;background:#F7F5F0;border:1px solid #DCD8C8;border-radius:99px;padding:1px 9px;margin:1px 3px 1px 0;font-family:Arial;font-size:11px}.imgs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.imgs img{width:100%;border-radius:6px;display:block}.sw{display:inline-block;width:46px;height:46px;border-radius:8px;border:1px solid #ccc;margin-right:8px;vertical-align:top}.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:8px 0}.tile{background:#F7F5F0;border-radius:8px;padding:8px 10px;font-family:Arial}.tile small{color:#6b7280;display:block;font-size:10.5px}.tile strong{font-size:18px}.foot{margin-top:30px;font-family:Arial;font-size:10.5px;color:#6b7280;border-top:1px solid #DCD8C8;padding-top:8px}.bar{position:sticky;top:0;background:#1B2A4A;color:#fff;font-family:Arial;padding:10px 16px;text-align:center}.bar button{margin-left:10px;padding:6px 14px;border:0;border-radius:8px;cursor:pointer}@media print{.bar{display:none}}`;
+function smOpenPrint(title,bodyHtml){
+  const w=window.open('','_blank');if(!w){alert('Your browser blocked the PDF window. Allow pop-ups for this site and try again.');return;}
+  w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${smE(title)}</title><style>${SM_PRINT_CSS}</style></head><body><div class="bar">Save as PDF: choose “Save as PDF” as the printer. <button onclick="window.print()">Print / Save PDF</button></div>${bodyHtml}<script>setTimeout(function(){window.print()},900)<\/script></body></html>`);w.document.close();
+}
+function smPF(fields,obj){obj=obj||{};return fields.filter(f=>f[2]!=='h').map(f=>{const v=obj[f[0]];if(f[2]==='multi'){return Array.isArray(v)&&v.length?`<div class="f"><b>${f[1]}</b>${v.map(x=>`<span class="chip">${smE(x)}</span>`).join('')}</div>`:'';}return v?`<div class="f"><b>${f[1]}</b><div>${smE(v)}</div></div>`:'';}).join('');}
+async function smClientName(cid){try{const {data}=await db.from('clients').select('business_name').eq('id',cid).maybeSingle();return (data&&data.business_name)||'Client';}catch(e){return'Client';}}
+async function smPrintPack(elId){
+  const S=_sm[elId],vis=S.row.visible||{},r=S.row,show=k=>!S.ro||vis[k]!==false;
+  const name=await smClientName(S.cid);let h=`<div class="cover"><div class="sub">HAIDA YAMMAR LIMITED · SOCIAL MEDIA</div><h1>${smE(name)}</h1><div class="sub">Brand &amp; strategy pack · ${new Date().toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'})}</div></div>`;
+  const sec=(t,x)=>x.trim()?`<h2>${t}</h2>${x}`:'';
+  if(show('overview'))h+=sec('Brand, tone &amp; goals',smPF(F_OV,r.overview));
+  if(show('audience'))h+=sec('Audience',smPF(F_AUD,r.audience));
+  if(show('competitors'))h+=sec('Competitors',(r.competitors||[]).map(c=>`<div class="card"><h3 style="margin-top:0">${smE(c.name||'')} <span class="sub">${smE(c.handle||'')} ${c.followers?'· '+smE(c.followers)+' followers':''}</span></h3>${smPF(F_COMP.slice(3),c)}</div>`).join(''));
+  if(show('audit'))h+=sec('Instagram audit',smPF(F_AUDIT,r.ig_audit)+(smAssets(S,'audit').length?`<div class="imgs">${smAssets(S,'audit').filter(a=>smIsImg(a.url)).map(a=>`<img src="${a.url}">`).join('')}</div>`:''));
+  if(show('strategy')){const st=r.strategies||{};const ads=((r.overview||{}).services||[]).includes('Paid ads');h+=sec('Platform strategy',Object.keys(st).map(p=>`<h3>${smE(p)}</h3>${smPF(F_STRAT.filter(f=>ads||f[0]!=='ads_plan'),st[p])}`).join(''));}
+  if(show('pillars'))h+=sec('Content pillars',(r.pillars||[]).map(p=>`<div class="card"><h3 style="margin-top:0">${smE(p.name||'')} ${p.mix?`<span class="chip">${smE(p.mix)}%</span>`:''}</h3>${smPF(F_PIL.slice(2),p)}</div>`).join(''));
+  if(show('mood')){const m=smAssets(S,'mood').filter(a=>smIsImg(a.url));const kw=(r.kit_notes||{}).mood_keywords;h+=sec('Mood board',(kw?`<div>${kw.split(',').map(x=>`<span class="chip">${smE(x.trim())}</span>`).join('')}</div>`:'')+(m.length?`<div class="imgs" style="margin-top:8px">${m.map(a=>`<img src="${a.url}">`).join('')}</div>`:''));}
+  if(show('kit')){const col=(r.kit_colors||[]).filter(c=>c.hex),fnt=(r.kit_fonts||[]).filter(f=>f.name),lg=smAssets(S,'logo').filter(a=>smIsImg(a.url)),tp=smAssets(S,'template');
+    h+=sec('Brand kit',(col.length?`<h3>Colours</h3><div>${col.map(c=>`<span style="display:inline-block;margin:0 10px 8px 0"><span class="sw" style="background:${smE(c.hex)}"></span><small style="font-family:Arial">${smE(c.name||'')}<br>${smE(c.hex)}</small></span>`).join('')}</div>`:'')+(fnt.length?`<h3>Fonts</h3>${fnt.map(f=>`<div><b>${smE(f.name)}</b> ${smE(f.use||'')}</div>`).join('')}`:'')+(lg.length?`<h3>Logo kit</h3><div class="imgs">${lg.map(a=>`<img src="${a.url}">`).join('')}</div>`:'')+(tp.length?`<h3>Templates</h3>${tp.map(t=>`<div class="card"><b>${smE(t.title||'Template')}</b> ${t.link?`<div class="sub">${smE(t.link)}</div>`:''}${t.url&&smIsImg(t.url)?`<img src="${t.url}" style="max-width:60%;margin-top:6px;border-radius:6px">`:''}</div>`).join('')}`:'')+smPF(F_KIT,r.kit_notes));}
+  const ap=r.approvals||{},apr=SM_SECTIONS.filter(([k])=>ap[k]&&ap[k].status==='Approved'&&show(k));
+  if(apr.length)h+=`<h2>Approvals</h2>`+apr.map(([k,l])=>`<div class="f"><b>${l}</b><div>Approved ${smE(ap[k].by||'')} · ${new Date(ap[k].at).toLocaleDateString('en-GB')}</div></div>`).join('');
+  h+=`<div class="foot">Prepared by Haida Yammar Limited. Confidential to ${smE(name)}.</div>`;
+  smOpenPrint(name+' – brand and strategy pack',h);
+}
+async function smPrintReport(elId,id){
+  const S=_sm[elId],m=S.metrics.find(x=>x.id===id);if(!m)return;const name=await smClientName(S.cid),pv=smPrevOf(S,m),en=smEng(m);
+  const dl=(c,p,lb)=>{c=smNum(c);p=smNum(p);if(c==null||p==null||!p)return'';const d=(c-p)/p*100;return `<small style="color:${(lb?d<0:d>0)?'#1a7f37':'#b3261e'}">${d>0?'▲':'▼'} ${Math.abs(d).toFixed(1)}% vs last month</small>`;};
+  const t=(l,v,x)=>`<div class="tile"><small>${l}</small><strong>${v}</strong>${x||''}</div>`;
+  const h=`<div class="cover"><div class="sub">HAIDA YAMMAR LIMITED · MONTHLY SOCIAL MEDIA REPORT</div><h1>${smE(name)}</h1><div class="sub">${smMonthLabel(m.month)} · ${smE(m.platform)}</div></div>
+   <div class="tiles">${t('Followers',smFmt(m.followers),dl(m.followers,pv&&pv.followers))}${t('Reach',smFmt(m.reach),dl(m.reach,pv&&pv.reach))}${t('Impressions',smFmt(m.impressions),dl(m.impressions,pv&&pv.impressions))}${t('Engagement rate',en==null?'—':en.toFixed(1)+'%')}${t('Posts published',smFmt(m.posts_published))}${t('Link clicks',smFmt(m.link_clicks),dl(m.link_clicks,pv&&pv.link_clicks))}${t('Likes',smFmt(m.likes))}${t('Comments',smFmt(m.comments))}${t('Shares / saves',smFmt((smNum(m.shares)||0)+(smNum(m.saves)||0)))}${t('Profile visits',smFmt(m.profile_visits),dl(m.profile_visits,pv&&pv.profile_visits))}${smNum(m.ad_spend)?t('Ad spend','₦'+smFmt(m.ad_spend),m.ad_results?`<small>${smE(m.ad_results)}</small>`:''):''}</div>
+   ${m.best_post?`<h2>Best post</h2><div class="f"><div>${smE(m.best_post)}</div></div>`:''}${m.highlights?`<h2>What went well</h2><div class="f"><div>${smE(m.highlights)}</div></div>`:''}${m.learnings?`<h2>What we learned</h2><div class="f"><div>${smE(m.learnings)}</div></div>`:''}${m.next_plan?`<h2>Plan for next month</h2><div class="f"><div>${smE(m.next_plan)}</div></div>`:''}
+   <div class="foot">Prepared by Haida Yammar Limited. Engagement rate = (likes + comments + shares + saves) ÷ reach.</div>`;
+  smOpenPrint(name+' – '+smMonthLabel(m.month)+' report',h);
+}
+
+// ══ SOCIAL: TODAY / WEEK PLAN DASHBOARD ══
+const smD2=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+const SM_PCOL={Instagram:'#d6249f',TikTok:'#111',Facebook:'#1877f2','X / Twitter':'#222',LinkedIn:'#0a66c2',WhatsApp:'#25d366',YouTube:'#ff0000'};
+function smStyle2(){if(document.getElementById('sm-style2'))return;const s=document.createElement('style');s.id='sm-style2';s.textContent=`.sh-hero{background:linear-gradient(135deg,#1B2A4A 0%,#28395e 60%,#3a4d7a 100%);color:#fff;border-radius:18px;padding:20px 22px;margin-bottom:14px;position:relative;overflow:hidden}.sh-hero:after{content:"";position:absolute;right:-40px;top:-40px;width:160px;height:160px;border-radius:50%;background:rgba(201,162,75,.25)}.sh-hero h2{margin:0 0 4px;font-size:21px;color:#fff;position:relative}.sh-hero p{margin:0;font-size:13.5px;opacity:.85;position:relative;line-height:1.45}.sh-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:14px}.sh-stat{background:var(--white);border:1px solid var(--border);border-radius:14px;padding:12px 14px;box-shadow:0 1px 3px rgba(0,0,0,.04)}.sh-stat small{color:var(--muted);font-size:11.5px;display:block}.sh-stat b{font-size:24px;display:block;line-height:1.2}.sh-stat i{font-style:normal;font-size:11.5px}.sh-week{display:grid;grid-template-columns:repeat(7,minmax(118px,1fr));gap:8px;overflow-x:auto;padding-bottom:6px}.sh-day{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:8px;min-height:120px}.sh-day.today{background:#fff;border:2px solid var(--gold);box-shadow:0 4px 14px rgba(201,162,75,.25)}.sh-day .dh{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}.sh-day .dn{font-size:18px;font-weight:700;margin-bottom:6px}.sh-mini{border-radius:9px;overflow:hidden;background:var(--white);border:1px solid var(--border);margin-bottom:6px;cursor:pointer;font-size:11px}.sh-mini img{width:100%;height:70px;object-fit:cover;display:block}.sh-mini .nb{height:34px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:11px}.sh-mini .mt{padding:4px 6px;line-height:1.3}.sh-todo{display:flex;gap:10px;align-items:center;padding:10px 0;border-top:1px solid var(--border);font-size:13.5px}.sh-todo .dot{width:10px;height:10px;border-radius:50%;flex:none}.sh-ring{--p:0;width:64px;height:64px;border-radius:50%;background:conic-gradient(var(--gold) calc(var(--p)*1%),#e6e2d4 0);display:grid;place-items:center;flex:none}.sh-ring span{width:48px;height:48px;border-radius:50%;background:var(--white);display:grid;place-items:center;font-weight:700;font-size:14px;color:var(--ink)}.sh-mix{display:flex;height:14px;border-radius:99px;overflow:hidden;margin:8px 0}.sh-nav{display:flex;gap:6px;align-items:center}`;document.head.appendChild(s);}
+function smStat(l,v,x){return `<div class="sh-stat"><small>${l}</small><b>${v}</b><i>${x||'&nbsp;'}</i></div>`;}
+function smMonday(off){const d=new Date();d.setHours(12,0,0,0);d.setDate(d.getDate()-((d.getDay()+6)%7)+(off||0)*7);return d;}
+function smAgeDays(iso){return iso?Math.floor((Date.now()-new Date(iso))/864e5):0;}
+function smTodos(S){
+  const d=smDone(S),r=S.row,t=[];const add=(p,txt,tab,col)=>t.push({p,txt,tab,col});
+  const ap=r.approvals||{};const today=smD2(new Date()),in7=smD2(new Date(Date.now()+7*864e5));
+  Object.entries(ap).forEach(([k,a])=>{if(a.status==='Changes requested')add(1,`Client asked for changes: <b>${(SM_SECTIONS.find(x=>x[0]===k)||[k,k])[1]}</b>${a.comment?` (“${smE(a.comment)}”)`:''}`,k,'#b3261e');});
+  S.posts.filter(p=>p.approval==='Changes requested').forEach(p=>add(1,`Client wants changes on the ${smE(p.platform||'')} post of ${p.post_date}${p.client_comment?`: “${smE(p.client_comment)}”`:''}`,'calendar','#b3261e'));
+  if(!S.posts.some(p=>p.post_date>=today&&p.post_date<=in7))add(1,'Nothing planned for the next 7 days','calendar','#b3261e');
+  Object.entries(ap).forEach(([k,a])=>{if(a.status==='Pending'&&smAgeDays(a.at)>=2)add(2,`<b>${(SM_SECTIONS.find(x=>x[0]===k)||[k,k])[1]}</b> waiting on client for ${smAgeDays(a.at)} days. Nudge them`,'approvals','#d98a00');});
+  const pend=S.posts.filter(p=>p.approval==='Pending').length;if(pend)add(2,`${pend} post${pend>1?'s':''} waiting for client approval`,'approvals','#d98a00');
+  S.posts.filter(p=>p.post_date>=today&&p.post_date<=in7&&!p.image_url&&p.status!=='Posted').slice(0,3).forEach(p=>add(2,`Design needed: ${smE(p.platform||'')} post on ${p.post_date} has no image yet`,'calendar','#d98a00'));
+  if(!d.overview)add(3,'Fill in brand overview, tone of voice and goals','overview','#6b7280');
+  if(!d.audience)add(3,'Describe the audience (demographics + psychographics)','audience','#6b7280');
+  if(!d.audit)add(3,'Do the Instagram audit','audit','#6b7280');
+  if(!d.competitors)add(3,'Add 3 competitors','competitors','#6b7280');
+  if(!d.strategy)add(3,'Write the platform strategy','strategy','#6b7280');
+  if((r.pillars||[]).length<3)add(3,`Content pillars: ${(r.pillars||[]).length} of 3 to 5 added`,'pillars','#6b7280');
+  if(smAssets(S,'mood').length<6)add(3,`Mood board: ${smAssets(S,'mood').length} of 6+ images`,'mood','#6b7280');
+  const have=new Set(smAssets(S,'template').map(x=>x.fmt)),miss=SM_REQ_TPL.filter(x=>!have.has(x[0]));if(miss.length)add(3,`Designer: ${miss.length} template${miss.length>1?'s':''} still to make (${miss.slice(0,3).map(x=>x[1]).join(', ')}${miss.length>3?'…':''})`,'kit','#6b7280');
+  const secsReady=SM_SECTIONS.filter(([k])=>d[k]&&!(ap[k]&&ap[k].status));if(secsReady.length)add(3,`${secsReady.length} finished section${secsReady.length>1?'s':''} not yet sent for client approval`,'approvals','#6b7280');
+  const pm=smD2(new Date(new Date().getFullYear(),new Date().getMonth()-1,1)).slice(0,7);if(!S.noMetrics&&S.metrics.length&&!S.metrics.some(m=>m.month===pm&&m.published))add(2,`Last month's report (${smMonthLabel(pm)}) is not published yet`,'reports','#d98a00');
+  if(!S.noMetrics&&!S.metrics.length&&d.overview)add(3,'Add the first monthly report (baseline numbers)','reports','#6b7280');
+  return t.sort((a,b)=>a.p-b.p);
+}
+function smToday(S,elId){
+  smStyle2();const off=S.weekOff||0,mon=smMonday(off),today=smD2(new Date());
+  const h=new Date().getHours(),greet=h<12?'Good morning':h<17?'Good afternoon':'Good evening';
+  const posts=S.posts.filter(p=>!S.ro||(p.approval&&p.approval!=='Not sent')||p.status!=='Draft');
+  const mstr=smD2(new Date()).slice(0,7),thisWeek=posts.filter(p=>{const d=new Date(p.post_date+'T12:00:00');return d>=smMonday(0)&&d<new Date(smMonday(0).getTime()+7*864e5);});
+  const postedM=posts.filter(p=>p.status==='Posted'&&p.post_date.startsWith(mstr)).length,plannedM=posts.filter(p=>p.post_date.startsWith(mstr)).length;
+  const pendP=S.posts.filter(p=>p.approval==='Pending').length,pendS=Object.values(S.row.approvals||{}).filter(a=>a.status==='Pending').length;
+  const mets=S.metrics.filter(m=>(!S.ro||m.published)&&m.followers!=null).sort((a,b)=>b.month.localeCompare(a.month));const lm=mets[0],pv=lm&&smPrevOf(S,lm);
+  const todayPosts=posts.filter(p=>p.post_date===today);
+  const d=smDone(S),n=Object.values(d).filter(Boolean).length,pct=Math.round(n/8*100);
+  const svc=((S.row.overview||{}).services||[]);
+  const hero=S.ro?`<div class="sh-hero"><h2>${greet}${S.cname?', '+smE(S.cname):''} 👋</h2><p>${todayPosts.length?`We have <b>${todayPosts.length} post${todayPosts.length>1?'s':''} going out today</b>. `:''}${thisWeek.length?`${thisWeek.length} post${thisWeek.length>1?'s':''} planned this week.`:'Your content plan for this week is being prepared.'}${pendP+pendS?` <b>${pendP+pendS} item${pendP+pendS>1?'s need':' needs'} your approval.</b>`:' Nothing needs your approval right now.'}</p>${svc.length?`<div style="margin-top:10px;position:relative">${svc.map(x=>`<span class="sh-chip" style="background:rgba(255,255,255,.16);color:#fff">✓ ${smE(x)}</span>`).join('')}</div>`:''}</div>`:
+   `<div class="sh-hero"><div style="display:flex;gap:16px;align-items:center;position:relative"><div class="sh-ring" style="--p:${pct}"><span>${pct}%</span></div><div><h2>${greet}, ${smE((currentUser&&currentUser.name||'').split(' ')[0]||'team')}</h2><p>${S.cname?smE(S.cname)+' · ':''}${n} of 8 brand sections done · ${thisWeek.length} post${thisWeek.length===1?'':'s'} this week${pendP+pendS?` · ${pendP+pendS} awaiting client`:''}</p></div></div></div>`;
+  const stats=`<div class="sh-stats">${smStat('Followers',lm?smFmt(lm.followers):'—',lm&&pv?smDelta(smNum(lm.followers),smNum(pv.followers)):(lm?smMonthLabel(lm.month):'Add a report'))}${smStat('This week',thisWeek.length,'posts planned')}${smStat('This month',postedM+' / '+plannedM,'posted / planned')}${smStat('Needs approval',pendP+pendS,pendP+pendS?'<span style="color:#d98a00">waiting</span>':'<span style="color:#1a7f37">all clear</span>')}</div>`;
+  const days=[...Array(7)].map((_,i)=>{const dt=new Date(mon.getTime()+i*864e5),ds=smD2(dt),ps=posts.filter(p=>p.post_date===ds);
+    return `<div class="sh-day ${ds===today?'today':''}"><div class="dh">${dt.toLocaleDateString('en-GB',{weekday:'short'})}</div><div class="dn">${dt.getDate()}${ds===today?' <span style="font-size:10px;color:var(--gold)">TODAY</span>':''}</div>${ps.map(p=>`<div class="sh-mini" onclick="${p.image_url?`smZoom('${p.image_url}')`:`smTab('${elId}','calendar')`}">${p.image_url?`<img src="${p.image_url}">`:`<div class="nb" style="background:${SM_PCOL[p.platform]||'#555'}">${smE((p.platform||'').split(' ')[0])}</div>`}<div class="mt"><b>${smE(p.pillar||p.platform||'')}</b><br>${p.status==='Posted'?'✅ Posted':p.approval==='Pending'?'⏳ Awaiting approval':p.approval==='Approved'?'👍 Approved':p.approval==='Changes requested'?'✏️ Changes':p.status}</div></div>`).join('')||`<div style="font-size:11px;color:var(--muted)">${S.ro?'':'Free'}</div>`}</div>`;}).join('');
+  const lab=off===0?'This week':off===1?'Next week':off===-1?'Last week':mon.toLocaleDateString('en-GB',{day:'numeric',month:'short'})+' week';
+  const week=`<div class="sh-card"><div class="sh-h"><div class="sh-t">📅 ${lab}</div><div class="sh-nav"><button class="btn-sm" onclick="_sm['${elId}'].weekOff=(_sm['${elId}'].weekOff||0)-1;smRender('${elId}')">‹</button><button class="btn-sm" onclick="_sm['${elId}'].weekOff=0;smRender('${elId}')">Today</button><button class="btn-sm" onclick="_sm['${elId}'].weekOff=(_sm['${elId}'].weekOff||0)+1;smRender('${elId}')">›</button></div></div><div class="sh-week">${days}</div></div>`;
+  // content mix
+  const pils=S.row.pillars||[],mixPosts=posts.filter(p=>p.pillar&&p.post_date.startsWith(mstr));
+  const mix=pils.length&&mixPosts.length?`<div class="sh-card"><div class="sh-t">🧱 This month's content mix</div><div class="sh-mix">${pils.map((p,i)=>{const c=mixPosts.filter(x=>x.pillar===p.name).length;return c?`<div style="flex:${c};background:hsl(${(i*67)%360},55%,50%)" title="${smE(p.name)}"></div>`:'';}).join('')}</div><div>${pils.map((p,i)=>`<span class="sh-chip" style="background:#f1efe9"><span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:hsl(${(i*67)%360},55%,50%);margin-right:5px"></span>${smE(p.name)} · ${mixPosts.filter(x=>x.pillar===p.name).length}${p.mix?` <span style="color:var(--muted)">(target ${smE(p.mix)}%)</span>`:''}</span>`).join('')}</div></div>`:'';
+  let todo='';
+  if(S.ro){
+    const items=[];Object.entries(S.row.approvals||{}).forEach(([k,a])=>{if(a.status==='Pending')items.push(`<div class="sh-todo"><span class="dot" style="background:#d98a00"></span><div style="flex:1"><b>${(SM_SECTIONS.find(x=>x[0]===k)||[k,k])[1]}</b> is ready for your approval</div><button class="btn-add" onclick="smTab('${elId}','${k}')">Review</button></div>`);});
+    S.posts.filter(p=>p.approval==='Pending').slice(0,5).forEach(p=>items.push(`<div class="sh-todo"><span class="dot" style="background:#d98a00"></span><div style="flex:1">${smE(p.platform||'')} post for <b>${p.post_date}</b> needs your approval</div><button class="btn-add" onclick="smTab('${elId}','calendar')">Review</button></div>`));
+    todo=items.length?`<div class="sh-card" style="border:2px solid #f0d58a"><div class="sh-t">⚡ Needs your attention</div>${items.join('')}</div>`:'';
+  }else{
+    const t=smTodos(S),dotc=x=>x.col;const top=t.slice(0,6);
+    todo=`<div class="sh-card"><div class="sh-h"><div class="sh-t">🎯 What we need to do for this client</div><span style="font-size:12px;color:var(--muted)">${t.length} item${t.length===1?'':'s'}</span></div>${top.map(x=>`<div class="sh-todo"><span class="dot" style="background:${x.col}"></span><div style="flex:1">${x.txt}</div><button class="btn-sm" onclick="smTab('${elId}','${x.tab}')">Open</button></div>`).join('')||'<p style="font-size:13px;color:#1a7f37">✅ All caught up for this client.</p>'}${t.length>6?`<details style="margin-top:6px"><summary style="cursor:pointer;font-size:12.5px;color:var(--muted)">Show ${t.length-6} more</summary>${t.slice(6).map(x=>`<div class="sh-todo"><span class="dot" style="background:${x.col}"></span><div style="flex:1">${x.txt}</div><button class="btn-sm" onclick="smTab('${elId}','${x.tab}')">Open</button></div>`).join('')}</details>`:''}<div style="font-size:11.5px;color:var(--muted);margin-top:8px"><span style="color:#b3261e">●</span> urgent · <span style="color:#d98a00">●</span> soon · <span style="color:#6b7280">●</span> setup</div></div>`;
+  }
+  const recent=posts.filter(p=>p.status==='Posted').sort((a,b)=>b.post_date.localeCompare(a.post_date)).slice(0,6);
+  const rec=recent.length?`<div class="sh-card"><div class="sh-t" style="margin-bottom:8px">✅ Recently posted</div><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px">${recent.map(p=>`<div class="sh-mini" style="margin:0" onclick="${p.link?`window.open('${smE(p.link)}','_blank')`:p.image_url?`smZoom('${p.image_url}')`:`smTab('${elId}','calendar')`}">${p.image_url?`<img src="${p.image_url}">`:`<div class="nb" style="background:${SM_PCOL[p.platform]||'#555'}">${smE((p.platform||'').split(' ')[0])}</div>`}<div class="mt">${p.post_date}<br>${smE(p.pillar||p.platform||'')}</div></div>`).join('')}</div></div>`:'';
+  return hero+stats+todo+week+mix+rec;
 }
 
 // ══ INVOICES ══
@@ -10854,19 +11220,25 @@ function rcRoleRow(r){
    <button class="btn-danger" style="margin-top:8px" onclick="this.closest('.rc-role').remove()">Remove role</button></div>`;
 }
 function rcAddRole(){document.getElementById('rc-roles-box').insertAdjacentHTML('beforeend',rcRoleRow());}
+function rcCopyClientLink(){const b=obBase();if(!b)return;const c=document.getElementById('rc-link-client')?.value;const u=b+'/client-intake.html'+(c?'?c='+c:'');(navigator.clipboard?navigator.clipboard.writeText(u):Promise.reject()).then(()=>alert('Send this to the client:\n'+u),()=>prompt('Copy this link:',u));}
 async function loadRecruit(){
   const el=document.getElementById('recruit-body');if(!el)return;
   _rcView=null;el.innerHTML='<p style="font-size:13px;color:var(--muted)">Loading…</p>';
   const [{data:its,error},{data:roles}]=await Promise.all([db.from('recruit_intakes').select('*').order('created_at',{ascending:false}),db.from('recruit_roles').select('*')]);
   if(error){el.innerHTML=`<p style="color:var(--danger);font-size:13px">Run recruit_intake_migration.sql in Supabase first. (${rcEsc(error.message)})</p>`;return;}
   _rcIntakes=its||[];_rcRoles=roles||[];
+  const {data:cl}=await db.from('clients').select('id,business_name').neq('status','Inactive').order('business_name');
+  const cn=x=>String(x||'').toLowerCase().replace(/[^a-z0-9]/g,'');
+  for(const i of _rcIntakes){if(!i.client_id){const n=cn(i.company_name);const m=n&&(cl||[]).filter(c=>{const k=cn(c.business_name);return k&&(k===n||(n.length>=4&&(k.includes(n)||n.includes(k))));});if(m&&m.length===1){i.client_id=m[0].id;i._auto=m[0].business_name;db.from('recruit_intakes').update({client_id:m[0].id}).eq('id',i.id).then(()=>{});}}}
   el.innerHTML=`<datalist id="rc-cities">${RC_CITIES.map(c=>`<option value="${c}">`).join('')}</datalist>
-  <button class="btn-add" onclick="rcEditIntake()" style="margin-bottom:14px">+ New client intake</button>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;align-items:center"><button class="btn-add" onclick="rcEditIntake()">+ New client intake</button><select id="rc-link-client" style="padding:7px 10px;border:1px solid var(--border);border-radius:9px;font-size:13px"><option value="">New / unregistered client</option></select><button class="btn-sm" onclick="rcCopyClientLink()">🔗 Copy link for client to fill in</button></div>
   ${_rcIntakes.length?`<div class="staff-grid" style="grid-template-columns:repeat(auto-fill,minmax(300px,1fr))">`+_rcIntakes.map(i=>{const rs=_rcRoles.filter(r=>r.intake_id===i.id);const d=i.data||{};
-   return `<div class="card" style="padding:16px 18px"><strong style="font-size:14px">${rcEsc(i.company_name)}</strong>
+   return `<div class="card" style="padding:16px 18px"><strong style="font-size:14px">${rcEsc(i.company_name)}</strong>${i.status==='New from client'?' <span class="badge badge-gold" style="margin-left:4px">📥 New from client</span>':''}
    <div style="font-size:12px;color:var(--muted);margin-top:3px">📍 ${rcEsc(d.city||'—')} · ${rs.length} role${rs.length===1?'':'s'} · ${rcEsc(i.status||'Open')}</div>
    <div style="font-size:12px;margin-top:6px">${rs.map(r=>`${rcEsc(r.role_name)} ×${r.num_needed||1}`).join(', ')||'<span style="color:var(--muted)">No roles yet</span>'}</div>
+   <div style="font-size:11.5px;margin-top:4px;color:${i.client_id?'#1a7f37':'#b3261e'}">${i.client_id?'🔗 Linked to '+rcEsc(i._auto||((cl||[]).find(c=>c.id===i.client_id)||{}).business_name||'client'):'Not linked to a registered client'}</div>
    <div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap"><button class="btn-sm" onclick="rcOpen('${i.id}')">🎯 Find matches</button><button class="btn-sm" onclick="rcEditIntake('${i.id}')">Edit</button><button class="btn-danger" onclick="rcDelIntake('${i.id}')">Del</button></div></div>`}).join('')+`</div>`:'<p style="font-size:13px;color:var(--muted)">No intakes yet. Add one from the client intake form.</p>'}`;
+  const ls=document.getElementById('rc-link-client');if(ls)ls.innerHTML+= (cl||[]).map(c=>`<option value="${c.id}">${rcEsc(c.business_name)}</option>`).join('');
 }
 async function rcEditIntake(id){
   const it=id?_rcIntakes.find(x=>x.id===id):null;_rcEdit=id||null;
@@ -10929,6 +11301,7 @@ function rcMatch(a,role,it){
   return {F,W,roleOk};
 }
 async function rcOpen(id){
+  {const x=_rcIntakes.find(y=>y.id===id);if(x&&x.status==='New from client'){x.status='Open';db.from('recruit_intakes').update({status:'Open'}).eq('id',id).then(()=>{});}}
   _rcView=id;const it=_rcIntakes.find(x=>x.id===id);if(!it)return loadRecruit();
   const rs=_rcRoles.filter(r=>r.intake_id===id);
   document.getElementById('recruit-body').innerHTML=`<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap"><button class="btn-sm" onclick="loadRecruit()">← Back</button><button class="btn-sm" onclick="rcEditIntake('${id}')">Edit intake</button></div>
@@ -17048,6 +17421,6 @@ document.getElementById('rf-client').addEventListener('change',()=>renderTypeFie
     </div>
   </div>
 </div>
-<div style="position:fixed;left:8px;bottom:4px;font:10px Arial;color:#9a9a9a;z-index:5;pointer-events:none">version 9 Nov · 11:10 (recruitment + onboarding)</div>
+<div style="position:fixed;left:8px;bottom:4px;font:10px Arial;color:#9a9a9a;z-index:5;pointer-events:none">version 10 Nov · 23:10 (social: today plan, reports, PDF)</div>
 </body>
 </html>
