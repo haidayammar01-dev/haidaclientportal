@@ -6144,7 +6144,7 @@ async function showStaffPortal(staff){
   renderHandover('sp');
   // Team reports (only if this staff member is an Operations Manager)
   const teamBox=document.getElementById('sp-team-reports-box');
-  if(staff.is_ops_manager){
+  if(/admin|manager|supervisor|owner/i.test(staff.role||'')){
     teamBox.style.display='block';
     await loadSpTeamReports(staff.client_id,staff.id);
   } else {
@@ -13724,7 +13724,7 @@ async function stkLoad(id){
     db.from('stock_counts').select('*').eq('client_id',cid).order('created_at',{ascending:false}).limit(30),
     db.from('clients').select('*').eq('id',cid).maybeSingle()
   ]);
-  if(S.ctx==='sp'){try{const {data:me}=await db.from('client_staff').select('role,is_ops_manager').eq('id',_spStaffId).maybeSingle();S.isAdmin=!!(me&&(me.is_ops_manager||/admin|manager|supervisor|owner/i.test(me.role||'')));}catch(e){S.isAdmin=false;}}
+  if(S.ctx==='sp'){try{const {data:me}=await db.from('client_staff').select('role,is_ops_manager').eq('id',_spStaffId).maybeSingle();S.isAdmin=!!(me&&/admin|manager|supervisor|owner/i.test(me.role||''));}catch(e){S.isAdmin=false;}}
   {const f=await db.from('daily_figures').select('*').eq('client_id',cid).order('figure_date',{ascending:false}).limit(800);S.figures=f.error?[]:(f.data||[]);}
   S.items=(a.data||[]).map(i=>Object.assign({item_type:'stock',is_active:true},i,{item_type:i.item_type||'stock',is_active:i.is_active!==false}));
   S.moves=b.data||[];S.counts=c.data||[];S.client=d.data||null;
@@ -13750,8 +13750,8 @@ function stkRender(id){
     if(S.ctx==='sp'){const b=document.getElementById('sp-stock-box');if(b)b.style.display='none';return;}
     el.innerHTML=`<div class="card" style="padding:18px;font-family:Arial;font-size:13px">The stock system needs its database tables first — run <strong>stock_system_migration.sql</strong> in Supabase, then refresh. <span style="color:var(--muted)">(${stkEsc(S.err)})</span></div>`;return;
   }
-  const canManage=S.ctx!=='sp';
-  const tabs=S.only?[]:(S.ctx==='sp'?(S.isAdmin?[['usage','📝 Daily usage'],['count','✅ Stock count']]:[['usage','📝 Daily usage']]):[['stock','📦 Stock'],['usage','📝 Daily usage'],['count','✅ Stock count'],['activity','📊 Daily summary'],['figures','📒 Figures & export']]);
+  const canManage=S.ctx!=='sp'||!!S.isAdmin;
+  const tabs=S.only?[]:(S.ctx==='sp'?(S.isAdmin?[['stock','📦 Stock list'],['usage','📝 Daily usage'],['count','✅ Stock count']]:[['usage','📝 Daily usage']]):[['stock','📦 Stock'],['usage','📝 Daily usage'],['count','✅ Stock count'],['activity','📊 Daily summary'],['figures','📒 Figures & export']]);
   const cs=stkCountStatus(S);
   const low=S.items.filter(i=>i.is_active&&['low','out'].includes(stkStatus(i)));
   let head='';
@@ -17421,6 +17421,6 @@ document.getElementById('rf-client').addEventListener('change',()=>renderTypeFie
     </div>
   </div>
 </div>
-<div style="position:fixed;left:8px;bottom:4px;font:10px Arial;color:#9a9a9a;z-index:5;pointer-events:none">version 10 Nov · 23:10 (social: today plan, reports, PDF)</div>
+<div style="position:fixed;left:8px;bottom:4px;font:10px Arial;color:#9a9a9a;z-index:5;pointer-events:none">version 21 Nov · 17:40 (stock setup for managers, private daily reports)</div>
 </body>
 </html>
