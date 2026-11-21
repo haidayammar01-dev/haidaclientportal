@@ -16033,7 +16033,21 @@ async function loadDailyHRReport(){
   const {data:allStaff}=await staffQ;
   const clockedIds=new Set(rows.map(r=>r.staff_id));
   const closedToday=new Set(portalClients.filter(c=>effectiveHours(c,date).closed).map(c=>c.id));
-  const absentees=(allStaff||[]).filter(s=>!clockedIds.has(s.id)&&!closedToday.has(s.client_id));
+  // Roster-aware: only people SCHEDULED (shift assigned) that day count as absent. Unscheduled = day off, approved leave = on leave.
+  const _d0=new Date(date+'T12:00:00'),_ds=n=>{const x=new Date(_d0);x.setDate(x.getDate()+n);return x.toISOString().slice(0,10);};
+  const [{data:_sh},{data:_lv}]=await Promise.all([
+    db.from('shifts').select('id,client_id,shift_date').in('client_id',scopedClientIds).gte('shift_date',_ds(-7)).lte('shift_date',_ds(7)),
+    db.from('staff_leave_requests').select('staff_id').eq('status','Approved').in('client_id',scopedClientIds).lte('start_date',date).gte('end_date',date)
+  ]);
+  const _shIds=(_sh||[]).filter(x=>x.shift_date===date).map(x=>x.id);
+  const {data:_as}=_shIds.length?await db.from('shift_assignments').select('shift_id,staff_id').in('shift_id',_shIds):{data:[]};
+  const _rosterClients=new Set((_sh||[]).map(x=>x.client_id)); // clients that actually use a rota around this date
+  const _sched=new Set((_as||[]).map(a=>a.staff_id));
+  const _leaveIds=new Set((_lv||[]).map(l=>l.staff_id));
+  const _notIn=(allStaff||[]).filter(s=>!clockedIds.has(s.id)&&!closedToday.has(s.client_id));
+  const absentees=_notIn.filter(s=>!_leaveIds.has(s.id)&&(!_rosterClients.has(s.client_id)||_sched.has(s.id)));
+  const onLeaveList=_notIn.filter(s=>_leaveIds.has(s.id));
+  const dayOff=_notIn.filter(s=>!_leaveIds.has(s.id)&&_rosterClients.has(s.client_id)&&!_sched.has(s.id));
   const lateCount=rows.filter(r=>r.is_late).length;
   const earlyCount=rows.filter(r=>r.is_early_leave).length;
   const stillOpenCount=rows.filter(r=>!r.clock_out).length;
@@ -16042,7 +16056,8 @@ async function loadDailyHRReport(){
     <div style="color:${lateCount?'var(--danger)':'var(--muted)'}"><strong>${lateCount}</strong> late</div>
     <div style="color:${earlyCount?'var(--danger)':'var(--muted)'}"><strong>${earlyCount}</strong> left early</div>
     <div><strong>${stillOpenCount}</strong> still clocked in</div>
-    <div style="color:${absentees.length?'var(--danger)':'var(--muted)'}"><strong>${absentees.length}</strong> didn't clock in</div>
+    <div style="color:${absentees.length?'var(--danger)':'var(--muted)'}"><strong>${absentees.length}</strong> scheduled but didn't clock in</div>
+    <div style="color:var(--muted)"><strong>${dayOff.length}</strong> not scheduled (day off)</div>${onLeaveList.length?`<div style="color:var(--muted)"><strong>${onLeaveList.length}</strong> on leave</div>`:''}
   </div>`;
   const list=document.getElementById('dhr-list');
   list.innerHTML=(rows.length?`<table class="data-table"><thead><tr><th>Face Check</th><th>Staff</th><th>Client</th><th>Clock In</th><th>Clock Out</th><th>Flags</th></tr></thead><tbody>`+
@@ -16053,8 +16068,11 @@ async function loadDailyHRReport(){
         :(r.face_match_score!=null?(r.face_match_score>FACE_MATCH_THRESHOLD?'<span class="badge badge-red" style="font-size:10px" title="The face check could not read this person; they clocked in anyway after 2 tries">⚠ Face not read — review</span>':'<span class="badge badge-green" style="font-size:10px">✓ Face verified</span>'):'<span style="color:var(--muted);font-size:11px">No face on file</span>');
       return `<tr><td>${photoCell}</td><td style="font-size:13px">${(r.client_staff&&r.client_staff.name)||'—'}</td><td style="font-size:13px">${(r.clients&&r.clients.business_name)||'—'}</td><td style="font-family:'IBM Plex Mono',monospace;font-size:12px">${r.clock_in?new Date(r.clock_in).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}):'—'}</td><td style="font-family:'IBM Plex Mono',monospace;font-size:12px">${r.clock_out?new Date(r.clock_out).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}):'—'}</td><td>${flags||'—'}</td></tr>`;
     }).join('')+`</tbody></table>`:'<p style="font-family:Arial;font-size:13px;color:var(--muted)">No clock-ins recorded for this date.</p>')
-  +(absentees.length?`<div style="margin-top:18px"><div style="font-family:Arial;font-size:13px;font-weight:600;color:var(--danger);margin-bottom:8px">⚠ Didn't clock in on this date</div>`+
-    absentees.map(s=>`<div style="font-family:Arial;font-size:12.5px;color:var(--ink2);padding:6px 0;border-bottom:1px solid var(--border)">${s.name} — ${(s.clients&&s.clients.business_name)||'—'}</div>`).join('')+`</div>`:'');
+  +(absentees.length?`<div style="margin-top:18px"><div style="font-family:Arial;font-size:13px;font-weight:600;color:var(--danger);margin-bottom:8px">⚠ Scheduled to work but didn't clock in</div>`+
+    absentees.map(s=>`<div style="font-family:Arial;font-size:12.5px;color:var(--ink2);padding:6px 0;border-bottom:1px solid var(--border)">${s.name} — ${(s.clients&&s.clients.business_name)||'—'}</div>`).join('')+`</div>`:'')
+  +((dayOff.length||onLeaveList.length)?`<details style="margin-top:14px"><summary style="cursor:pointer;font-family:Arial;font-size:13px;font-weight:600;color:var(--ink2)">Not working this day (${dayOff.length+onLeaveList.length})</summary>`+
+    dayOff.map(s=>`<div style="font-family:Arial;font-size:12.5px;color:var(--muted);padding:6px 0;border-bottom:1px solid var(--border)">${s.name} — ${(s.clients&&s.clients.business_name)||'—'} · <em>not scheduled (day off)</em></div>`).join('')+
+    onLeaveList.map(s=>`<div style="font-family:Arial;font-size:12.5px;color:var(--muted);padding:6px 0;border-bottom:1px solid var(--border)">${s.name} — ${(s.clients&&s.clients.business_name)||'—'} · <em>on approved leave</em></div>`).join('')+`</details>`:'');
   loadTrainingGapList(scopedClientIds);
   loadDailyReportsList(scopedClientIds,date);
   loadDailyStockList(scopedClientIds,date);
@@ -17421,6 +17439,6 @@ document.getElementById('rf-client').addEventListener('change',()=>renderTypeFie
     </div>
   </div>
 </div>
-<div style="position:fixed;left:8px;bottom:4px;font:10px Arial;color:#9a9a9a;z-index:5;pointer-events:none">version 21 Nov · 17:40 (stock setup for managers, private daily reports)</div>
+<div style="position:fixed;left:8px;bottom:4px;font:10px Arial;color:#9a9a9a;z-index:5;pointer-events:none">version 21 Nov · 18:05 (daily check follows the shift rota)</div>
 </body>
 </html>
