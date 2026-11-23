@@ -14089,7 +14089,7 @@ function stkViewFigures(id,S){
     const tot=k=>rows.reduce((a,r)=>a+figN(r[k]),0);
     const inc=rows.reduce((a,r)=>a+figIncome(r),0);
     body=`<div class="stk-bar"><span style="font-size:12.5px;color:var(--ink2)">From</span><input type="date" value="${from}" onchange="_stkS['${id}'].figFrom=this.value;stkRender('${id}')" style="padding:6px 10px;border:1px solid var(--border);border-radius:9px"><span style="font-size:12.5px;color:var(--ink2)">to</span><input type="date" value="${to}" onchange="_stkS['${id}'].figTo=this.value;stkRender('${id}')" style="padding:6px 10px;border:1px solid var(--border);border-radius:9px">
-      <button class="btn-sm" onclick="stkExportFigures('${id}')">⬇ Figures (CSV)</button><button class="btn-sm" onclick="stkExportMoves('${id}')">⬇ Stock movements (CSV)</button><button class="btn-sm" onclick="stkExportCounts('${id}')">⬇ Stock counts (CSV)</button></div>
+      <button class="btn-sm" onclick="stkFigAll('${id}')">📅 Since we opened</button><button class="btn-sm" onclick="stkExportFigures('${id}')">⬇ Figures (CSV)</button><button class="btn-sm" onclick="stkExportMoves('${id}')">⬇ Stock movements (CSV)</button><button class="btn-sm" onclick="stkExportCounts('${id}')">⬇ Stock counts (CSV)</button></div>
       <div class="stk-cards"><div class="stk-card"><div class="stk-n" style="font-size:20px">${_fm(inc)}</div><div class="stk-l">total income</div></div><div class="stk-card"><div class="stk-n" style="font-size:20px;color:#b00020">${_fm(tot('expenses'))}</div><div class="stk-l">expenses</div></div><div class="stk-card"><div class="stk-n" style="font-size:20px;color:${inc-tot('expenses')<0?'#b00020':'#17693a'}">${_fm(inc-tot('expenses'))}</div><div class="stk-l">net</div></div><div class="stk-card"><div class="stk-n" style="font-size:20px">${_fm(tot('cash_banked'))}</div><div class="stk-l">cash banked</div></div></div>
       ${rows.length?`<div style="overflow-x:auto"><table class="data-table stk-table">${FIG_HEAD}<tbody>${rows.map(r=>figRowHtml(r,true)).join('')}</tbody></table></div>`:'<p style="font-size:13px;color:var(--muted)">No figures in this date range.</p>'}`;
   }
@@ -14104,6 +14104,7 @@ async function stkSaveFigures(id){
   if(res.error){fb.innerHTML='<div class="error-msg">'+stkEsc(res.error.message)+' — have you run stock_system_migration.sql?</div>';return;}
   await stkLoad(id);stkRender(id);const f2=document.getElementById('fg-fb-'+id);if(f2)f2.innerHTML='<div class="success-msg">✓ Figures saved.</div>';
 }
+function stkFigAll(id){const S=_stkS[id];const d=S.figures.map(r=>r.figure_date).sort();if(!d.length){alert('No figures entered yet.');return;}S.figFrom=d[0];S.figTo=localDateStr();stkRender(id);}
 function stkExportFigures(id){
   const S=_stkS[id];const from=S.figFrom||'0000',to=S.figTo||'9999';
   const rows=S.figures.filter(r=>r.figure_date>=from&&r.figure_date<=to).sort((a,b)=>a.figure_date.localeCompare(b.figure_date)).map(r=>[r.figure_date,figN(r.cash_sales),figN(r.pos_sales),figN(r.transfer_sales),figN(r.other_income),figIncome(r),figN(r.expenses),figIncome(r)-figN(r.expenses),figN(r.cash_banked),figN(r.closing_cash),r.customers??'',r.entered_by||'',r.notes||'']);
@@ -17439,6 +17440,6 @@ document.getElementById('rf-client').addEventListener('change',()=>renderTypeFie
     </div>
   </div>
 </div>
-<div style="position:fixed;left:8px;bottom:4px;font:10px Arial;color:#9a9a9a;z-index:5;pointer-events:none">version 21 Nov · 18:05 (daily check follows the shift rota)</div>
+<div style="position:fixed;left:8px;bottom:4px;font:10px Arial;color:#9a9a9a;z-index:5;pointer-events:none">version 23 Nov · 12:40 (figures: since we opened)</div>
 </body>
 </html>
