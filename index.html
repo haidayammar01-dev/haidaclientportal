@@ -445,6 +445,7 @@ details.setbox>div,details.setbox>.card{margin:0 12px 12px}
 .qk-row{display:flex;justify-content:space-between;align-items:center;gap:10px;border:1px solid var(--border);border-radius:12px;padding:10px 12px;margin-bottom:6px}
 .qk-name{font-family:Arial;font-size:14px;font-weight:700;color:var(--ink)}.qk-sub{font-family:Arial;font-size:12px;margin-top:2px}
 .qk-step{display:flex;align-items:center;gap:4px;flex-shrink:0}.qk-step button{width:38px;height:38px;border:1.5px solid var(--border);background:white;border-radius:10px;font-size:20px;font-weight:700;cursor:pointer}.qk-step input{width:56px;height:38px;text-align:center;font-size:16px;border:1.5px solid var(--border);border-radius:10px}
+.qk-unit{display:flex;border:1.5px solid var(--border);border-radius:9px;overflow:hidden}.qk-unit button{font-family:Arial;font-size:11.5px;padding:5px 9px;border:0;background:white;cursor:pointer}.qk-unit button.on{background:var(--gold);color:white;font-weight:700}
 .qk-save{position:sticky;bottom:0;display:flex;justify-content:space-between;align-items:center;gap:10px;background:white;border-top:1.5px solid var(--border);padding:10px 4px;margin-top:8px}
 .stk-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
 .stk-tab,.stk-mode{font-family:Arial;font-size:13px;font-weight:600;padding:8px 14px;border:1px solid var(--border);background:white;border-radius:999px;cursor:pointer;color:var(--ink2)}
@@ -13877,6 +13878,8 @@ function stkItemModal(id,itemId){
     <label>Type<select id="sm-type"><option value="stock" ${type==='stock'?'selected':''}>Main stock (ingredients / products sold)</option><option value="supplies" ${type==='supplies'?'selected':''}>Small supplies (gloves, cleaners, tissue…)</option></select></label>
     <label>Category<input id="sm-cat" list="stk-cats" value="${v('category')}" placeholder="Pick or type your own"></label>
     <label>Unit of measure<input id="sm-unit" list="stk-units" value="${v('unit')}" placeholder="kg, litre, crate, box… or type your own"></label>
+    <label>Each unit contains how many smaller pieces? <span style="font-weight:400;color:var(--muted)">(optional — e.g. 1 carton = 12 bottles)</span><input id="sm-subper" type="number" step="any" value="${v('sub_per')}" placeholder="e.g. 12"></label>
+    <label>What do you call the smaller piece?<input id="sm-subunit" value="${v('sub_unit')}" placeholder="bottle, can, sachet, piece…"></label>
     <label>${it?'Quantity in stock now':'Quantity in stock now'}<input id="sm-qty" type="number" step="any" value="${it?_fq(it.quantity):'0'}"></label>
     <label>🔴 Reorder at (turns red at or below this)<input id="sm-min" type="number" step="any" value="${v('reorder_level')}" placeholder="e.g. 5"></label>
     <label>Target level (what to order up to)<input id="sm-par" type="number" step="any" value="${v('par_level')}" placeholder="e.g. 20"></label>
@@ -13892,6 +13895,7 @@ async function stkSaveItem(id,itemId){
   const name=g('sm-name');if(!name){document.getElementById('sm-fb').innerHTML='<div class="error-msg">Give the item a name.</div>';return;}
   const num=s=>{const n=parseFloat(g(s));return isNaN(n)?null:n;};
   const row={item_name:name,item_type:document.getElementById('sm-type').value,category:g('sm-cat')||null,unit:g('sm-unit')||null,reorder_level:num('sm-min'),par_level:num('sm-par'),cost_per_unit:num('sm-cost'),supplier:g('sm-sup')||null,notes:g('sm-notes')||null};
+  {const sp=num('sm-subper'),su=g('sm-subunit');if(sp>0&&su){row.sub_per=sp;row.sub_unit=su;}else if(itemId&&S.items.find(x=>x.id===itemId)&&S.items.find(x=>x.id===itemId).sub_per){row.sub_per=null;row.sub_unit=null;}}
   const qty=num('sm-qty')||0;
   const who=await stkWho();
   if(itemId){
@@ -13974,8 +13978,9 @@ function stkViewUsage(id,S){
     const st=stkStatus(i),m=STK_ST[st];const lg=logged[i.id+'|'+S.mode];
     return `<div class="qk-row" data-n="${stkEsc((i.item_name||'').toLowerCase())}" data-c="${stkEsc(i.category||'Other')}" style="background:${m.bg==='transparent'?'white':m.bg}">
       <div style="min-width:0"><div class="qk-name">${stkEsc(i.item_name)}</div>
-        <div class="qk-sub" style="color:${m.c==='#17693a'?'var(--muted)':m.c}">${m.dot} ${_fq(i.quantity)} ${stkEsc(i.unit||'')} in stock${lg?` · <span style="color:var(--muted)">logged today: ${_fq(lg)}</span>`:''}</div></div>
-      <div class="qk-step"><button type="button" onclick="stkStep(this,-1,'${id}')">−</button><input type="number" inputmode="decimal" step="any" min="0" class="stk-in" data-id="${i.id}" placeholder="0" oninput="stkTally('${id}')"><button type="button" onclick="stkStep(this,1,'${id}')">+</button></div>
+        <div class="qk-sub" style="color:${m.c==='#17693a'?'var(--muted)':m.c}">${m.dot} ${_fq(i.quantity)} ${stkEsc(i.unit||'')} in stock${i.sub_per>0?` (= ${_fq(Math.round(i.quantity*i.sub_per*100)/100)} ${stkEsc(i.sub_unit||'pcs')})`:''}${lg?` · <span style="color:var(--muted)">logged today: ${_fq(lg)}</span>`:''}</div></div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px"><div class="qk-step"><button type="button" onclick="stkStep(this,-1,'${id}')">−</button><input type="number" inputmode="decimal" step="any" min="0" class="stk-in" data-id="${i.id}" data-per="${i.sub_per>0?i.sub_per:''}" data-sub="${i.sub_per>0&&S.mode!=='received'?1:0}" placeholder="0" oninput="stkTally('${id}')"><button type="button" onclick="stkStep(this,1,'${id}')">+</button></div>
+        ${i.sub_per>0?`<div class="qk-unit"><button type="button" class="${S.mode!=='received'?'on':''}" onclick="stkUnitSw(this,1)">${stkEsc(i.sub_unit||'pcs')}</button><button type="button" class="${S.mode==='received'?'on':''}" onclick="stkUnitSw(this,0)">${stkEsc(i.unit||'pack')}</button></div>`:''}</div>
     </div>`;}).join('');
   return `<div class="qk-modes">${Object.keys(modeLab).map(k=>`<button class="${S.mode===k?'on':''}" onclick="_stkS['${id}'].mode='${k}';stkRender('${id}')">${k==='used'?'－ ':k==='received'?'＋ ':'🗑 '}${modeLab[k]}</button>`).join('')}</div>
   <div style="font-family:Arial;font-size:12.5px;color:var(--ink2);margin:4px 0 8px">${modeHelp[S.mode]} <span style="color:var(--muted)">${S.date===localDateStr()?'(today)':'(for '+S.date+')'} · <a href="#" onclick="event.preventDefault();const d=prompt('Date (YYYY-MM-DD)',_stkS['${id}'].date);if(d&&/^\d{4}-\d{2}-\d{2}$/.test(d)){_stkS['${id}'].date=d;stkRender('${id}');}">change day</a></span></div>
@@ -13992,11 +13997,12 @@ function stkQuick(id){
   const none=document.getElementById('qk-none-'+id);if(none)none.style.display=n?'none':'block';
 }
 function stkQuickCat(id,btn){document.querySelectorAll(`#qk-chips-${id} button`).forEach(b=>b.classList.remove('on'));btn.classList.add('on');stkQuick(id);}
+function stkUnitSw(btn,sub){const row=btn.closest('.qk-row');const inp=row.querySelector('input.stk-in');inp.dataset.sub=sub;row.querySelectorAll('.qk-unit button').forEach(b=>b.classList.toggle('on',b===btn));}
 function stkStep(btn,d,id){const inp=btn.parentNode.querySelector('input');inp.value=Math.max(0,(parseFloat(inp.value)||0)+d)||'';stkTally(id);}
 function stkTally(id){const n=[...document.querySelectorAll(`#${id} .stk-in`)].filter(e=>parseFloat(e.value)>0).length;const el=document.getElementById('qk-count-'+id);if(el)el.innerHTML=n?`<strong>${n}</strong> item${n===1?'':'s'} to save`:'Nothing entered yet';}
 async function stkSubmitUsage(id){
   const S=_stkS[id];const fb=document.getElementById('usage-fb-'+id);
-  const entries=[...document.querySelectorAll(`#${id} .stk-in`)].map(e=>({id:e.dataset.id,q:parseFloat(e.value)})).filter(x=>x.q>0);
+  const entries=[...document.querySelectorAll(`#${id} .stk-in`)].map(e=>{let q=parseFloat(e.value);if(q>0&&e.dataset.sub==='1'&&parseFloat(e.dataset.per)>0)q=Math.round(q/parseFloat(e.dataset.per)*10000)/10000;return {id:e.dataset.id,q};}).filter(x=>x.q>0);
   if(!entries.length){fb.innerHTML='<div class="error-msg">Type at least one quantity first.</div>';return;}
   const over=entries.filter(e=>S.mode!=='received'&&e.q>(Number(S.items.find(i=>i.id===e.id).quantity)||0));
   if(over.length&&!confirm(`${over.length} item${over.length===1?'':'s'} ${over.length===1?'is':'are'} more than the stock on record (${over.map(e=>S.items.find(i=>i.id===e.id).item_name).slice(0,4).join(', ')}). Save anyway? Stock will go to 0 and a stock count will check it.`))return;
@@ -17489,6 +17495,6 @@ document.getElementById('rf-client').addEventListener('change',()=>renderTypeFie
     </div>
   </div>
 </div>
-<div style="position:fixed;left:8px;bottom:4px;font:10px Arial;color:#9a9a9a;z-index:5;pointer-events:none">version 23 Nov · 17:00 (staff phone view: home tiles, bottom menu, stock tab)</div>
+<div style="position:fixed;left:8px;bottom:4px;font:10px Arial;color:#9a9a9a;z-index:5;pointer-events:none">version 23 Nov · 18:00 (stock: use pieces out of a carton)</div>
 </body>
 </html>
