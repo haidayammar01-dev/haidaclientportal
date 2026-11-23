@@ -580,6 +580,7 @@ self.addEventListener('notificationclick',function(e){
   </div>
   <div id="sp-container" style="max-width:720px;margin:20px auto;padding:0 16px 60px;width:100%">
     <div id="sp-nav"></div>
+    <div id="sp-low-stock-top" onclick="{const b=document.getElementById('sp-stock-box');if(b)b.scrollIntoView({behavior:'smooth'});}" style="display:none;cursor:pointer;background:#fdecea;border:1.5px solid #d93025;color:#8b1a1a;border-radius:12px;padding:12px 16px;margin-bottom:14px;font-family:Arial;font-size:13px;font-weight:600"></div>
 
     <!-- PROFILE HEADER -->
     <div style="background:white;border:1.5px solid var(--border);border-radius:14px;padding:20px 24px;margin-bottom:16px;display:flex;gap:16px;align-items:center;flex-wrap:wrap;box-shadow:0 2px 10px rgba(100,74,60,.06)">
@@ -13724,7 +13725,7 @@ async function stkLoad(id){
     db.from('stock_counts').select('*').eq('client_id',cid).order('created_at',{ascending:false}).limit(30),
     db.from('clients').select('*').eq('id',cid).maybeSingle()
   ]);
-  if(S.ctx==='sp'){try{const {data:me}=await db.from('client_staff').select('role,is_ops_manager').eq('id',_spStaffId).maybeSingle();S.isAdmin=!!(me&&/admin|manager|supervisor|owner/i.test(me.role||''));}catch(e){S.isAdmin=false;}}
+  if(S.ctx==='sp'){try{const {data:me}=await db.from('client_staff').select('role,is_ops_manager').eq('id',_spStaffId).maybeSingle();S.isAdmin=!!(me&&/admin|manager|supervisor|owner/i.test(me.role||''));}catch(e){S.isAdmin=false;}if(S.isAdmin&&!S._init){S._init=1;if(S.tab==='usage')S.tab='stock';}}
   {const f=await db.from('daily_figures').select('*').eq('client_id',cid).order('figure_date',{ascending:false}).limit(800);S.figures=f.error?[]:(f.data||[]);}
   S.items=(a.data||[]).map(i=>Object.assign({item_type:'stock',is_active:true},i,{item_type:i.item_type||'stock',is_active:i.is_active!==false}));
   S.moves=b.data||[];S.counts=c.data||[];S.client=d.data||null;
@@ -13758,6 +13759,7 @@ function stkRender(id){
   if(!S.only){
     head=`<div class="stk-tabs">${tabs.map(([k,l])=>`<button class="stk-tab ${S.tab===k?'on':''}" onclick="stkTab('${id}','${k}')">${l}${k==='count'&&cs.due?' <span class="stk-dot"></span>':''}</button>`).join('')}</div>`;
   }
+  if(S.ctx==='sp'){const tb=document.getElementById('sp-low-stock-top');if(tb){if(low.length){tb.style.display='block';tb.innerHTML=`🔴 Low stock: ${low.length} item${low.length===1?'':'s'} at or below minimum — ${low.slice(0,8).map(i=>stkEsc(i.item_name)).join(', ')}${low.length>8?' …':''} <span style="font-weight:400;text-decoration:underline">tap to open Stock</span>`;}else tb.style.display='none';}}
   let body='';
   if(S.tab==='stock')body=stkViewStock(id,S,canManage,low,cs);
   else if(S.tab==='usage')body=stkViewUsage(id,S);
@@ -13801,7 +13803,7 @@ function stkViewStock(id,S,canManage,low,cs){
       <td style="font-family:Arial;font-size:12.5px;color:${dl!==null&&dl<=2?'#b00020':'var(--muted)'}">${dl===null?'—':(dl<1?'< 1 day':'~'+Math.round(dl)+' day'+(Math.round(dl)===1?'':'s'))}</td>
       <td style="white-space:nowrap"><button class="btn-sm" onclick="stkMoveModal('${id}','${i.id}','received')">＋ In</button> <button class="btn-sm" onclick="stkMoveModal('${id}','${i.id}','used')">－ Use</button> ${canManage?`<button class="btn-sm" onclick="stkItemModal('${id}','${i.id}')">✎</button>`:''}</td>
     </tr>`;}).join('')+`</tbody></table></div>`:`<p style="font-family:Arial;font-size:13px;color:var(--muted);padding:14px 0">${act.length?'No items match.':'No items yet — add your first item or load the starter list above.'}</p>`;
-  const settings=canManage?`<div style="margin-top:18px;font-family:Arial;font-size:12px;color:var(--muted)">Stock counts required per week: <select onchange="stkSetPerWeek('${id}',this.value)" style="padding:4px 8px;border:1px solid var(--border);border-radius:8px"><option ${cs.perWeek===2?'selected':''} value="2">2 times</option><option ${cs.perWeek===3?'selected':''} value="3">3 times</option><option ${cs.perWeek===4?'selected':''} value="4">4 times</option></select> · the admin is reminded when a count is due</div>`:'';
+  const settings=canManage?`<div style="margin-top:18px;font-family:Arial;font-size:12px;color:var(--muted)">Stock counts required per week: <select onchange="stkSetPerWeek('${id}',this.value)" style="padding:4px 8px;border:1px solid var(--border);border-radius:8px"><option ${cs.perWeek===2?'selected':''} value="2">2 times</option><option ${cs.perWeek===3?'selected':''} value="3">3 times</option><option ${cs.perWeek===4?'selected':''} value="4">4 times</option></select> · the admin is reminded when a count is due</div>`+(S.ctx==='cv'?`<div style="margin-top:10px;font-family:Arial;font-size:12px;color:var(--muted)">📲 Morning WhatsApp stock brief goes to (WhatsApp numbers with country code, separated by commas): <input id="stk-wa-${id}" value="${stkEsc((S.client&&S.client.stock_alert_phones)||'')}" placeholder="2348012345678, 2348098765432" style="padding:6px 10px;border:1px solid var(--border);border-radius:8px;width:300px;max-width:100%"> <button class="btn-sm" onclick="stkSaveWa('${id}')">Save</button></div>`:''):'';
   return cards+banner+setup+toolbar+tbl+settings;
 }
 function stkSetupBox(id,S){
@@ -13907,6 +13909,7 @@ async function stkDoMove(id,itemId){
   try{await stkMove(it,t,q,document.getElementById('mv-note').value.trim(),await stkWho());}catch(e){document.getElementById('mv-fb').innerHTML='<div class="error-msg">'+stkEsc(e.message)+'</div>';return;}
   stkCloseModal();stkRefresh(id);
 }
+async function stkSaveWa(id){const S=_stkS[id];const v=(document.getElementById('stk-wa-'+id).value||'').trim();const {error}=await db.from('clients').update({stock_alert_phones:v||null}).eq('id',S.clientId);if(error){alert('Could not save: '+error.message+'\n\nRun setup.sql from the daily-stock-whatsapp folder first.');return;}if(S.client)S.client.stock_alert_phones=v;alert('Saved. The brief goes to these numbers every morning.');}
 async function stkSetPerWeek(id,v){const S=_stkS[id];const {error}=await db.from('clients').update({stock_counts_per_week:parseInt(v)}).eq('id',S.clientId);if(error){alert('Run stock_system_migration.sql first. '+error.message);return;}stkRefresh(id);}
 // ── Shopping list ──
 function stkShoppingText(S){
@@ -17440,6 +17443,6 @@ document.getElementById('rf-client').addEventListener('change',()=>renderTypeFie
     </div>
   </div>
 </div>
-<div style="position:fixed;left:8px;bottom:4px;font:10px Arial;color:#9a9a9a;z-index:5;pointer-events:none">version 23 Nov · 12:40 (figures: since we opened)</div>
+<div style="position:fixed;left:8px;bottom:4px;font:10px Arial;color:#9a9a9a;z-index:5;pointer-events:none">version 23 Nov · 14:50 (stock WhatsApp brief)</div>
 </body>
 </html>
